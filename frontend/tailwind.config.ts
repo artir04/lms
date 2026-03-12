@@ -31,10 +31,10 @@ export default {
         sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
       },
       boxShadow: {
-        card: '0 1px 3px 0 rgba(0,0,0,0.05), 0 1px 2px -1px rgba(0,0,0,0.04)',
-        'card-hover': '0 8px 24px 0 rgba(0,0,0,0.09), 0 2px 8px -2px rgba(0,0,0,0.05)',
-        topbar: '0 1px 0 0 rgba(0,0,0,0.06)',
-        sidebar: '4px 0 24px 0 rgba(0,0,0,0.15)',
+        card: '0 1px 3px 0 rgba(0,0,0,0.3), 0 1px 2px -1px rgba(0,0,0,0.2)',
+        'card-hover': '0 8px 24px 0 rgba(0,0,0,0.4), 0 2px 8px -2px rgba(0,0,0,0.3)',
+        topbar: '0 1px 0 0 rgba(0,0,0,0.3)',
+        sidebar: '4px 0 24px 0 rgba(0,0,0,0.4)',
       },
       animation: {
         'slide-in': 'slideIn 0.25s ease-out',

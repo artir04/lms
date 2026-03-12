@@ -30,7 +30,7 @@ export function StatCard({ title, value, icon, trend, trendUp, color = 'indigo' 
       <div className="flex items-start justify-between">
         <div className="flex-1 min-w-0">
           <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">{title}</p>
-          <p className="mt-2 text-3xl font-bold text-slate-900 tabular-nums leading-none">
+          <p className="mt-2 text-3xl font-bold text-white tabular-nums leading-none">
             {value}
           </p>
         </div>

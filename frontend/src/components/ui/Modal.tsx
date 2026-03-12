@@ -39,14 +39,14 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
       {/* Panel */}
       <div
         className={cn(
-          'relative w-full bg-white shadow-2xl animate-scale-in',
+          'relative w-full bg-slate-800 shadow-2xl animate-scale-in border border-slate-700',
           'rounded-t-2xl sm:rounded-2xl max-h-[90vh] flex flex-col',
           sizes[size]
         )}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0">
-          <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
+          <h2 className="text-lg font-semibold text-white">{title}</h2>
           <button
             onClick={onClose}
             className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"

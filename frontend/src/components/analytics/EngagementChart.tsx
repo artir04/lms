@@ -8,7 +8,7 @@ interface EngagementChartProps {
 export function EngagementChart({ data }: EngagementChartProps) {
   return (
     <div className="card p-6">
-      <h3 className="text-base font-semibold text-gray-900 mb-4">Platform Engagement</h3>
+      <h3 className="text-base font-semibold text-white mb-4">Platform Engagement</h3>
       <ResponsiveContainer width="100%" height={280}>
         <LineChart data={data} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />

@@ -39,7 +39,7 @@ export function GradebookPage() {
   }
 
   if (isLoading) return <PageLoader />
-  if (!gradebook) return <div className="text-center text-gray-500 py-16">Gradebook not found</div>
+  if (!gradebook) return <div className="text-center text-slate-500 py-16">Gradebook not found</div>
 
   // Collect all categories across all students
   const allCategories = Array.from(
@@ -49,45 +49,45 @@ export function GradebookPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <Link to={ROUTES.COURSE_DETAIL(courseId!)} className="text-gray-400 hover:text-gray-600">
+        <Link to={ROUTES.COURSE_DETAIL(courseId!)} className="text-slate-500 hover:text-slate-400">
           <ArrowLeft className="h-5 w-5" />
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Gradebook</h1>
-          <p className="text-sm text-gray-500">{gradebook.course_title}</p>
+          <h1 className="text-2xl font-bold text-white">Gradebook</h1>
+          <p className="text-sm text-slate-500">{gradebook.course_title}</p>
         </div>
       </div>
 
       {!gradebook.rows.length ? (
-        <div className="card p-12 text-center text-gray-400">No students enrolled yet.</div>
+        <div className="card p-12 text-center text-slate-500">No students enrolled yet.</div>
       ) : (
         <div className="card overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase sticky left-0 bg-gray-50 min-w-[180px]">
+              <tr className="bg-slate-800/50 border-b border-slate-700">
+                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase sticky left-0 bg-slate-800/50 min-w-[180px]">
                   Student
                 </th>
                 {allCategories.map((cat) => (
-                  <th key={cat} className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase capitalize min-w-[100px]">
+                  <th key={cat} className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase capitalize min-w-[100px]">
                     {cat}
                   </th>
                 ))}
-                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase min-w-[100px]">
+                <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase min-w-[100px]">
                   Average
                 </th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase min-w-[80px]">
+                <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase min-w-[80px]">
                   Grade
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-slate-700/40">
               {gradebook.rows.map((row) => (
-                <tr key={row.student_id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 sticky left-0 bg-white hover:bg-gray-50">
+                <tr key={row.student_id} className="hover:bg-slate-800/50">
+                  <td className="px-4 py-3 sticky left-0 bg-slate-800 hover:bg-slate-700/50">
                     <div>
-                      <p className="font-medium text-gray-900">{row.student_name}</p>
-                      <p className="text-xs text-gray-400">{row.email}</p>
+                      <p className="font-medium text-white">{row.student_name}</p>
+                      <p className="text-xs text-slate-500">{row.email}</p>
                     </div>
                   </td>
                   {allCategories.map((cat) => {
@@ -97,18 +97,18 @@ export function GradebookPage() {
                         {entry ? (
                           <button
                             onClick={() => openEdit(entry)}
-                            className="inline-flex items-center gap-1 text-gray-700 hover:text-primary-600 group"
+                            className="inline-flex items-center gap-1 text-slate-300 hover:text-primary-600 group"
                           >
                             {entry.raw_score}/{entry.max_score}
                             <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
                           </button>
                         ) : (
-                          <span className="text-gray-300">—</span>
+                          <span className="text-slate-600">—</span>
                         )}
                       </td>
                     )
                   })}
-                  <td className="px-4 py-3 text-center font-medium text-gray-900">
+                  <td className="px-4 py-3 text-center font-medium text-white">
                     {formatGrade(row.course_average)}
                   </td>
                   <td className="px-4 py-3 text-center">

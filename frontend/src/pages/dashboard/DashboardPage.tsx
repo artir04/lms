@@ -108,7 +108,7 @@ export function DashboardPage() {
                   {g.course_title}
                 </p>
                 <div className="flex items-baseline gap-2 mt-2">
-                  <span className="text-2xl font-bold text-slate-900 tabular-nums">
+                  <span className="text-2xl font-bold text-white tabular-nums">
                     {formatGrade(g.average)}
                   </span>
                   {g.letter_grade && (
@@ -133,7 +133,7 @@ export function DashboardPage() {
         {(isAdmin || isTeacher) && (
           <div className="xl:col-span-2 card">
             <div className="card-header flex items-center justify-between">
-              <h3 className="font-semibold text-slate-900 text-sm">Platform Engagement</h3>
+              <h3 className="font-semibold text-white text-sm">Platform Engagement</h3>
               <div className="flex gap-1">
                 {[7, 14, 30].map((d) => (
                   <button

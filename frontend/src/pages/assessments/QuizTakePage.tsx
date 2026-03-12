@@ -16,7 +16,7 @@ export function QuizTakePage() {
   const [result, setResult] = useState<Submission | null>(null)
 
   if (isLoading) return <PageLoader />
-  if (!quiz) return <div className="text-center text-gray-500 py-16">Quiz not found</div>
+  if (!quiz) return <div className="text-center text-slate-500 py-16">Quiz not found</div>
 
   if (result) {
     const score = result.score !== null && result.score !== undefined ? Number(result.score) : null
@@ -32,24 +32,24 @@ export function QuizTakePage() {
           {isPending ? (
             <>
               <Clock className="h-16 w-16 text-yellow-500 mx-auto mb-4" />
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Submitted for Grading</h2>
-              <p className="text-gray-500">Your essay answers require manual grading. You'll see your score once your teacher reviews them.</p>
+              <h2 className="text-2xl font-bold text-white mb-2">Submitted for Grading</h2>
+              <p className="text-slate-500">Your essay answers require manual grading. You'll see your score once your teacher reviews them.</p>
             </>
           ) : (
             <>
               <Trophy className={cn('h-16 w-16 mx-auto mb-4', score !== null && score >= 70 ? 'text-green-500' : 'text-red-500')} />
-              <h2 className="text-2xl font-bold text-gray-900 mb-1">Quiz Complete!</h2>
+              <h2 className="text-2xl font-bold text-white mb-1">Quiz Complete!</h2>
               <p className="text-5xl font-bold text-primary-600 mb-2">{score !== null ? formatGrade(score) : '—'}</p>
-              <p className="text-gray-500">{correctCount} of {totalAnswered} questions correct</p>
+              <p className="text-slate-500">{correctCount} of {totalAnswered} questions correct</p>
             </>
           )}
         </div>
 
         {/* Per-question breakdown */}
         {isGraded && result.answers && result.answers.length > 0 && (
-          <div className="card divide-y divide-gray-100">
-            <div className="px-6 py-3 bg-gray-50 rounded-t-xl">
-              <h3 className="text-sm font-semibold text-gray-700">Answer Review</h3>
+          <div className="card divide-y divide-slate-700/40">
+            <div className="px-6 py-3 bg-slate-800/50 rounded-t-xl">
+              <h3 className="text-sm font-semibold text-slate-300">Answer Review</h3>
             </div>
             {result.answers.map((answer, i) => {
               const question = quiz.questions?.find((q) => q.id === answer.question_id)
@@ -58,14 +58,14 @@ export function QuizTakePage() {
                   <div className="mt-0.5 flex-shrink-0">
                     {answer.is_correct === true && <CheckCircle className="h-5 w-5 text-green-500" />}
                     {answer.is_correct === false && <XCircle className="h-5 w-5 text-red-500" />}
-                    {answer.is_correct === null && <AlertCircle className="h-5 w-5 text-gray-400" />}
+                    {answer.is_correct === null && <AlertCircle className="h-5 w-5 text-slate-500" />}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 mb-1">
+                    <p className="text-sm font-medium text-white mb-1">
                       Q{i + 1}. {question?.text ?? 'Question'}
                     </p>
                     {answer.text_response && (
-                      <p className="text-sm text-gray-600 italic">"{answer.text_response}"</p>
+                      <p className="text-sm text-slate-400 italic">"{answer.text_response}"</p>
                     )}
                     {answer.feedback && (
                       <p className="text-sm text-blue-600 mt-1">{answer.feedback}</p>
@@ -92,8 +92,8 @@ export function QuizTakePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">{quiz.title}</h1>
-        {quiz.instructions && <p className="mt-1 text-gray-500">{quiz.instructions}</p>}
+        <h1 className="text-2xl font-bold text-white">{quiz.title}</h1>
+        {quiz.instructions && <p className="mt-1 text-slate-500">{quiz.instructions}</p>}
       </div>
       <QuizPlayer
         quiz={quiz}

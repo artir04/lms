@@ -58,7 +58,7 @@ export function CourseCard({ course }: CourseCardProps) {
 
       {/* Content */}
       <div className="p-4">
-        <h3 className="font-semibold text-slate-900 text-sm leading-snug line-clamp-2 group-hover:text-primary-600 transition-colors">
+        <h3 className="font-semibold text-white text-sm leading-snug line-clamp-2 group-hover:text-primary-600 transition-colors">
           {course.title}
         </h3>
         {course.description && (

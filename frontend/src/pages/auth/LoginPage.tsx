@@ -103,18 +103,18 @@ export function LoginPage() {
       </div>
 
       {/* ── Right panel ──────────────────────────────── */}
-      <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-10 bg-slate-50">
+      <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-10 bg-slate-900">
         {/* Mobile logo */}
         <div className="lg:hidden flex items-center gap-2 mb-8">
           <div className="w-9 h-9 rounded-xl bg-primary-600 flex items-center justify-center">
             <BookMarked className="w-4 h-4 text-white" />
           </div>
-          <span className="font-bold text-xl text-slate-900">EduFlow</span>
+          <span className="font-bold text-xl text-white">EduFlow</span>
         </div>
 
         <div className="w-full max-w-[380px]">
           <div className="mb-7">
-            <h1 className="text-2xl font-bold text-slate-900">Welcome back</h1>
+            <h1 className="text-2xl font-bold text-white">Welcome back</h1>
             <p className="mt-1 text-slate-500 text-sm">Sign in to your account to continue</p>
           </div>
 
@@ -195,10 +195,10 @@ export function LoginPage() {
             </button>
           </form>
 
-          <div className="mt-6 p-3.5 rounded-xl bg-slate-100 border border-slate-200">
-            <p className="text-xs font-medium text-slate-500 mb-1.5">Demo credentials</p>
-            <p className="text-xs text-slate-600 font-mono">org: lincoln-unified</p>
-            <p className="text-xs text-slate-600 font-mono">admin@lincoln-unified.edu / Admin123!</p>
+          <div className="mt-6 p-3.5 rounded-xl bg-slate-800 border border-slate-700">
+            <p className="text-xs font-medium text-slate-400 mb-1.5">Demo credentials</p>
+            <p className="text-xs text-slate-400 font-mono">org: lincoln-unified</p>
+            <p className="text-xs text-slate-400 font-mono">admin@lincoln-unified.edu / Admin123!</p>
           </div>
         </div>
       </div>

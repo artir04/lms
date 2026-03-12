@@ -13,8 +13,8 @@ export function GradeDistributionChart({ data }: GradeDistributionChartProps) {
   return (
     <div className="card p-6">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-base font-semibold text-gray-900">Grade Distribution</h3>
-        <span className="text-sm text-gray-500">Mean: {data.mean.toFixed(1)}%</span>
+        <h3 className="text-base font-semibold text-white">Grade Distribution</h3>
+        <span className="text-sm text-slate-500">Mean: {data.mean.toFixed(1)}%</span>
       </div>
       <ResponsiveContainer width="100%" height={220}>
         <BarChart data={data.buckets} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>

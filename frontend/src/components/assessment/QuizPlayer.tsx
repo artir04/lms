@@ -35,12 +35,12 @@ export function QuizPlayer({ quiz, onSubmit, isSubmitting }: QuizPlayerProps) {
       {/* Progress */}
       <div className="card p-4">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium text-gray-700">
+          <span className="text-sm font-medium text-slate-300">
             Question {currentIndex + 1} of {questions.length}
           </span>
-          <span className="text-sm text-gray-500">{currentQuestion.points} point{currentQuestion.points !== 1 ? 's' : ''}</span>
+          <span className="text-sm text-slate-500">{currentQuestion.points} point{currentQuestion.points !== 1 ? 's' : ''}</span>
         </div>
-        <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+        <div className="h-2 bg-slate-700/50 rounded-full overflow-hidden">
           <div
             className="h-full bg-primary-500 rounded-full transition-all"
             style={{ width: `${((currentIndex + 1) / questions.length) * 100}%` }}
@@ -50,7 +50,7 @@ export function QuizPlayer({ quiz, onSubmit, isSubmitting }: QuizPlayerProps) {
 
       {/* Question */}
       <div className="card p-6">
-        <p className="text-lg font-medium text-gray-900 mb-6">{currentQuestion.text}</p>
+        <p className="text-lg font-medium text-white mb-6">{currentQuestion.text}</p>
 
         {/* MCQ / True-False Options */}
         {(currentQuestion.question_type === 'mcq' || currentQuestion.question_type === 'true_false') && (
@@ -65,7 +65,7 @@ export function QuizPlayer({ quiz, onSubmit, isSubmitting }: QuizPlayerProps) {
                     'w-full text-left px-4 py-3 rounded-lg border-2 transition-all text-sm',
                     isSelected
                       ? 'border-primary-500 bg-primary-50 text-primary-700'
-                      : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                      : 'border-slate-700 hover:border-slate-600 text-slate-300'
                   )}
                 >
                   {opt.text}

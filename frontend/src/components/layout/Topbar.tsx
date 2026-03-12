@@ -46,38 +46,38 @@ export function Topbar({ title, onMenuClick }: TopbarProps) {
   const pageTitle = title || getPageTitle(pathname)
 
   return (
-    <header className="h-16 bg-white border-b border-slate-100 flex items-center gap-3 px-4 sm:px-6 shrink-0 z-10" style={{ boxShadow: '0 1px 0 0 rgba(0,0,0,0.06)' }}>
+    <header className="h-14 bg-slate-900 border-b border-slate-700/60 flex items-center gap-3 px-4 sm:px-6 shrink-0 z-10">
       <button
         onClick={onMenuClick}
-        className="lg:hidden p-2 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+        className="lg:hidden p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
         aria-label="Open menu"
       >
         <Menu className="h-5 w-5" />
       </button>
 
-      <h1 className="text-base font-semibold text-slate-900 hidden sm:block">{pageTitle}</h1>
+      <h1 className="text-sm font-semibold text-slate-100 hidden sm:block tracking-tight">{pageTitle}</h1>
 
       <div className="flex-1" />
 
-      <button className="hidden md:flex items-center gap-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl px-3.5 py-2 text-sm text-slate-400 w-52 transition-colors">
+      <button className="hidden md:flex items-center gap-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-slate-500 w-52 transition-colors">
         <Search className="w-3.5 h-3.5 shrink-0" />
         <span>Search...</span>
-        <kbd className="ml-auto text-[10px] bg-slate-200 text-slate-400 px-1.5 py-0.5 rounded font-mono hidden lg:block">
+        <kbd className="ml-auto text-[10px] bg-slate-700 text-slate-500 px-1.5 py-0.5 rounded font-mono hidden lg:block">
           ⌘K
         </kbd>
       </button>
 
-      <button className="relative p-2 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors">
+      <button className="relative p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
         <Bell className="h-5 w-5" />
         {unreadCount > 0 && (
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full ring-2 ring-white" />
+          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full ring-2 ring-slate-900" />
         )}
       </button>
 
       <div className="relative">
         <button
           onClick={() => setMenuOpen(!menuOpen)}
-          className="flex items-center gap-2 p-1 rounded-xl hover:bg-slate-100 transition-colors"
+          className="flex items-center gap-2 p-1 rounded-xl hover:bg-slate-800 transition-colors"
         >
           {user && <Avatar src={user.avatar_url} name={user.full_name} size="sm" />}
         </button>
@@ -85,17 +85,17 @@ export function Topbar({ title, onMenuClick }: TopbarProps) {
         {menuOpen && (
           <>
             <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-            <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-lg border border-slate-100 z-20 py-1.5 animate-scale-in">
-              <div className="px-4 py-3 border-b border-slate-100">
-                <p className="text-sm font-semibold text-slate-900">{user?.full_name}</p>
-                <p className="text-xs text-slate-500 mt-0.5">{user?.email}</p>
+            <div className="absolute right-0 mt-2 w-56 bg-slate-800 rounded-2xl shadow-xl border border-slate-700 z-20 py-1.5 animate-scale-in">
+              <div className="px-4 py-3 border-b border-slate-700">
+                <p className="text-sm font-semibold text-white">{user?.full_name}</p>
+                <p className="text-xs text-slate-400 mt-0.5">{user?.email}</p>
                 <span className="badge badge-indigo mt-2 capitalize">
                   {user?.roles[0]}
                 </span>
               </div>
               <button
                 onClick={handleLogout}
-                className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-rose-600 hover:bg-rose-50 transition-colors mt-1"
+                className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-rose-400 hover:bg-rose-900/30 hover:text-rose-300 transition-colors mt-1"
               >
                 <LogOut className="h-4 w-4" />
                 Sign out

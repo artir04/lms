@@ -80,18 +80,18 @@ export function CourseEditorPage() {
     setExpandedModules((prev) => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s })
 
   if (isLoading) return <PageLoader />
-  if (!course) return <div className="text-center text-gray-500 py-16">Course not found</div>
+  if (!course) return <div className="text-center text-slate-500 py-16">Course not found</div>
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <button onClick={() => navigate(ROUTES.COURSE_DETAIL(courseId!))} className="text-gray-400 hover:text-gray-600">
+        <button onClick={() => navigate(ROUTES.COURSE_DETAIL(courseId!))} className="text-slate-500 hover:text-slate-400">
           <ArrowLeft className="h-5 w-5" />
         </button>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold text-gray-900">{course.title}</h1>
-          <p className="text-sm text-gray-500">{course.is_published ? 'Published' : 'Draft'}</p>
+          <h1 className="text-2xl font-bold text-white">{course.title}</h1>
+          <p className="text-sm text-slate-500">{course.is_published ? 'Published' : 'Draft'}</p>
         </div>
         <button onClick={() => setShowEditCourse(true)} className="btn-secondary">
           <Pencil className="h-4 w-4" /> Edit Details
@@ -101,7 +101,7 @@ export function CourseEditorPage() {
       {/* Modules */}
       <div className="card p-5 space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">Course Content</h2>
+          <h2 className="text-lg font-semibold text-white">Course Content</h2>
           <button onClick={() => setShowAddModule(true)} className="btn-primary text-sm">
             <Plus className="h-4 w-4" /> Add Module
           </button>
@@ -110,22 +110,22 @@ export function CourseEditorPage() {
         {modulesLoading ? (
           <PageLoader />
         ) : !modules?.length ? (
-          <div className="text-center text-gray-400 py-8">No modules yet. Add your first module above.</div>
+          <div className="text-center text-slate-500 py-8">No modules yet. Add your first module above.</div>
         ) : (
           <div className="space-y-2">
             {modules.map((mod) => (
-              <div key={mod.id} className="border border-gray-200 rounded-lg overflow-hidden">
+              <div key={mod.id} className="border border-slate-700 rounded-lg overflow-hidden">
                 {/* Module header */}
-                <div className="flex items-center gap-2 px-4 py-3 bg-gray-50">
-                  <GripVertical className="h-4 w-4 text-gray-300" />
+                <div className="flex items-center gap-2 px-4 py-3 bg-slate-800/50">
+                  <GripVertical className="h-4 w-4 text-slate-600" />
                   <button onClick={() => toggleModule(mod.id)} className="flex-1 flex items-center gap-2 text-left">
                     {expandedModules.has(mod.id) ? (
-                      <ChevronDown className="h-4 w-4 text-gray-400" />
+                      <ChevronDown className="h-4 w-4 text-slate-500" />
                     ) : (
-                      <ChevronRight className="h-4 w-4 text-gray-400" />
+                      <ChevronRight className="h-4 w-4 text-slate-500" />
                     )}
-                    <span className="font-medium text-gray-900">{mod.title}</span>
-                    <span className="text-xs text-gray-400 ml-1">({mod.lesson_count} lessons)</span>
+                    <span className="font-medium text-white">{mod.title}</span>
+                    <span className="text-xs text-slate-500 ml-1">({mod.lesson_count} lessons)</span>
                   </button>
                   <button
                     onClick={() => { setAddLessonModuleId(mod.id); lessonForm.reset({ content_type: 'text' }) }}
@@ -174,7 +174,7 @@ export function CourseEditorPage() {
           </div>
           <div className="flex items-center gap-3">
             <input type="checkbox" id="is_published" {...courseForm.register('is_published')} className="rounded" />
-            <label htmlFor="is_published" className="text-sm text-gray-700">Published (visible to students)</label>
+            <label htmlFor="is_published" className="text-sm text-slate-300">Published (visible to students)</label>
           </div>
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={() => setShowEditCourse(false)} className="btn-secondary flex-1">Cancel</button>
@@ -250,19 +250,19 @@ function LessonList({ courseId, moduleId, onDelete }: { courseId: string; module
     enabled: !!moduleId,
   })
 
-  if (isLoading) return <div className="px-4 py-3 text-sm text-gray-400">Loading...</div>
+  if (isLoading) return <div className="px-4 py-3 text-sm text-slate-500">Loading...</div>
 
   return (
-    <div className="divide-y divide-gray-100">
+    <div className="divide-y divide-slate-700/40">
       {!lessons?.length && (
-        <p className="px-4 py-3 text-sm text-gray-400">No lessons yet.</p>
+        <p className="px-4 py-3 text-sm text-slate-500">No lessons yet.</p>
       )}
       {lessons?.map((lesson) => (
         <div key={lesson.id} className="flex items-center gap-3 px-4 py-2.5">
           <GripVertical className="h-4 w-4 text-gray-200" />
-          <span className="flex-1 text-sm text-gray-700">{lesson.title}</span>
-          {lesson.duration_min && <span className="text-xs text-gray-400">{lesson.duration_min} min</span>}
-          <span className="text-xs text-gray-400 capitalize">{lesson.content_type}</span>
+          <span className="flex-1 text-sm text-slate-300">{lesson.title}</span>
+          {lesson.duration_min && <span className="text-xs text-slate-500">{lesson.duration_min} min</span>}
+          <span className="text-xs text-slate-500 capitalize">{lesson.content_type}</span>
           <button onClick={() => { if (confirm('Delete this lesson?')) onDelete(lesson.id) }} className="text-red-400 hover:text-red-600">
             <Trash2 className="h-3.5 w-3.5" />
           </button>

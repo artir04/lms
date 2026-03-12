@@ -27,14 +27,14 @@ export function LessonPage() {
   })
 
   if (isLoading) return <PageLoader />
-  if (!lesson) return <div className="text-center text-gray-500 py-16">Lesson not found</div>
+  if (!lesson) return <div className="text-center text-slate-500 py-16">Lesson not found</div>
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Back link */}
       <button
         onClick={() => navigate(ROUTES.COURSE_DETAIL(courseId!))}
-        className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700"
+        className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-slate-300"
       >
         <ArrowLeft className="h-4 w-4" />
         Back to course
@@ -44,12 +44,12 @@ export function LessonPage() {
       <div className="card p-6">
         <div className="flex items-center gap-3 mb-2">
           {lesson.content_type === 'video' && <PlayCircle className="h-5 w-5 text-blue-500" />}
-          {lesson.content_type === 'text' && <FileText className="h-5 w-5 text-gray-400" />}
+          {lesson.content_type === 'text' && <FileText className="h-5 w-5 text-slate-500" />}
           {lesson.duration_min && (
-            <span className="text-sm text-gray-400">{lesson.duration_min} min</span>
+            <span className="text-sm text-slate-500">{lesson.duration_min} min</span>
           )}
         </div>
-        <h1 className="text-2xl font-bold text-gray-900">{lesson.title}</h1>
+        <h1 className="text-2xl font-bold text-white">{lesson.title}</h1>
       </div>
 
       {/* Video */}
@@ -82,7 +82,7 @@ export function LessonPage() {
 
       {/* Text body */}
       {lesson.body && (
-        <div className="card p-6 prose prose-sm max-w-none text-gray-700 leading-relaxed">
+        <div className="card p-6 prose prose-sm max-w-none text-slate-300 leading-relaxed">
           <div dangerouslySetInnerHTML={{ __html: lesson.body }} />
         </div>
       )}
@@ -90,7 +90,7 @@ export function LessonPage() {
       {/* Attachments */}
       {lesson.attachments && lesson.attachments.length > 0 && (
         <div className="card p-5">
-          <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+          <h3 className="text-sm font-semibold text-slate-300 mb-3 flex items-center gap-2">
             <Paperclip className="h-4 w-4" /> Attachments
           </h3>
           <ul className="space-y-2">

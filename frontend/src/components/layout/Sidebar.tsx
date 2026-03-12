@@ -80,7 +80,7 @@ export function Sidebar({ onClose }: SidebarProps) {
           <div className="w-8 h-8 rounded-xl bg-primary-600 flex items-center justify-center shadow-lg shadow-primary-900/50">
             <BookMarked className="w-4 h-4 text-white" />
           </div>
-          <span className="text-white font-bold text-base tracking-tight">EduFlow</span>
+          <span className="text-white font-bold text-base tracking-tight">EduDitari</span>
         </div>
         <button
           onClick={onClose}

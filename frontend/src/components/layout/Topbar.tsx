@@ -28,7 +28,7 @@ function getPageTitle(pathname: string): string {
   if (pathname.includes('/take')) return 'Take Quiz'
   if (pathname.includes('/edit')) return 'Edit Course'
   if (pathname.match(/\/courses\/[^/]+$/)) return 'Course Details'
-  return 'EduFlow'
+  return 'EduDitari'
 }
 
 export function Topbar({ title, onMenuClick }: TopbarProps) {

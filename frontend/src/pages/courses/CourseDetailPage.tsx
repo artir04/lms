@@ -144,14 +144,17 @@ export function CourseDetailPage() {
                   </p>
                 </div>
                 <div className="flex gap-2">
-                  {(isTeacher || isAdmin) && (
+                  {(isTeacher || isAdmin) ? (
                     <Link to={ROUTES.QUIZ_BUILDER(courseId!, quiz.id)} className="btn-secondary text-sm">
                       Build
                     </Link>
+                  ) : quiz.is_published ? (
+                    <Link to={ROUTES.QUIZ_TAKE(quiz.id)} className="btn-primary text-sm">
+                      Start
+                    </Link>
+                  ) : (
+                    <span className="text-xs text-gray-400 italic">Not available</span>
                   )}
-                  <Link to={ROUTES.QUIZ_TAKE(quiz.id)} className="btn-primary text-sm">
-                    Start
-                  </Link>
                 </div>
               </div>
             ))}

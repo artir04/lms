@@ -34,14 +34,22 @@ class AssessmentService:
         quiz = Quiz(course_id=course_id, **data.model_dump())
         self.db.add(quiz)
         await self.db.flush()
-        return quiz
+        # Re-fetch with questions eagerly loaded so question_count/total_points work
+        return await self._fetch_quiz_with_questions(quiz.id)
 
     async def update_quiz(self, quiz_id: uuid.UUID, data: QuizUpdate) -> Quiz:
         quiz = await self.get_quiz(quiz_id)
         for field, value in data.model_dump(exclude_none=True).items():
             setattr(quiz, field, value)
         await self.db.flush()
-        return quiz
+        # Re-fetch after flush to avoid lazy-load MissingGreenlet on question_count/total_points
+        return await self._fetch_quiz_with_questions(quiz_id)
+
+    async def _fetch_quiz_with_questions(self, quiz_id: uuid.UUID) -> Quiz:
+        result = await self.db.execute(
+            select(Quiz).options(selectinload(Quiz.questions)).where(Quiz.id == quiz_id)
+        )
+        return result.scalar_one()
 
     async def add_question(self, quiz_id: uuid.UUID, data: QuestionCreate) -> Question:
         question = Question(

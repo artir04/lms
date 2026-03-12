@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 from decimal import Decimal
-from pydantic import BaseModel
+from pydantic import BaseModel, computed_field
 
 
 class GradeEntryRead(BaseModel):
@@ -12,10 +12,16 @@ class GradeEntryRead(BaseModel):
     category: str
     raw_score: Decimal
     max_score: Decimal
-    percentage: Decimal
     letter_grade: str | None
     posted_at: datetime | None
     created_at: datetime
+
+    @computed_field
+    @property
+    def percentage(self) -> Decimal:
+        if self.max_score:
+            return (self.raw_score / self.max_score * 100).quantize(Decimal("0.01"))
+        return Decimal("0")
 
     model_config = {"from_attributes": True}
 

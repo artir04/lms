@@ -1,57 +1,78 @@
-import { BookOpen, Users, Calendar } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { ChevronRight, Users } from 'lucide-react'
 import type { Course } from '@/types/course'
 import { ROUTES } from '@/config/routes'
-import { formatDate } from '@/utils/formatters'
 import { cn } from '@/utils/cn'
 
 interface CourseCardProps {
   course: Course
 }
 
-const subjectColors: Record<string, string> = {
-  Math: 'bg-blue-100 text-blue-700',
-  Science: 'bg-green-100 text-green-700',
-  English: 'bg-purple-100 text-purple-700',
-  History: 'bg-yellow-100 text-yellow-700',
+const GRADIENTS = [
+  'from-violet-500 to-indigo-600',
+  'from-sky-500 to-blue-600',
+  'from-emerald-500 to-teal-600',
+  'from-orange-500 to-amber-500',
+  'from-rose-500 to-pink-600',
+  'from-purple-500 to-violet-600',
+  'from-cyan-500 to-sky-600',
+  'from-lime-500 to-emerald-600',
+]
+
+function getGradient(id: string): string {
+  let hash = 0
+  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) % GRADIENTS.length
+  return GRADIENTS[Math.abs(hash)]
 }
 
 export function CourseCard({ course }: CourseCardProps) {
-  const colorClass = subjectColors[course.subject || ''] || 'bg-gray-100 text-gray-700'
+  const gradient = getGradient(course.id)
+  const initials = course.title.substring(0, 2).toUpperCase()
 
   return (
-    <Link to={ROUTES.COURSE_DETAIL(course.id)} className="card block hover:shadow-md transition-shadow group">
-      <div className="p-5">
-        {/* Header */}
-        <div className="flex items-start justify-between mb-3">
-          <div className={cn('p-2 rounded-lg', colorClass)}>
-            <BookOpen className="h-5 w-5" />
-          </div>
-          <span className={cn('badge', course.is_published ? 'badge-green' : 'badge-gray')}>
-            {course.is_published ? 'Published' : 'Draft'}
-          </span>
-        </div>
+    <Link
+      to={ROUTES.COURSE_DETAIL(course.id)}
+      className="card-hover block group"
+    >
+      {/* Gradient banner */}
+      <div
+        className={cn(
+          'h-24 bg-gradient-to-br flex items-end p-3 relative overflow-hidden',
+          gradient
+        )}
+      >
+        <span className="absolute inset-0 flex items-center justify-center text-white/10 text-7xl font-black select-none leading-none">
+          {initials}
+        </span>
+        <span
+          className={cn(
+            'relative badge text-white ring-0 text-[10px]',
+            course.is_published
+              ? 'bg-white/20 backdrop-blur-sm'
+              : 'bg-black/20 backdrop-blur-sm'
+          )}
+        >
+          {course.is_published ? 'Published' : 'Draft'}
+        </span>
+      </div>
 
-        {/* Content */}
-        <h3 className="font-semibold text-gray-900 group-hover:text-primary-600 transition-colors line-clamp-1">
+      {/* Content */}
+      <div className="p-4">
+        <h3 className="font-semibold text-slate-900 text-sm leading-snug line-clamp-2 group-hover:text-primary-600 transition-colors">
           {course.title}
         </h3>
         {course.description && (
-          <p className="mt-1 text-sm text-gray-500 line-clamp-2">{course.description}</p>
+          <p className="mt-1 text-xs text-slate-500 line-clamp-2 leading-relaxed">
+            {course.description}
+          </p>
         )}
 
-        {/* Footer */}
-        <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
-          <span className="flex items-center gap-1">
-            <Users className="h-3.5 w-3.5" />
-            {course.teacher.full_name}
+        <div className="mt-3 pt-3 border-t border-slate-50 flex items-center justify-between">
+          <span className="flex items-center gap-1.5 text-xs text-slate-400">
+            <Users className="w-3 h-3" />
+            {course.teacher?.full_name?.split(' ')[0] ?? 'Instructor'}
           </span>
-          {course.end_date && (
-            <span className="flex items-center gap-1">
-              <Calendar className="h-3.5 w-3.5" />
-              {formatDate(course.end_date)}
-            </span>
-          )}
+          <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-primary-500 transition-colors" />
         </div>
       </div>
     </Link>

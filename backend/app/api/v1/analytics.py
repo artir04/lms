@@ -9,7 +9,7 @@ from app.schemas.analytics import DashboardSummary, EngagementReport, GradeDistr
 router = APIRouter(prefix="/analytics", tags=["analytics"])
 
 
-@router.get("/dashboard", response_model=DashboardSummary)
+@router.get("/dashboard", response_model=DashboardSummary, dependencies=[require_roles(Role.TEACHER, Role.ADMIN)])
 async def dashboard(payload: CurrentUserPayload, db=Depends(get_db)):
     service = AnalyticsService(db)
     teacher_id = uuid.UUID(payload["sub"]) if "teacher" in payload.get("roles", []) else None

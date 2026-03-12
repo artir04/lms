@@ -34,9 +34,14 @@ async def get_quiz(quiz_id: uuid.UUID, payload: CurrentUserPayload, db=Depends(g
     quiz = await service.get_quiz(quiz_id)
     is_student = "student" in payload.get("roles", []) and "teacher" not in payload.get("roles", [])
     if is_student:
-        for q in quiz.questions:
+        # Serialize to Pydantic first to avoid mutating the ORM object.
+        # Mutating opt.is_correct = None on an ORM Mapped[bool] (non-nullable) column
+        # would be flushed/committed by get_db and cause a DB constraint violation.
+        quiz_read = QuizDetailRead.model_validate(quiz)
+        for q in quiz_read.questions:
             for opt in q.options:
                 opt.is_correct = None
+        return quiz_read
     return quiz
 
 

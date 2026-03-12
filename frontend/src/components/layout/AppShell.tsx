@@ -1,15 +1,46 @@
+import { useState, useEffect } from 'react'
 import { Outlet } from 'react-router-dom'
 import { Sidebar } from './Sidebar'
 import { Topbar } from './Topbar'
 
 export function AppShell() {
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  useEffect(() => {
+    const onResize = () => {
+      if (window.innerWidth >= 1024) setSidebarOpen(false)
+    }
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50">
-      <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <Topbar />
-        <main className="flex-1 overflow-y-auto p-6">
-          <Outlet />
+    <div className="flex h-screen bg-slate-50 overflow-hidden">
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-20 bg-black/50 backdrop-blur-sm lg:hidden animate-fade-in"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      <aside
+        style={{ background: '#0f172a' }}
+        className={[
+          'fixed inset-y-0 left-0 z-30 flex flex-col w-[260px]',
+          'transition-transform duration-300 ease-in-out',
+          'lg:relative lg:translate-x-0',
+          sidebarOpen ? 'translate-x-0 shadow-sidebar' : '-translate-x-full',
+        ].join(' ')}
+      >
+        <Sidebar onClose={() => setSidebarOpen(false)} />
+      </aside>
+
+      <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+        <Topbar onMenuClick={() => setSidebarOpen(true)} />
+        <main className="flex-1 overflow-y-auto custom-scroll">
+          <div className="py-6 px-4 sm:px-6 lg:px-8 max-w-[1400px] mx-auto">
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>

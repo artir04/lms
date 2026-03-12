@@ -29,19 +29,32 @@ export const router = createBrowserRouter([
         element: <AppShell />,
         children: [
           { index: true, element: <Navigate to="/dashboard" replace /> },
+          // Routes accessible by all authenticated users
           { path: 'dashboard', element: <DashboardPage /> },
           { path: 'courses', element: <CourseListPage /> },
           { path: 'courses/:courseId', element: <CourseDetailPage /> },
-          { path: 'courses/:courseId/edit', element: <CourseEditorPage /> },
           { path: 'courses/:courseId/lessons/:lessonId', element: <LessonPage /> },
-          { path: 'courses/:courseId/gradebook', element: <GradebookPage /> },
-          { path: 'courses/:courseId/quizzes/:quizId/build', element: <QuizBuilderPage /> },
           { path: 'quizzes/:quizId/take', element: <QuizTakePage /> },
           { path: 'grades', element: <MyGradesPage /> },
           { path: 'messaging', element: <MessagingPage /> },
-          { path: 'analytics', element: <AnalyticsPage /> },
-          { path: 'admin/users', element: <UserManagementPage /> },
-          { path: 'admin/settings', element: <div className="text-center py-16 text-gray-400">Settings coming soon</div> },
+          // Teacher & Admin only routes
+          {
+            element: <ProtectedRoute roles={['teacher', 'admin', 'superadmin']} />,
+            children: [
+              { path: 'courses/:courseId/edit', element: <CourseEditorPage /> },
+              { path: 'courses/:courseId/gradebook', element: <GradebookPage /> },
+              { path: 'courses/:courseId/quizzes/:quizId/build', element: <QuizBuilderPage /> },
+              { path: 'analytics', element: <AnalyticsPage /> },
+            ],
+          },
+          // Admin only routes
+          {
+            element: <ProtectedRoute roles={['admin', 'superadmin']} />,
+            children: [
+              { path: 'admin/users', element: <UserManagementPage /> },
+              { path: 'admin/settings', element: <div className="text-center py-16 text-gray-400">Settings coming soon</div> },
+            ],
+          },
         ],
       },
     ],

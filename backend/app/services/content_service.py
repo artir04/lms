@@ -3,6 +3,7 @@ import os
 import aiofiles
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
+from sqlalchemy.orm import selectinload
 from fastapi import UploadFile
 
 from app.models.content import Module, Lesson, Attachment
@@ -20,7 +21,10 @@ class ContentService:
 
     async def list_modules(self, course_id: uuid.UUID) -> list[Module]:
         result = await self.db.execute(
-            select(Module).where(Module.course_id == course_id).order_by(Module.position)
+            select(Module)
+            .options(selectinload(Module.lessons))
+            .where(Module.course_id == course_id)
+            .order_by(Module.position)
         )
         return result.scalars().all()
 

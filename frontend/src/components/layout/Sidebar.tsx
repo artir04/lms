@@ -1,74 +1,155 @@
-import { NavLink } from 'react-router-dom'
-import { BookOpen, LayoutDashboard, MessageSquare, BarChart2, Users, Settings, GraduationCap, FileText, Bell } from 'lucide-react'
-import { cn } from '@/utils/cn'
+import { NavLink, useNavigate } from 'react-router-dom'
+import {
+  LayoutDashboard,
+  BookOpen,
+  GraduationCap,
+  MessageSquare,
+  BarChart3,
+  Users,
+  Settings,
+  LogOut,
+  X,
+  BookMarked,
+  ChevronRight,
+} from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { Avatar } from '@/components/ui/Avatar'
 import { ROUTES } from '@/config/routes'
 
-interface NavItem {
-  to: string
-  icon: React.ReactNode
-  label: string
+interface SidebarProps {
+  onClose?: () => void
 }
 
-export function Sidebar() {
-  const { user, isStudent, isTeacher, isAdmin } = useAuth()
+interface NavSection {
+  label: string
+  items: {
+    to: string
+    icon: React.ElementType
+    label: string
+    end?: boolean
+  }[]
+}
 
-  const navItems: NavItem[] = [
-    { to: ROUTES.DASHBOARD, icon: <LayoutDashboard className="h-5 w-5" />, label: 'Dashboard' },
-    { to: ROUTES.COURSES, icon: <BookOpen className="h-5 w-5" />, label: 'Courses' },
-    ...(isStudent ? [{ to: ROUTES.MY_GRADES, icon: <GraduationCap className="h-5 w-5" />, label: 'My Grades' }] : []),
-    ...(isTeacher ? [{ to: ROUTES.ANALYTICS, icon: <BarChart2 className="h-5 w-5" />, label: 'Analytics' }] : []),
-    { to: ROUTES.MESSAGING, icon: <MessageSquare className="h-5 w-5" />, label: 'Messages' },
-    ...(isAdmin ? [
-      { to: ROUTES.ADMIN_USERS, icon: <Users className="h-5 w-5" />, label: 'Users' },
-      { to: ROUTES.ADMIN_SETTINGS, icon: <Settings className="h-5 w-5" />, label: 'Settings' },
-    ] : []),
+export function Sidebar({ onClose }: SidebarProps) {
+  const { user, isStudent, isTeacher, isAdmin, logout } = useAuth()
+  const navigate = useNavigate()
+
+  const handleLogout = () => {
+    logout()
+    navigate('/login')
+  }
+
+  const navSections: NavSection[] = [
+    {
+      label: 'Main',
+      items: [
+        { to: ROUTES.DASHBOARD, icon: LayoutDashboard, label: 'Dashboard', end: true },
+        { to: ROUTES.COURSES, icon: BookOpen, label: 'Courses' },
+      ],
+    },
+    {
+      label: 'Learning',
+      items: [
+        ...(isStudent
+          ? [{ to: ROUTES.MY_GRADES, icon: GraduationCap, label: 'My Grades' }]
+          : []),
+        { to: ROUTES.MESSAGING, icon: MessageSquare, label: 'Messages' },
+        ...(isTeacher || isAdmin
+          ? [{ to: ROUTES.ANALYTICS, icon: BarChart3, label: 'Analytics' }]
+          : []),
+      ],
+    },
+    ...(isAdmin
+      ? [
+          {
+            label: 'Administration',
+            items: [
+              { to: ROUTES.ADMIN_USERS, icon: Users, label: 'Users' },
+              { to: ROUTES.ADMIN_SETTINGS, icon: Settings, label: 'Settings' },
+            ],
+          },
+        ]
+      : []),
   ]
 
   return (
-    <aside className="hidden lg:flex flex-col w-64 bg-white border-r border-gray-200 h-screen sticky top-0">
-      {/* Logo */}
-      <div className="flex items-center gap-3 px-6 py-5 border-b border-gray-100">
-        <div className="bg-primary-600 text-white p-2 rounded-lg">
-          <BookOpen className="h-5 w-5" />
+    <div className="flex flex-col h-full sidebar-scroll overflow-y-auto">
+      {/* Brand */}
+      <div className="flex items-center justify-between px-4 h-16 border-b border-white/5 shrink-0">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-xl bg-primary-600 flex items-center justify-center shadow-lg shadow-primary-900/50">
+            <BookMarked className="w-4 h-4 text-white" />
+          </div>
+          <span className="text-white font-bold text-base tracking-tight">EduFlow</span>
         </div>
-        <span className="text-lg font-bold text-gray-900">LMS Platform</span>
+        <button
+          onClick={onClose}
+          className="lg:hidden p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-white/10 transition-colors"
+        >
+          <X className="w-4 h-4" />
+        </button>
       </div>
 
-      {/* Nav */}
-      <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
-        {navItems.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            className={({ isActive }) =>
-              cn(
-                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
-                isActive
-                  ? 'bg-primary-50 text-primary-700'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-              )
-            }
-          >
-            {item.icon}
-            {item.label}
-          </NavLink>
-        ))}
+      {/* Navigation */}
+      <nav className="flex-1 px-3 py-4">
+        {navSections.map((section) =>
+          section.items.length === 0 ? null : (
+            <div key={section.label}>
+              <p className="nav-section">{section.label}</p>
+              <div className="space-y-0.5">
+                {section.items.map((item) => {
+                  const Icon = item.icon
+                  return (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      end={item.end}
+                      onClick={onClose}
+                      className={({ isActive }) =>
+                        isActive ? 'nav-item-active' : 'nav-item'
+                      }
+                    >
+                      {({ isActive }) => (
+                        <>
+                          <Icon className="w-[18px] h-[18px] shrink-0" />
+                          <span className="flex-1">{item.label}</span>
+                          {isActive && (
+                            <ChevronRight className="w-3.5 h-3.5 opacity-60" />
+                          )}
+                        </>
+                      )}
+                    </NavLink>
+                  )
+                })}
+              </div>
+            </div>
+          )
+        )}
       </nav>
 
-      {/* User */}
+      {/* User profile */}
       {user && (
-        <div className="px-4 py-4 border-t border-gray-100">
-          <div className="flex items-center gap-3 px-3 py-2">
+        <div className="shrink-0 p-3 border-t border-white/5">
+          <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 transition-colors group">
             <Avatar src={user.avatar_url} name={user.full_name} size="sm" />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 truncate">{user.full_name}</p>
-              <p className="text-xs text-gray-500 truncate capitalize">{user.roles[0]}</p>
+              <p className="text-sm font-medium text-white truncate leading-tight">
+                {user.full_name}
+              </p>
+              <p className="text-xs text-slate-500 capitalize leading-tight mt-0.5">
+                {user.roles[0]}
+              </p>
             </div>
+            <button
+              onClick={handleLogout}
+              title="Sign out"
+              className="p-1.5 rounded-lg text-slate-600 hover:text-rose-400 hover:bg-white/10 transition-all opacity-0 group-hover:opacity-100"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+            </button>
           </div>
         </div>
       )}
-    </aside>
+    </div>
   )
 }

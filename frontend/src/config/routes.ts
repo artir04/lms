@@ -1,0 +1,18 @@
+export const ROUTES = {
+  LOGIN: '/login',
+  DASHBOARD: '/dashboard',
+  COURSES: '/courses',
+  COURSE_DETAIL: (id: string) => `/courses/${id}`,
+  COURSE_EDITOR: (id: string) => `/courses/${id}/edit`,
+  LESSON: (courseId: string, lessonId: string) => `/courses/${courseId}/lessons/${lessonId}`,
+  QUIZ_BUILDER: (courseId: string, quizId: string) => `/courses/${courseId}/quizzes/${quizId}/build`,
+  QUIZ_TAKE: (quizId: string) => `/quizzes/${quizId}/take`,
+  GRADEBOOK: (courseId: string) => `/courses/${courseId}/gradebook`,
+  MY_GRADES: '/grades',
+  MESSAGING: '/messaging',
+  ANALYTICS: '/analytics',
+  ADMIN_USERS: '/admin/users',
+  ADMIN_SETTINGS: '/admin/settings',
+  FORBIDDEN: '/403',
+  NOT_FOUND: '/404',
+} as const

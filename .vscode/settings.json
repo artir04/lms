@@ -29,5 +29,6 @@
 
   "terminal.integrated.env.windows": {
     "PYTHONPATH": "${workspaceFolder}/backend"
-  }
+  },
+  "git.ignoreLimitWarning": true
 }

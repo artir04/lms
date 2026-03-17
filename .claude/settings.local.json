@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(docker exec:*)",
+      "Bash(docker-compose up:*)",
+      "Bash(curl -X POST \"http://localhost:8000/api/v1/auth/login\" -H \"Content-Type: application/json\" -d '{\"\"email\"\": \"\"sarah.chen@lincoln-unified.edu\"\", \"\"password\"\": \"\"Teacher123!\"\"}')",
+      "Bash(curl -X POST \"http://localhost:8000/api/v1/auth/login\" -H \"Content-Type: application/json\" -d '{\"\"email\"\": \"\"sarah.chen@lincoln-unified.edu\"\", \"\"password\"\": \"\"Teacher123\"\"}')",
+      "Bash(curl -X POST \"http://localhost:8000/api/v1/auth/login\" -H \"Content-Type: application/json\" -d '{\"\"email\"\": \"\"sarah.chen@lincoln-unified.edu\"\", \"\"password\"\": \"\"Teacher123\"\", \"\"tenant_slug\"\": \"\"lincoln-unified\"\"}')",
+      "Bash(curl -X POST \"http://localhost:8000/api/v1/auth/login\" -H \"Content-Type: application/json\" -d \"{\"\"email\"\": \"\"sarah.chen@lincoln-unified.edu\"\", \"\"password\"\": \"\"Teacher123!\"\", \"\"tenant_slug\"\": \"\"lincoln-unified\"\"}\")",
+      "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMWQwMDVhOS0wOWE4LTQxYWEtOTYwZC1hY2I1MmM5NjhlNWQiLCJ0ZW5hbnRfaWQiOiI2ZDNlMjYxOS01Njg3LTQ3NDctYWZjYi1mOGMzNzYyZjliZTAiLCJyb2xlcyI6WyJ0ZWFjaGVyIl0sInR5cGUiOiJhY2Nlc3MiLCJleHAiOjE3NzM3NDMxNTAsImlhdCI6MTc3Mzc0MjI1MH0.J0Muzi6HmqGFAL_52S66vBb9gMqM1GrdVDDj5-znk08\")",
+      "Bash(curl -X POST \"http://localhost:8000/api/v1/attendance/courses/7c19d74e-7b08-4a29-af05-0f1b2f779283\" -H \"Authorization: Bearer $TOKEN\" -H \"Content-Type: application/json\" -d '{\"\"date\"\": \"\"2026-03-17\"\", \"\"records\"\": [{\"\"student_id\"\": \"\"017cd964-2dee-4463-a37c-7b1140c1dcde\"\", \"\"status\"\": \"\"present\"\"}, {\"\"student_id\"\": \"\"09aea233-2104-4773-bb54-f93e1657f04e\"\", \"\"status\"\": \"\"tardy\"\"}, {\"\"student_id\"\": \"\"e6c967d4-f30b-4f0a-b8d1-d63f81541af0\"\", \"\"status\"\": \"\"absent\"\"}]}')",
+      "Bash(curl -X POST \"http://localhost:8000/api/v1/attendance/courses/7c19d74e-7b08-4a29-af05-0f1b2f779283\" -H \"Authorization: Bearer $TOKEN\" -H \"Content-Type: application/json\" -d \"{\"\"date\"\": \"\"2026-03-17\"\", \"\"records\"\": [{\"\"date\"\": \"\"2026-03-17\"\", \"\"student_id\"\": \"\"017cd964-2dee-4463-a37c-7b1140c1dcde\"\", \"\"status\"\": \"\"present\"\"}, {\"\"date\"\": \"\"2026-03-17\"\", \"\"student_id\"\": \"\"09aea233-2104-4773-bb54-f93e1657f04e\"\", \"\"status\"\": \"\"tardy\"\"}, {\"\"date\"\": \"\"2026-03-17\"\", \"\"student_id\"\": \"\"e6c967d4-f30b-4f0a-b8d1-d63f81541af0\"\", \"\"status\"\": \"\"absent\"\"}]}\")",
+      "Bash(docker-compose restart:*)",
+      "Bash(curl -X POST \"http://localhost:8000/api/v1/auth/login\" -H \"Content-Type: application/json\" -d @/tmp/login.json)",
+      "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMWQwMDVhOS0wOWE4LTQxYWEtOTYwZC1hY2I1MmM5NjhlNWQiLCJ0ZW5hbnRfaWQiOiI2ZDNlMjYxOS01Njg3LTQ3NDctYWZjYi1mOGMzNzYyZjliZTAiLCJyb2xlcyI6WyJ0ZWFjaGVyIl0sInR5cGUiOiJhY2Nlc3MiLCJleHAiOjE3NzM3NDM3MjMsImlhdCI6MTc3Mzc0MjgyM30.OuPj__aImsxc4_ldc9mrzf5kO6K98QlVet2s-jWM1Bk\")",
+      "Bash(curl -X POST \"http://localhost:8000/api/v1/attendance/courses/7c19d74e-7b08-4a29-af05-0f1b2f779283\" -H \"Authorization: Bearer $TOKEN\" -H \"Content-Type: application/json\" -d @/tmp/attendance.json)",
+      "Bash(curl -X GET \"http://localhost:8000/api/v1/attendance/courses/7c19d74e-7b08-4a29-af05-0f1b2f779283\" -H \"Authorization: Bearer $TOKEN\")",
+      "Bash(npm run:*)",
+      "Bash(docker-compose ps:*)",
+      "Bash(docker-compose -f c:/Users/erion/Code/lms/docker-compose.yml restart backend)",
+      "Bash(curl -s http://localhost:8000/api/v1/courses -H \"Content-Type: application/json\")",
+      "Bash(python -m json.tool)",
+      "Bash(curl -s -X POST http://localhost:8000/api/v1/auth/login -H \"Content-Type: application/json\" -d '{\"\"\"\"email\"\"\"\":\"\"\"\"sarah.chen@lincoln-unified.edu\"\"\"\",\"\"\"\"password\"\"\"\":\"\"\"\"Teacher123!\"\"\"\",\"\"\"\"tenant_slug\"\"\"\":\"\"\"\"lincoln-unified\"\"\"\"}')",
+      "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMWQwMDVhOS0wOWE4LTQxYWEtOTYwZC1hY2I1MmM5NjhlNWQiLCJ0ZW5hbnRfaWQiOiI2ZDNlMjYxOS01Njg3LTQ3NDctYWZjYi1mOGMzNzYyZjliZTAiLCJyb2xlcyI6WyJ0ZWFjaGVyIl0sInR5cGUiOiJhY2Nlc3MiLCJleHAiOjE3NzM3NDYyMDIsImlhdCI6MTc3Mzc0NTMwMn0.5obJLXre0Nn9_g5_NZv2TCyddF7Zfx7cER7QXOGzKDo\" curl -s http://localhost:8000/api/v1/courses -H \"Authorization: Bearer $TOKEN\" -H \"Content-Type: application/json\")"
+    ]
+  }
+}

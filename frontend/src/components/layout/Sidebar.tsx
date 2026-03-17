@@ -11,6 +11,7 @@ import {
   X,
   BookMarked,
   ChevronRight,
+  Calendar,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { Avatar } from '@/components/ui/Avatar'
@@ -51,7 +52,10 @@ export function Sidebar({ onClose }: SidebarProps) {
       label: 'Learning',
       items: [
         ...(isStudent
-          ? [{ to: ROUTES.MY_GRADES, icon: GraduationCap, label: 'My Grades' }]
+          ? [
+              { to: ROUTES.MY_GRADES, icon: GraduationCap, label: 'My Grades' },
+              { to: ROUTES.ATTENDANCE, icon: Calendar, label: 'My Attendance' },
+            ]
           : []),
         { to: ROUTES.MESSAGING, icon: MessageSquare, label: 'Messages' },
         ...(isTeacher || isAdmin

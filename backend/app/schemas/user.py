@@ -47,6 +47,6 @@ class UserSummary(BaseModel):
     full_name: str
     email: str
     avatar_url: str | None
-    roles: list[str]
+    roles: list[str] | None = None
 
     model_config = {"from_attributes": True}

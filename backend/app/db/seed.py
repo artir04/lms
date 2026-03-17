@@ -20,6 +20,7 @@ from app.models.course import Course, Section, Enrollment
 from app.models.content import Module, Lesson
 from app.models.assessment import Quiz, Question, QuestionOption, Submission, Answer
 from app.models.grade import GradeEntry
+from app.models.attendance import Attendance, AttendanceStatus
 from app.core.security import hash_password
 
 # ─────────────────────────────────────────────
@@ -638,6 +639,72 @@ async def seed():
             await db.commit()
 
         print(f"  ✓ Quiz submissions and grades for 7 students across all courses")
+
+        # ── Attendance ─────────────────────────────────
+        # Generate attendance for the past 14 days across all courses
+        for course in created_courses:
+            # Get course teacher
+            teacher = next((t for t in teachers if t.id == course.teacher_id), None)
+            if not teacher:
+                continue
+
+            # Get course section
+            sec_r = await db.execute(
+                select(Section).where(Section.course_id == course.id)
+            )
+            section = sec_r.scalar_one_or_none()
+            if not section:
+                continue
+
+            # Get all enrolled students
+            enr_r = await db.execute(
+                select(Enrollment).where(
+                    Enrollment.section_id == section.id,
+                    Enrollment.status == "active"
+                )
+            )
+            enrollments = enr_r.scalars().all()
+
+            # Generate attendance for past 14 days
+            statuses = [AttendanceStatus.PRESENT, AttendanceStatus.PRESENT, AttendanceStatus.PRESENT,
+                       AttendanceStatus.ABSENT, AttendanceStatus.TARDY]
+            notes_options = ["doctor's note", "field trip", None, None, None]
+
+            for days_ago in range(14):
+                attendance_date = date.today() - timedelta(days=days_ago)
+
+                for enrollment in enrollments:
+                    # Check if attendance already exists
+                    existing_r = await db.execute(
+                        select(Attendance).where(
+                            Attendance.course_id == course.id,
+                            Attendance.student_id == enrollment.student_id,
+                            Attendance.date == attendance_date
+                        )
+                    )
+                    if existing_r.scalar_one_or_none():
+                        continue
+
+                    # Randomly assign status
+                    status = random.choice(statuses)
+                    notes = random.choice(notes_options) if status in [AttendanceStatus.ABSENT, AttendanceStatus.TARDY] else None
+
+                    db.add(Attendance(
+                        course_id=course.id,
+                        section_id=section.id,
+                        student_id=enrollment.student_id,
+                        teacher_id=teacher.id,
+                        date=attendance_date,
+                        status=status,
+                        notes=notes,
+                        tenant_id=district.id
+                    ))
+
+            await db.flush()
+
+        await db.commit()
+
+        print(f"  ✓ Attendance records for {len(created_courses)} courses over the past 14 days")
         print("✅ Demo seed complete!")
         print()
         print("  District slug : lincoln-unified")

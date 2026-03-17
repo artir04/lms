@@ -15,6 +15,9 @@ import { MessagingPage } from '@/pages/messaging/MessagingPage'
 import { AnalyticsPage } from '@/pages/analytics/AnalyticsPage'
 import { UserManagementPage } from '@/pages/admin/UserManagementPage'
 import { NotFoundPage, ForbiddenPage } from '@/pages/errors/NotFoundPage'
+import { AttendanceMarkingPage } from '@/pages/attendance/AttendanceMarkingPage'
+import { AttendanceReportPage } from '@/pages/attendance/AttendanceReportPage'
+import { StudentAttendancePage } from '@/pages/attendance/StudentAttendancePage'
 
 export const router = createBrowserRouter([
   {
@@ -36,6 +39,7 @@ export const router = createBrowserRouter([
           { path: 'courses/:courseId/lessons/:lessonId', element: <LessonPage /> },
           { path: 'quizzes/:quizId/take', element: <QuizTakePage /> },
           { path: 'grades', element: <MyGradesPage /> },
+          { path: 'attendance', element: <StudentAttendancePage /> },
           { path: 'messaging', element: <MessagingPage /> },
           // Teacher & Admin only routes
           {
@@ -44,6 +48,8 @@ export const router = createBrowserRouter([
               { path: 'courses/:courseId/edit', element: <CourseEditorPage /> },
               { path: 'courses/:courseId/gradebook', element: <GradebookPage /> },
               { path: 'courses/:courseId/quizzes/:quizId/build', element: <QuizBuilderPage /> },
+              { path: 'courses/:courseId/attendance', element: <AttendanceMarkingPage /> },
+              { path: 'courses/:courseId/attendance/report', element: <AttendanceReportPage /> },
               { path: 'analytics', element: <AnalyticsPage /> },
             ],
           },

@@ -82,3 +82,10 @@ async def drop_student(course_id: uuid.UUID, section_id: uuid.UUID, student_id: 
     service = CourseService(db)
     await service.drop_student(section_id, student_id)
     return MessageResponse(message="Student dropped")
+
+
+@router.get("/{course_id}/enrollments")
+async def list_enrollments(course_id: uuid.UUID, payload: CurrentUserPayload, db=Depends(get_db)):
+    """Get all enrolled students for a course."""
+    service = CourseService(db)
+    return await service.list_enrollments(course_id, uuid.UUID(payload["tenant_id"]))

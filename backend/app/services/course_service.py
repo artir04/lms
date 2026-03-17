@@ -95,6 +95,33 @@ class CourseService:
         )
         return result.scalars().all()
 
+    async def list_enrollments(self, course_id: uuid.UUID, tenant_id: uuid.UUID) -> list[dict]:
+        """Get all enrolled students for a course as a simplified list."""
+        await self.get_by_id(course_id, tenant_id)
+
+        result = await self.db.execute(
+            select(Enrollment, User)
+            .join(Section)
+            .join(User, Enrollment.student_id == User.id)
+            .where(
+                Section.course_id == course_id,
+                Enrollment.status == "active"
+            )
+            .order_by(User.last_name, User.first_name)
+        )
+
+        rows = result.unique().all()
+
+        return [
+            {
+                "id": str(user.id),
+                "student_id": str(user.id),
+                "full_name": f"{user.first_name} {user.last_name}",
+                "email": user.email,
+            }
+            for enrollment, user in rows
+        ]
+
     # --- Enrollments ---
     async def enroll_student(self, section_id: uuid.UUID, student_id: uuid.UUID, tenant_id: uuid.UUID) -> Enrollment:
         existing = await self.db.execute(

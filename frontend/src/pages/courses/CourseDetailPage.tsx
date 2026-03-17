@@ -100,6 +100,9 @@ export function CourseDetailPage() {
             {/* Teacher/Admin actions */}
             {(isTeacher || isAdmin) && (
               <div className="flex gap-2 flex-shrink-0">
+                <Link to={ROUTES.COURSE_ATTENDANCE(courseId!)} className="btn-secondary btn-sm">
+                  <CalendarDays className="h-3.5 w-3.5" /> Attendance
+                </Link>
                 <Link to={ROUTES.GRADEBOOK(courseId!)} className="btn-secondary btn-sm">
                   <Award className="h-3.5 w-3.5" /> Gradebook
                 </Link>

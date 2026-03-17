@@ -1,5 +1,7 @@
 import axios from 'axios'
 import { useAuthStore } from '@/store/authStore'
+import { queryClient } from '@/config/queryClient'
+import { cookieManager } from '@/utils/cookieManager'
 
 const api = axios.create({
   baseURL: '/api/v1',
@@ -8,7 +10,7 @@ const api = axios.create({
 
 // Attach access token to every request
 api.interceptors.request.use((config) => {
-  const token = useAuthStore.getState().accessToken
+  const token = cookieManager.get('accessToken')
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
@@ -22,7 +24,7 @@ api.interceptors.response.use(
     const originalRequest = error.config
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true
-      const refreshToken = useAuthStore.getState().refreshToken
+      const refreshToken = cookieManager.get('refreshToken')
       if (refreshToken) {
         try {
           const { data } = await axios.post('/api/v1/auth/refresh', { refresh_token: refreshToken })
@@ -31,10 +33,12 @@ api.interceptors.response.use(
           return api(originalRequest)
         } catch {
           useAuthStore.getState().logout()
+          queryClient.clear()
           window.location.href = '/login'
         }
       } else {
         useAuthStore.getState().logout()
+        queryClient.clear()
         window.location.href = '/login'
       }
     }

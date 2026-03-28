@@ -34,7 +34,7 @@ export function UserManagementPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-white">User Management</h2>
+        <h2 className="text-2xl font-bold text-ink font-display">User Management</h2>
         <button onClick={() => setShowCreate(true)} className="btn-primary">
           <Plus className="h-4 w-4" />
           Add User
@@ -44,7 +44,7 @@ export function UserManagementPage() {
       {/* Filters */}
       <div className="flex gap-3">
         <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-muted" />
           <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1) }} className="input pl-10" placeholder="Search users..." />
         </div>
         <select value={role} onChange={(e) => { setRole(e.target.value); setPage(1) }} className="input w-40">
@@ -61,22 +61,22 @@ export function UserManagementPage() {
         <div className="card overflow-hidden">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-slate-800/50 border-b border-slate-700">
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">User</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Role</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Joined</th>
+              <tr className="bg-surface-elevated/50 border-b border-border">
+                <th className="px-6 py-3 text-left text-xs font-medium text-ink-muted uppercase">User</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-ink-muted uppercase">Role</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-ink-muted uppercase">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-ink-muted uppercase">Joined</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-700/40">
+            <tbody className="divide-y divide-border/60">
               {data?.items.map((user) => (
-                <tr key={user.id} className="hover:bg-slate-800/50">
+                <tr key={user.id} className="hover:bg-surface-elevated/50">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <Avatar src={user.avatar_url} name={user.full_name} size="sm" />
                       <div>
-                        <p className="font-medium text-white">{user.full_name}</p>
-                        <p className="text-xs text-slate-500">{user.email}</p>
+                        <p className="font-medium text-ink">{user.full_name}</p>
+                        <p className="text-xs text-ink-muted">{user.email}</p>
                       </div>
                     </div>
                   </td>
@@ -85,12 +85,12 @@ export function UserManagementPage() {
                   </td>
                   <td className="px-6 py-4">
                     {user.is_active ? (
-                      <span className="flex items-center gap-1 text-green-600 text-xs font-medium"><UserCheck className="h-3.5 w-3.5" />Active</span>
+                      <span className="flex items-center gap-1 text-emerald-400 text-xs font-medium"><UserCheck className="h-3.5 w-3.5" />Active</span>
                     ) : (
-                      <span className="flex items-center gap-1 text-red-600 text-xs font-medium"><UserX className="h-3.5 w-3.5" />Inactive</span>
+                      <span className="flex items-center gap-1 text-red-400 text-xs font-medium"><UserX className="h-3.5 w-3.5" />Inactive</span>
                     )}
                   </td>
-                  <td className="px-6 py-4 text-slate-500 text-xs">{formatDate(user.created_at)}</td>
+                  <td className="px-6 py-4 text-ink-muted text-xs">{formatDate(user.created_at)}</td>
                 </tr>
               ))}
             </tbody>
@@ -101,7 +101,7 @@ export function UserManagementPage() {
       {data && data.pages > 1 && (
         <div className="flex items-center justify-center gap-2">
           <button onClick={() => setPage((p) => p - 1)} disabled={page === 1} className="btn-secondary px-3 py-1.5 text-xs">Previous</button>
-          <span className="text-sm text-slate-400">Page {page} of {data.pages}</span>
+          <span className="text-sm text-ink-secondary">Page {page} of {data.pages}</span>
           <button onClick={() => setPage((p) => p + 1)} disabled={page === data.pages} className="btn-secondary px-3 py-1.5 text-xs">Next</button>
         </div>
       )}

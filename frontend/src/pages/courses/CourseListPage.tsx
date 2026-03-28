@@ -26,7 +26,7 @@ export function CourseListPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-white">Courses</h2>
+        <h2 className="text-2xl font-bold text-ink font-display">Courses</h2>
         {(isTeacher || isAdmin) && (
           <button onClick={() => setShowCreate(true)} className="btn-primary">
             <Plus className="h-4 w-4" />
@@ -37,7 +37,7 @@ export function CourseListPage() {
 
       {/* Search */}
       <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-muted" />
         <input
           value={search}
           onChange={(e) => { setSearch(e.target.value); setPage(1) }}
@@ -53,7 +53,7 @@ export function CourseListPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
             {data?.items.map((course) => <CourseCard key={course.id} course={course} />)}
             {!data?.items.length && (
-              <p className="text-slate-500 col-span-3 text-center py-16">No courses found.</p>
+              <p className="text-ink-muted col-span-3 text-center py-16">No courses found.</p>
             )}
           </div>
 
@@ -61,7 +61,7 @@ export function CourseListPage() {
           {data && data.pages > 1 && (
             <div className="flex items-center justify-center gap-2">
               <button onClick={() => setPage((p) => p - 1)} disabled={page === 1} className="btn-secondary px-3 py-1.5 text-xs">Previous</button>
-              <span className="text-sm text-slate-400">Page {page} of {data.pages}</span>
+              <span className="text-sm text-ink-secondary">Page {page} of {data.pages}</span>
               <button onClick={() => setPage((p) => p + 1)} disabled={page === data.pages} className="btn-secondary px-3 py-1.5 text-xs">Next</button>
             </div>
           )}

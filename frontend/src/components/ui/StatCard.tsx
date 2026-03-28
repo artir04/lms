@@ -12,25 +12,25 @@ interface StatCardProps {
 }
 
 const colorMap = {
-  blue:    { icon: 'bg-blue-50    text-blue-600',    bar: 'bg-blue-500' },
-  indigo:  { icon: 'bg-indigo-50  text-indigo-600',  bar: 'bg-indigo-500' },
-  green:   { icon: 'bg-emerald-50 text-emerald-600', bar: 'bg-emerald-500' },
-  emerald: { icon: 'bg-emerald-50 text-emerald-600', bar: 'bg-emerald-500' },
-  yellow:  { icon: 'bg-amber-50   text-amber-600',   bar: 'bg-amber-500' },
-  red:     { icon: 'bg-rose-50    text-rose-600',    bar: 'bg-rose-500' },
-  purple:  { icon: 'bg-purple-50  text-purple-600',  bar: 'bg-purple-500' },
-  sky:     { icon: 'bg-sky-50     text-sky-600',     bar: 'bg-sky-500' },
+  blue:    { icon: 'bg-blue-500/15    text-blue-400',    glow: 'shadow-[0_0_20px_rgba(59,130,246,0.08)]' },
+  indigo:  { icon: 'bg-indigo-500/15  text-indigo-400',  glow: 'shadow-[0_0_20px_rgba(99,102,241,0.08)]' },
+  green:   { icon: 'bg-emerald-500/15 text-emerald-400', glow: 'shadow-[0_0_20px_rgba(16,185,129,0.08)]' },
+  emerald: { icon: 'bg-emerald-500/15 text-emerald-400', glow: 'shadow-[0_0_20px_rgba(16,185,129,0.08)]' },
+  yellow:  { icon: 'bg-amber-500/15   text-amber-400',   glow: 'shadow-[0_0_20px_rgba(245,158,11,0.08)]' },
+  red:     { icon: 'bg-rose-500/15    text-rose-400',    glow: 'shadow-[0_0_20px_rgba(244,63,94,0.08)]' },
+  purple:  { icon: 'bg-purple-500/15  text-purple-400',  glow: 'shadow-[0_0_20px_rgba(168,85,247,0.08)]' },
+  sky:     { icon: 'bg-sky-500/15     text-sky-400',     glow: 'shadow-[0_0_20px_rgba(14,165,233,0.08)]' },
 }
 
 export function StatCard({ title, value, icon, trend, trendUp, color = 'indigo' }: StatCardProps) {
   const colors = colorMap[color]
 
   return (
-    <div className="card p-5 flex flex-col gap-3">
+    <div className={cn('card p-5 flex flex-col gap-3', colors.glow)}>
       <div className="flex items-start justify-between">
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">{title}</p>
-          <p className="mt-2 text-3xl font-bold text-white tabular-nums leading-none">
+          <p className="text-xs font-medium text-ink-secondary uppercase tracking-wide">{title}</p>
+          <p className="mt-2 text-3xl font-bold text-ink tabular-nums leading-none font-display">
             {value}
           </p>
         </div>
@@ -40,12 +40,12 @@ export function StatCard({ title, value, icon, trend, trendUp, color = 'indigo' 
       {trend && (
         <div
           className={cn(
-            'flex items-center gap-1.5 text-xs font-medium pt-2 border-t border-slate-50',
+            'flex items-center gap-1.5 text-xs font-medium pt-2 border-t border-border/60',
             trendUp === undefined
-              ? 'text-slate-400'
+              ? 'text-ink-muted'
               : trendUp
-              ? 'text-emerald-600'
-              : 'text-rose-500'
+              ? 'text-emerald-400'
+              : 'text-rose-400'
           )}
         >
           {trendUp !== undefined &&

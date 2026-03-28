@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1 import auth, users, courses, content, assessments, grades, messaging, notifications, analytics, tenants, attendance
+from app.api.v1 import auth, users, courses, content, assessments, grades, messaging, notifications, analytics, tenants, attendance, parents, gamification
 
 api_router = APIRouter(prefix="/api/v1")
 
@@ -14,3 +14,5 @@ api_router.include_router(notifications.router)
 api_router.include_router(analytics.router)
 api_router.include_router(tenants.router)
 api_router.include_router(attendance.router)
+api_router.include_router(parents.router)
+api_router.include_router(gamification.router)

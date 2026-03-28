@@ -60,18 +60,18 @@ export function AttendanceReportPage() {
   }
 
   if (courseLoading || reportLoading) return <PageLoader />
-  if (!course) return <div className="text-center text-slate-500 py-16">Course not found</div>
+  if (!course) return <div className="text-center text-ink-muted py-16">Course not found</div>
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <Link to={`/courses/${courseId}`} className="text-slate-500 hover:text-slate-400">
+        <Link to={`/courses/${courseId}`} className="text-ink-muted hover:text-ink-secondary transition-colors">
           <ArrowLeft className="h-5 w-5" />
         </Link>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold text-white">Attendance Report</h1>
-          <p className="text-sm text-slate-500">{course.title}</p>
+          <h1 className="text-2xl font-bold text-ink font-display">Attendance Report</h1>
+          <p className="text-sm text-ink-muted">{course.title}</p>
         </div>
         <button onClick={handleExport} className="btn-secondary">
           <Download className="h-4 w-4 mr-2" />
@@ -112,46 +112,46 @@ export function AttendanceReportPage() {
       {/* Overall Statistics */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="card p-4 flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center flex-shrink-0">
-            <BarChart3 className="h-6 w-6 text-indigo-500" />
+          <div className="w-12 h-12 rounded-xl bg-indigo-500/15 flex items-center justify-center flex-shrink-0">
+            <BarChart3 className="h-6 w-6 text-indigo-400" />
           </div>
           <div>
-            <p className="text-2xl font-bold text-white">{stats.totalAttendance}</p>
-            <p className="text-xs text-slate-500">Total Records</p>
+            <p className="text-2xl font-bold text-ink font-display">{stats.totalAttendance}</p>
+            <p className="text-xs text-ink-muted">Total Records</p>
           </div>
         </div>
         <div className="card p-4 flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl bg-green-50 flex items-center justify-center flex-shrink-0">
-            <TrendingUp className="h-6 w-6 text-green-500" />
+          <div className="w-12 h-12 rounded-xl bg-emerald-500/15 flex items-center justify-center flex-shrink-0">
+            <TrendingUp className="h-6 w-6 text-emerald-400" />
           </div>
           <div>
-            <p className="text-2xl font-bold text-green-600">{avgRate}%</p>
-            <p className="text-xs text-slate-500">Avg Attendance</p>
+            <p className="text-2xl font-bold text-emerald-400 font-display">{avgRate}%</p>
+            <p className="text-xs text-ink-muted">Avg Attendance</p>
           </div>
         </div>
         <div className="card p-4 flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center flex-shrink-0">
-            <TrendingDown className="h-6 w-6 text-red-500" />
+          <div className="w-12 h-12 rounded-xl bg-red-500/15 flex items-center justify-center flex-shrink-0">
+            <TrendingDown className="h-6 w-6 text-red-400" />
           </div>
           <div>
-            <p className="text-2xl font-bold text-red-600">{stats.totalAbsent}</p>
-            <p className="text-xs text-slate-500">Total Absences</p>
+            <p className="text-2xl font-bold text-red-400 font-display">{stats.totalAbsent}</p>
+            <p className="text-xs text-ink-muted">Total Absences</p>
           </div>
         </div>
         <div className="card p-4 flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl bg-yellow-50 flex items-center justify-center flex-shrink-0">
-            <TrendingUp className="h-6 w-6 text-yellow-500" />
+          <div className="w-12 h-12 rounded-xl bg-amber-500/15 flex items-center justify-center flex-shrink-0">
+            <TrendingUp className="h-6 w-6 text-amber-400" />
           </div>
           <div>
-            <p className="text-2xl font-bold text-yellow-600">{stats.totalTardy}</p>
-            <p className="text-xs text-slate-500">Total Tardies</p>
+            <p className="text-2xl font-bold text-amber-400 font-display">{stats.totalTardy}</p>
+            <p className="text-xs text-ink-muted">Total Tardies</p>
           </div>
         </div>
       </div>
 
       {/* Attendance Table */}
       {!report || report.rows.length === 0 ? (
-        <div className="card p-12 text-center text-slate-400">
+        <div className="card p-12 text-center text-ink-muted">
           <BarChart3 className="h-12 w-12 mx-auto mb-3 opacity-30" />
           <p className="font-medium">No attendance data available</p>
           <p className="text-sm mt-1">
@@ -162,59 +162,59 @@ export function AttendanceReportPage() {
         <div className="card overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-slate-800/50 border-b border-slate-700">
-                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase sticky left-0 bg-slate-800/50 min-w-[200px]">
+              <tr className="bg-surface-elevated/50 border-b border-border">
+                <th className="px-4 py-3 text-left text-xs font-medium text-ink-muted uppercase sticky left-0 bg-surface-elevated/50 min-w-[200px]">
                   Student
                 </th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase">
+                <th className="px-4 py-3 text-center text-xs font-medium text-ink-muted uppercase">
                   Total Days
                 </th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase">
+                <th className="px-4 py-3 text-center text-xs font-medium text-ink-muted uppercase">
                   Present
                 </th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase">
+                <th className="px-4 py-3 text-center text-xs font-medium text-ink-muted uppercase">
                   Absent
                 </th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase">
+                <th className="px-4 py-3 text-center text-xs font-medium text-ink-muted uppercase">
                   Tardy
                 </th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase min-w-[120px]">
+                <th className="px-4 py-3 text-center text-xs font-medium text-ink-muted uppercase min-w-[120px]">
                   Rate
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-700/40">
+            <tbody className="divide-y divide-border/60">
               {report.rows
                 .sort((a, b) => b.attendance_rate - a.attendance_rate)
                 .map((row) => (
-                  <tr key={row.student_id} className="hover:bg-slate-800/50">
-                    <td className="px-4 py-3 sticky left-0 bg-slate-800 hover:bg-slate-700/50">
+                  <tr key={row.student_id} className="hover:bg-surface-elevated/50">
+                    <td className="px-4 py-3 sticky left-0 bg-surface">
                       <div>
-                        <p className="font-medium text-white">{row.student_name}</p>
-                        <p className="text-xs text-slate-500">{row.email}</p>
+                        <p className="font-medium text-ink">{row.student_name}</p>
+                        <p className="text-xs text-ink-muted">{row.email}</p>
                       </div>
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <span className="font-medium text-white">{row.attendance_count}</span>
+                      <span className="font-medium text-ink">{row.attendance_count}</span>
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <span className="text-green-400 font-medium">{row.present_count}</span>
+                      <span className="text-emerald-400 font-medium">{row.present_count}</span>
                     </td>
                     <td className="px-4 py-3 text-center">
                       <span className="text-red-400 font-medium">{row.absent_count}</span>
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <span className="text-yellow-400 font-medium">{row.tardy_count}</span>
+                      <span className="text-amber-400 font-medium">{row.tardy_count}</span>
                     </td>
                     <td className="px-4 py-3 text-center">
                       <span
                         className={[
                           'inline-flex items-center justify-center px-2.5 py-1 rounded-full text-xs font-semibold',
                           row.attendance_rate >= 90
-                            ? 'bg-green-50 text-green-700'
+                            ? 'bg-emerald-500/15 text-emerald-400'
                             : row.attendance_rate >= 75
-                              ? 'bg-yellow-50 text-yellow-700'
-                              : 'bg-red-50 text-red-700',
+                              ? 'bg-amber-500/15 text-amber-400'
+                              : 'bg-red-500/15 text-red-400',
                         ].join(' ')}
                       >
                         {Math.round(row.attendance_rate)}%
@@ -229,7 +229,7 @@ export function AttendanceReportPage() {
 
       {/* Date Range Info */}
       {report && (report.date_range_start || report.date_range_end) && (
-        <div className="text-center text-sm text-slate-500">
+        <div className="text-center text-sm text-ink-muted">
           Showing data from{' '}
           {report.date_range_start ? formatDate(report.date_range_start) : 'the beginning'}{' '}
           to {report.date_range_end ? formatDate(report.date_range_end) : 'the present'}

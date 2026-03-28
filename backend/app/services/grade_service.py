@@ -1,15 +1,16 @@
 import uuid
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
-from sqlalchemy.orm import selectinload
+from sqlalchemy import select
 
 from app.models.grade import GradeEntry
 from app.models.course import Course, Section, Enrollment
 from app.models.user import User
-from app.models.assessment import Quiz
 from app.core.exceptions import NotFoundError
-from app.schemas.grade import GradeBookRead, GradeBookRow, StudentGradeSummary, GradeEntryUpdate
+from app.schemas.grade import (
+    GradeBookRead, GradeBookRow, StudentGradeSummary,
+    GradeEntryUpdate, GradeEntryRead, GradeEntryCreate,
+)
 
 
 class GradeService:
@@ -17,13 +18,11 @@ class GradeService:
         self.db = db
 
     async def get_gradebook(self, course_id: uuid.UUID) -> GradeBookRead:
-        # Get course
         course_result = await self.db.execute(select(Course).where(Course.id == course_id))
         course = course_result.scalar_one_or_none()
         if not course:
             raise NotFoundError("Course")
 
-        # Get all enrolled students
         students_result = await self.db.execute(
             select(User)
             .join(Enrollment, Enrollment.student_id == User.id)
@@ -41,14 +40,14 @@ class GradeService:
                 )
             )
             entries = entries_result.scalars().all()
-            avg = self._calculate_average(entries)
+            avg = self._weighted_average(entries)
             rows.append(GradeBookRow(
                 student_id=student.id,
                 student_name=student.full_name,
                 email=student.email,
                 grades=entries,
-                course_average=avg,
-                letter_grade=self._percentage_to_letter(avg),
+                weighted_average=avg,
+                final_grade=self._round_grade(avg),
             ))
 
         return GradeBookRead(
@@ -58,7 +57,6 @@ class GradeService:
         )
 
     async def get_student_grades(self, student_id: uuid.UUID, tenant_id: uuid.UUID) -> list[StudentGradeSummary]:
-        # Get all courses the student is enrolled in
         courses_result = await self.db.execute(
             select(Course)
             .join(Section, Section.course_id == Course.id)
@@ -76,16 +74,29 @@ class GradeService:
                 )
             )
             entries = entries_result.scalars().all()
-            avg = self._calculate_average(entries)
+            avg = self._weighted_average(entries)
             summaries.append(StudentGradeSummary(
                 course_id=course.id,
                 course_title=course.title,
-                average=avg,
-                letter_grade=self._percentage_to_letter(avg),
+                weighted_average=avg,
+                final_grade=self._round_grade(avg),
                 entries=entries,
             ))
 
         return summaries
+
+    async def create_entry(self, course_id: uuid.UUID, data: GradeEntryCreate) -> GradeEntry:
+        entry = GradeEntry(
+            student_id=data.student_id,
+            course_id=course_id,
+            category=data.category,
+            label=data.label,
+            grade=data.grade,
+            weight=data.weight,
+        )
+        self.db.add(entry)
+        await self.db.flush()
+        return entry
 
     async def update_entry(self, entry_id: uuid.UUID, data: GradeEntryUpdate) -> GradeEntry:
         result = await self.db.execute(select(GradeEntry).where(GradeEntry.id == entry_id))
@@ -98,23 +109,26 @@ class GradeService:
         return entry
 
     @staticmethod
-    def _calculate_average(entries: list[GradeEntry]) -> Decimal:
+    def _weighted_average(entries: list[GradeEntry]) -> Decimal:
+        """
+        Kosovo grading: weighted average of grades (1-5).
+
+        Example: Test1 grade=5 weight=0.30, Test2 grade=3 weight=0.30,
+                 Assignments grade=4 weight=0.40
+                 → (5×0.30 + 3×0.30 + 4×0.40) / (0.30+0.30+0.40) = 4.0
+        """
         if not entries:
             return Decimal("0")
         total_weight = sum(e.weight for e in entries)
         if not total_weight:
             return Decimal("0")
-        weighted_sum = sum(
-            (e.raw_score / e.max_score * 100 * e.weight) if e.max_score else Decimal("0")
-            for e in entries
-        )
-        return weighted_sum / total_weight
+        weighted_sum = sum(Decimal(str(e.grade)) * e.weight for e in entries)
+        return (weighted_sum / total_weight).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
     @staticmethod
-    def _percentage_to_letter(pct: Decimal) -> str | None:
-        if pct >= 90: return "A"
-        if pct >= 80: return "B"
-        if pct >= 70: return "C"
-        if pct >= 60: return "D"
-        if pct > 0: return "F"
-        return None
+    def _round_grade(avg: Decimal) -> int | None:
+        """Round a weighted average (e.g. 3.67) to the nearest integer grade 1-5."""
+        if avg <= 0:
+            return None
+        rounded = int(avg.quantize(Decimal("1"), rounding=ROUND_HALF_UP))
+        return max(1, min(5, rounded))

@@ -9,9 +9,12 @@ import {
   Settings,
   LogOut,
   X,
-  BookMarked,
   ChevronRight,
   Calendar,
+  Trophy,
+  UserCheck,
+  FileBarChart,
+  Sparkles,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { Avatar } from '@/components/ui/Avatar'
@@ -32,7 +35,7 @@ interface NavSection {
 }
 
 export function Sidebar({ onClose }: SidebarProps) {
-  const { user, isStudent, isTeacher, isAdmin, logout } = useAuth()
+  const { user, isStudent, isParent, isTeacher, isAdmin, logout } = useAuth()
   const navigate = useNavigate()
 
   const handleLogout = () => {
@@ -46,6 +49,9 @@ export function Sidebar({ onClose }: SidebarProps) {
       items: [
         { to: ROUTES.DASHBOARD, icon: LayoutDashboard, label: 'Dashboard', end: true },
         { to: ROUTES.COURSES, icon: BookOpen, label: 'Courses' },
+        ...(isParent
+          ? [{ to: ROUTES.PARENT_DASHBOARD, icon: UserCheck, label: 'My Children' }]
+          : []),
       ],
     },
     {
@@ -55,6 +61,7 @@ export function Sidebar({ onClose }: SidebarProps) {
           ? [
               { to: ROUTES.MY_GRADES, icon: GraduationCap, label: 'My Grades' },
               { to: ROUTES.ATTENDANCE, icon: Calendar, label: 'My Attendance' },
+              { to: ROUTES.GAMIFICATION, icon: Trophy, label: 'Achievements' },
             ]
           : []),
         { to: ROUTES.MESSAGING, icon: MessageSquare, label: 'Messages' },
@@ -69,6 +76,7 @@ export function Sidebar({ onClose }: SidebarProps) {
             label: 'Administration',
             items: [
               { to: ROUTES.ADMIN_USERS, icon: Users, label: 'Users' },
+              { to: ROUTES.ADMIN_REPORTS, icon: FileBarChart, label: 'Reports' },
               { to: ROUTES.ADMIN_SETTINGS, icon: Settings, label: 'Settings' },
             ],
           },
@@ -79,16 +87,18 @@ export function Sidebar({ onClose }: SidebarProps) {
   return (
     <div className="flex flex-col h-full sidebar-scroll overflow-y-auto">
       {/* Brand */}
-      <div className="flex items-center justify-between px-4 h-16 border-b border-white/5 shrink-0">
+      <div className="flex items-center justify-between px-5 h-16 border-b border-white/[0.04] shrink-0">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-primary-600 flex items-center justify-center shadow-lg shadow-primary-900/50">
-            <BookMarked className="w-4 h-4 text-white" />
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center shadow-lg shadow-primary-900/40">
+            <Sparkles className="w-4 h-4 text-white" />
           </div>
-          <span className="text-white font-bold text-base tracking-tight">EduDitari</span>
+          <span className="text-sidebar-text-active font-bold text-[15px] tracking-tight font-display">
+            EduDitari
+          </span>
         </div>
         <button
           onClick={onClose}
-          className="lg:hidden p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-white/10 transition-colors"
+          className="lg:hidden p-1.5 rounded-lg text-sidebar-text hover:text-sidebar-text-active hover:bg-white/[0.06] transition-colors"
         >
           <X className="w-4 h-4" />
         </button>
@@ -118,7 +128,7 @@ export function Sidebar({ onClose }: SidebarProps) {
                           <Icon className="w-[18px] h-[18px] shrink-0" />
                           <span className="flex-1">{item.label}</span>
                           {isActive && (
-                            <ChevronRight className="w-3.5 h-3.5 opacity-60" />
+                            <ChevronRight className="w-3.5 h-3.5 opacity-50" />
                           )}
                         </>
                       )}
@@ -133,21 +143,21 @@ export function Sidebar({ onClose }: SidebarProps) {
 
       {/* User profile */}
       {user && (
-        <div className="shrink-0 p-3 border-t border-white/5">
-          <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 transition-colors group">
+        <div className="shrink-0 p-3 border-t border-white/[0.04]">
+          <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/[0.04] transition-colors group">
             <Avatar src={user.avatar_url} name={user.full_name} size="sm" />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate leading-tight">
+              <p className="text-sm font-medium text-sidebar-text-active truncate leading-tight font-display">
                 {user.full_name}
               </p>
-              <p className="text-xs text-slate-500 capitalize leading-tight mt-0.5">
+              <p className="text-xs text-sidebar-text capitalize leading-tight mt-0.5">
                 {user.roles[0]}
               </p>
             </div>
             <button
               onClick={handleLogout}
               title="Sign out"
-              className="p-1.5 rounded-lg text-slate-600 hover:text-rose-400 hover:bg-white/10 transition-all opacity-0 group-hover:opacity-100"
+              className="p-1.5 rounded-lg text-sidebar-text hover:text-rose-400 hover:bg-white/[0.06] transition-all opacity-0 group-hover:opacity-100"
             >
               <LogOut className="w-3.5 h-3.5" />
             </button>

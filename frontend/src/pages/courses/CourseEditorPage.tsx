@@ -7,6 +7,7 @@ import { useCourse, useUpdateCourse } from '@/api/courses'
 import { Modal } from '@/components/ui/Modal'
 import { PageLoader } from '@/components/ui/Spinner'
 import { ROUTES } from '@/config/routes'
+import { cn } from '@/utils/cn'
 import api from '@/config/axios'
 
 interface Module {
@@ -64,6 +65,52 @@ export function CourseEditorPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['modules', courseId] }),
   })
 
+  const { mutate: reorderModules } = useMutation({
+    mutationFn: (ordered_ids: string[]) =>
+      api.put(`/courses/${courseId}/modules/reorder`, { ordered_ids }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['modules', courseId] }),
+  })
+
+  const { mutate: reorderLessons } = useMutation({
+    mutationFn: ({ moduleId, ordered_ids }: { moduleId: string; ordered_ids: string[] }) =>
+      api.put(`/courses/${courseId}/modules/${moduleId}/lessons/reorder`, { ordered_ids }),
+    onSuccess: (_d, { moduleId }) => qc.invalidateQueries({ queryKey: ['lessons', moduleId] }),
+  })
+
+  // Drag state for modules
+  const [dragModuleId, setDragModuleId] = useState<string | null>(null)
+  const [dragOverModuleId, setDragOverModuleId] = useState<string | null>(null)
+
+  const handleModuleDragStart = (e: React.DragEvent, moduleId: string) => {
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', moduleId)
+    setDragModuleId(moduleId)
+  }
+
+  const handleModuleDragOver = (e: React.DragEvent, moduleId: string) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    if (moduleId !== dragModuleId) setDragOverModuleId(moduleId)
+  }
+
+  const handleModuleDrop = (e: React.DragEvent, targetId: string) => {
+    e.preventDefault()
+    if (!modules || !dragModuleId || dragModuleId === targetId) return
+    const ordered = [...modules]
+    const fromIdx = ordered.findIndex((m) => m.id === dragModuleId)
+    const toIdx = ordered.findIndex((m) => m.id === targetId)
+    const [moved] = ordered.splice(fromIdx, 1)
+    ordered.splice(toIdx, 0, moved)
+    reorderModules(ordered.map((m) => m.id))
+    setDragModuleId(null)
+    setDragOverModuleId(null)
+  }
+
+  const handleModuleDragEnd = () => {
+    setDragModuleId(null)
+    setDragOverModuleId(null)
+  }
+
   // Modal states
   const [showEditCourse, setShowEditCourse] = useState(false)
   const [showAddModule, setShowAddModule] = useState(false)
@@ -80,18 +127,18 @@ export function CourseEditorPage() {
     setExpandedModules((prev) => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s })
 
   if (isLoading) return <PageLoader />
-  if (!course) return <div className="text-center text-slate-500 py-16">Course not found</div>
+  if (!course) return <div className="text-center text-ink-muted py-16">Course not found</div>
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <button onClick={() => navigate(ROUTES.COURSE_DETAIL(courseId!))} className="text-slate-500 hover:text-slate-400">
+        <button onClick={() => navigate(ROUTES.COURSE_DETAIL(courseId!))} className="text-ink-muted hover:text-ink-secondary transition-colors">
           <ArrowLeft className="h-5 w-5" />
         </button>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold text-white">{course.title}</h1>
-          <p className="text-sm text-slate-500">{course.is_published ? 'Published' : 'Draft'}</p>
+          <h1 className="text-2xl font-bold text-ink font-display">{course.title}</h1>
+          <p className="text-sm text-ink-muted">{course.is_published ? 'Published' : 'Draft'}</p>
         </div>
         <button onClick={() => setShowEditCourse(true)} className="btn-secondary">
           <Pencil className="h-4 w-4" /> Edit Details
@@ -101,7 +148,10 @@ export function CourseEditorPage() {
       {/* Modules */}
       <div className="card p-5 space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-white">Course Content</h2>
+          <div>
+            <h2 className="text-lg font-semibold text-ink font-display">Course Content</h2>
+            <p className="text-xs text-ink-muted mt-0.5">Drag modules and lessons to reorder them</p>
+          </div>
           <button onClick={() => setShowAddModule(true)} className="btn-primary text-sm">
             <Plus className="h-4 w-4" /> Add Module
           </button>
@@ -110,37 +160,57 @@ export function CourseEditorPage() {
         {modulesLoading ? (
           <PageLoader />
         ) : !modules?.length ? (
-          <div className="text-center text-slate-500 py-8">No modules yet. Add your first module above.</div>
+          <div className="text-center text-ink-muted py-8">No modules yet. Add your first module above.</div>
         ) : (
           <div className="space-y-2">
             {modules.map((mod) => (
-              <div key={mod.id} className="border border-slate-700 rounded-lg overflow-hidden">
+              <div
+                key={mod.id}
+                draggable
+                onDragStart={(e) => handleModuleDragStart(e, mod.id)}
+                onDragOver={(e) => handleModuleDragOver(e, mod.id)}
+                onDrop={(e) => handleModuleDrop(e, mod.id)}
+                onDragEnd={handleModuleDragEnd}
+                className={cn(
+                  'border rounded-xl overflow-hidden transition-all',
+                  dragModuleId === mod.id
+                    ? 'opacity-50 border-primary-500'
+                    : dragOverModuleId === mod.id
+                    ? 'border-primary-400 ring-1 ring-primary-400/30'
+                    : 'border-border'
+                )}
+              >
                 {/* Module header */}
-                <div className="flex items-center gap-2 px-4 py-3 bg-slate-800/50">
-                  <GripVertical className="h-4 w-4 text-slate-600" />
+                <div className="flex items-center gap-2 px-4 py-3 bg-surface-elevated/50">
+                  <GripVertical className="h-4 w-4 text-ink-muted cursor-grab active:cursor-grabbing shrink-0" />
                   <button onClick={() => toggleModule(mod.id)} className="flex-1 flex items-center gap-2 text-left">
                     {expandedModules.has(mod.id) ? (
-                      <ChevronDown className="h-4 w-4 text-slate-500" />
+                      <ChevronDown className="h-4 w-4 text-ink-muted" />
                     ) : (
-                      <ChevronRight className="h-4 w-4 text-slate-500" />
+                      <ChevronRight className="h-4 w-4 text-ink-muted" />
                     )}
-                    <span className="font-medium text-white">{mod.title}</span>
-                    <span className="text-xs text-slate-500 ml-1">({mod.lesson_count} lessons)</span>
+                    <span className="font-medium text-ink">{mod.title}</span>
+                    <span className="text-xs text-ink-muted ml-1">({mod.lesson_count} lessons)</span>
                   </button>
                   <button
                     onClick={() => { setAddLessonModuleId(mod.id); lessonForm.reset({ content_type: 'text' }) }}
-                    className="text-xs text-primary-600 hover:underline"
+                    className="text-xs text-primary-400 hover:underline"
                   >
                     + Lesson
                   </button>
-                  <button onClick={() => { if (confirm('Delete this module?')) deleteModule(mod.id) }} className="text-red-400 hover:text-red-600 ml-1">
+                  <button onClick={() => { if (confirm('Delete this module?')) deleteModule(mod.id) }} className="text-red-400 hover:text-red-300 ml-1">
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
 
                 {/* Lessons */}
                 {expandedModules.has(mod.id) && (
-                  <LessonList courseId={courseId!} moduleId={mod.id} onDelete={(lessonId) => deleteLesson({ lessonId, moduleId: mod.id })} />
+                  <LessonList
+                    courseId={courseId!}
+                    moduleId={mod.id}
+                    onDelete={(lessonId) => deleteLesson({ lessonId, moduleId: mod.id })}
+                    onReorder={(ordered_ids) => reorderLessons({ moduleId: mod.id, ordered_ids })}
+                  />
                 )}
               </div>
             ))}
@@ -174,7 +244,7 @@ export function CourseEditorPage() {
           </div>
           <div className="flex items-center gap-3">
             <input type="checkbox" id="is_published" {...courseForm.register('is_published')} className="rounded" />
-            <label htmlFor="is_published" className="text-sm text-slate-300">Published (visible to students)</label>
+            <label htmlFor="is_published" className="text-sm text-ink-secondary">Published (visible to students)</label>
           </div>
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={() => setShowEditCourse(false)} className="btn-secondary flex-1">Cancel</button>
@@ -243,27 +313,88 @@ export function CourseEditorPage() {
   )
 }
 
-function LessonList({ courseId, moduleId, onDelete }: { courseId: string; moduleId: string; onDelete: (id: string) => void }) {
+function LessonList({
+  courseId,
+  moduleId,
+  onDelete,
+  onReorder,
+}: {
+  courseId: string
+  moduleId: string
+  onDelete: (id: string) => void
+  onReorder: (ordered_ids: string[]) => void
+}) {
   const { data: lessons, isLoading } = useQuery<Lesson[]>({
     queryKey: ['lessons', moduleId],
     queryFn: () => api.get(`/courses/${courseId}/modules/${moduleId}/lessons`).then((r) => r.data),
     enabled: !!moduleId,
   })
 
-  if (isLoading) return <div className="px-4 py-3 text-sm text-slate-500">Loading...</div>
+  const [dragLessonId, setDragLessonId] = useState<string | null>(null)
+  const [dragOverLessonId, setDragOverLessonId] = useState<string | null>(null)
+
+  const handleLessonDragStart = (e: React.DragEvent, lessonId: string) => {
+    e.stopPropagation()
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('lesson', lessonId)
+    setDragLessonId(lessonId)
+  }
+
+  const handleLessonDragOver = (e: React.DragEvent, lessonId: string) => {
+    e.preventDefault()
+    e.stopPropagation()
+    e.dataTransfer.dropEffect = 'move'
+    if (lessonId !== dragLessonId) setDragOverLessonId(lessonId)
+  }
+
+  const handleLessonDrop = (e: React.DragEvent, targetId: string) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!lessons || !dragLessonId || dragLessonId === targetId) return
+    const ordered = [...lessons]
+    const fromIdx = ordered.findIndex((l) => l.id === dragLessonId)
+    const toIdx = ordered.findIndex((l) => l.id === targetId)
+    const [moved] = ordered.splice(fromIdx, 1)
+    ordered.splice(toIdx, 0, moved)
+    onReorder(ordered.map((l) => l.id))
+    setDragLessonId(null)
+    setDragOverLessonId(null)
+  }
+
+  const handleLessonDragEnd = () => {
+    setDragLessonId(null)
+    setDragOverLessonId(null)
+  }
+
+  if (isLoading) return <div className="px-4 py-3 text-sm text-ink-muted">Loading...</div>
 
   return (
-    <div className="divide-y divide-slate-700/40">
+    <div className="divide-y divide-border/60">
       {!lessons?.length && (
-        <p className="px-4 py-3 text-sm text-slate-500">No lessons yet.</p>
+        <p className="px-4 py-3 text-sm text-ink-muted">No lessons yet.</p>
       )}
       {lessons?.map((lesson) => (
-        <div key={lesson.id} className="flex items-center gap-3 px-4 py-2.5">
-          <GripVertical className="h-4 w-4 text-gray-200" />
-          <span className="flex-1 text-sm text-slate-300">{lesson.title}</span>
-          {lesson.duration_min && <span className="text-xs text-slate-500">{lesson.duration_min} min</span>}
-          <span className="text-xs text-slate-500 capitalize">{lesson.content_type}</span>
-          <button onClick={() => { if (confirm('Delete this lesson?')) onDelete(lesson.id) }} className="text-red-400 hover:text-red-600">
+        <div
+          key={lesson.id}
+          draggable
+          onDragStart={(e) => handleLessonDragStart(e, lesson.id)}
+          onDragOver={(e) => handleLessonDragOver(e, lesson.id)}
+          onDrop={(e) => handleLessonDrop(e, lesson.id)}
+          onDragEnd={handleLessonDragEnd}
+          className={cn(
+            'flex items-center gap-3 px-4 py-2.5 transition-colors',
+            dragLessonId === lesson.id
+              ? 'opacity-50 bg-primary-500/5'
+              : dragOverLessonId === lesson.id
+              ? 'bg-primary-500/10'
+              : ''
+          )}
+        >
+          <GripVertical className="h-4 w-4 text-ink-muted cursor-grab active:cursor-grabbing shrink-0" />
+          <span className="flex-1 text-sm text-ink-secondary">{lesson.title}</span>
+          {lesson.duration_min && <span className="text-xs text-ink-muted">{lesson.duration_min} min</span>}
+          <span className="text-xs text-ink-muted capitalize">{lesson.content_type}</span>
+          <button onClick={() => { if (confirm('Delete this lesson?')) onDelete(lesson.id) }} className="text-red-400 hover:text-red-300">
             <Trash2 className="h-3.5 w-3.5" />
           </button>
         </div>

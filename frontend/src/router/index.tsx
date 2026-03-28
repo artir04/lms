@@ -13,7 +13,11 @@ import { MyGradesPage } from '@/pages/grades/MyGradesPage'
 import { GradebookPage } from '@/pages/grades/GradebookPage'
 import { MessagingPage } from '@/pages/messaging/MessagingPage'
 import { AnalyticsPage } from '@/pages/analytics/AnalyticsPage'
+import { GamificationPage } from '@/pages/gamification/GamificationPage'
+import { ParentDashboardPage } from '@/pages/parent/ParentDashboardPage'
 import { UserManagementPage } from '@/pages/admin/UserManagementPage'
+import { ReportsPage } from '@/pages/admin/ReportsPage'
+import { SettingsPage } from '@/pages/admin/SettingsPage'
 import { NotFoundPage, ForbiddenPage } from '@/pages/errors/NotFoundPage'
 import { AttendanceMarkingPage } from '@/pages/attendance/AttendanceMarkingPage'
 import { AttendanceReportPage } from '@/pages/attendance/AttendanceReportPage'
@@ -41,6 +45,14 @@ export const router = createBrowserRouter([
           { path: 'grades', element: <MyGradesPage /> },
           { path: 'attendance', element: <StudentAttendancePage /> },
           { path: 'messaging', element: <MessagingPage /> },
+          { path: 'gamification', element: <GamificationPage /> },
+          // Parent only routes
+          {
+            element: <ProtectedRoute roles={['parent']} />,
+            children: [
+              { path: 'parent', element: <ParentDashboardPage /> },
+            ],
+          },
           // Teacher & Admin only routes
           {
             element: <ProtectedRoute roles={['teacher', 'admin', 'superadmin']} />,
@@ -58,7 +70,8 @@ export const router = createBrowserRouter([
             element: <ProtectedRoute roles={['admin', 'superadmin']} />,
             children: [
               { path: 'admin/users', element: <UserManagementPage /> },
-              { path: 'admin/settings', element: <div className="text-center py-16 text-gray-400">Settings coming soon</div> },
+              { path: 'admin/reports', element: <ReportsPage /> },
+              { path: 'admin/settings', element: <SettingsPage /> },
             ],
           },
         ],

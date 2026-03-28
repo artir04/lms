@@ -21,7 +21,13 @@
       "Bash(curl -s http://localhost:8000/api/v1/courses -H \"Content-Type: application/json\")",
       "Bash(python -m json.tool)",
       "Bash(curl -s -X POST http://localhost:8000/api/v1/auth/login -H \"Content-Type: application/json\" -d '{\"\"\"\"email\"\"\"\":\"\"\"\"sarah.chen@lincoln-unified.edu\"\"\"\",\"\"\"\"password\"\"\"\":\"\"\"\"Teacher123!\"\"\"\",\"\"\"\"tenant_slug\"\"\"\":\"\"\"\"lincoln-unified\"\"\"\"}')",
-      "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMWQwMDVhOS0wOWE4LTQxYWEtOTYwZC1hY2I1MmM5NjhlNWQiLCJ0ZW5hbnRfaWQiOiI2ZDNlMjYxOS01Njg3LTQ3NDctYWZjYi1mOGMzNzYyZjliZTAiLCJyb2xlcyI6WyJ0ZWFjaGVyIl0sInR5cGUiOiJhY2Nlc3MiLCJleHAiOjE3NzM3NDYyMDIsImlhdCI6MTc3Mzc0NTMwMn0.5obJLXre0Nn9_g5_NZv2TCyddF7Zfx7cER7QXOGzKDo\" curl -s http://localhost:8000/api/v1/courses -H \"Authorization: Bearer $TOKEN\" -H \"Content-Type: application/json\")"
+      "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMWQwMDVhOS0wOWE4LTQxYWEtOTYwZC1hY2I1MmM5NjhlNWQiLCJ0ZW5hbnRfaWQiOiI2ZDNlMjYxOS01Njg3LTQ3NDctYWZjYi1mOGMzNzYyZjliZTAiLCJyb2xlcyI6WyJ0ZWFjaGVyIl0sInR5cGUiOiJhY2Nlc3MiLCJleHAiOjE3NzM3NDYyMDIsImlhdCI6MTc3Mzc0NTMwMn0.5obJLXre0Nn9_g5_NZv2TCyddF7Zfx7cER7QXOGzKDo\" curl -s http://localhost:8000/api/v1/courses -H \"Authorization: Bearer $TOKEN\" -H \"Content-Type: application/json\")",
+      "Bash(ls -la *.log)",
+      "Bash(find . -name *.log -maxdepth 3)",
+      "Bash(python -c \"import ast; ast.parse\\(open\\(''app/services/analytics_service.py''\\).read\\(\\)\\); ast.parse\\(open\\(''app/services/gamification_service.py''\\).read\\(\\)\\); ast.parse\\(open\\(''app/api/v1/analytics.py''\\).read\\(\\)\\); print\\(''All files parse OK''\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\(''app/db/init_db.py''\\).read\\(\\)\\); print\\(''OK''\\)\")",
+      "Bash(docker compose:*)"
     ]
-  }
+  },
+  "enabledPlugins": {}
 }

@@ -33,7 +33,7 @@ class AtRiskStudent(BaseModel):
 
 
 class GradeDistributionBucket(BaseModel):
-    label: str  # A, B, C, D, F
+    label: str  # 5, 4, 3, 2, 1 (Kosovo system)
     count: int
     percentage: Decimal
 

@@ -34,7 +34,6 @@ class AssessmentService:
         quiz = Quiz(course_id=course_id, **data.model_dump())
         self.db.add(quiz)
         await self.db.flush()
-        # Re-fetch with questions eagerly loaded so question_count/total_points work
         return await self._fetch_quiz_with_questions(quiz.id)
 
     async def update_quiz(self, quiz_id: uuid.UUID, data: QuizUpdate) -> Quiz:
@@ -42,7 +41,6 @@ class AssessmentService:
         for field, value in data.model_dump(exclude_none=True).items():
             setattr(quiz, field, value)
         await self.db.flush()
-        # Re-fetch after flush to avoid lazy-load MissingGreenlet on question_count/total_points
         return await self._fetch_quiz_with_questions(quiz_id)
 
     async def _fetch_quiz_with_questions(self, quiz_id: uuid.UUID) -> Quiz:
@@ -76,7 +74,6 @@ class AssessmentService:
         if not quiz.is_published:
             raise ForbiddenError("Quiz is not published")
 
-        # Check attempt limit
         attempts_result = await self.db.execute(
             select(func.count()).select_from(Submission).where(
                 Submission.quiz_id == quiz_id, Submission.student_id == student_id
@@ -138,7 +135,6 @@ class AssessmentService:
                 answer.points_earned = question.points if is_correct else Decimal("0")
                 earned_points += answer.points_earned
             elif question.question_type == "short_answer" and ans_data.text_response:
-                # Simple exact-match grading
                 correct_option = next((o for o in question.options if o.is_correct), None)
                 if correct_option and ans_data.text_response.strip().lower() == correct_option.text.strip().lower():
                     answer.is_correct = True
@@ -148,7 +144,6 @@ class AssessmentService:
                     answer.is_correct = False
                     answer.points_earned = Decimal("0")
             else:
-                # Essay - needs manual grading
                 has_manual = True
 
             self.db.add(answer)
@@ -162,15 +157,15 @@ class AssessmentService:
 
         # Create grade entry if fully graded
         if not has_manual:
-            await self._upsert_grade_entry(submission, earned_points, total_points)
+            await self._upsert_grade_entry(submission)
 
-        # Re-fetch with answers eagerly loaded for serialization
         r = await self.db.execute(
             select(Submission).options(selectinload(Submission.answers)).where(Submission.id == submission.id)
         )
         return r.scalar_one()
 
-    async def _upsert_grade_entry(self, submission: Submission, earned: Decimal, total: Decimal) -> None:
+    async def _upsert_grade_entry(self, submission: Submission) -> None:
+        """Convert quiz score percentage to a Kosovo 1-5 grade and upsert."""
         result = await self.db.execute(
             select(GradeEntry).where(GradeEntry.submission_id == submission.id)
         )
@@ -180,13 +175,10 @@ class AssessmentService:
         )
         course_id = course_result.scalar_one()
 
-        percentage = (earned / total * 100) if total else Decimal("0")
-        letter = self._percentage_to_letter(percentage)
+        grade = self._score_to_grade(submission.score or Decimal("0"))
 
         if entry:
-            entry.raw_score = earned
-            entry.max_score = total
-            entry.letter_grade = letter
+            entry.grade = grade
         else:
             self.db.add(GradeEntry(
                 student_id=submission.student_id,
@@ -194,9 +186,9 @@ class AssessmentService:
                 quiz_id=submission.quiz_id,
                 submission_id=submission.id,
                 category="quiz",
-                raw_score=earned,
-                max_score=total,
-                letter_grade=letter,
+                label=None,
+                grade=grade,
+                weight=Decimal("1.0"),  # default weight, teacher can adjust later
             ))
         await self.db.flush()
 
@@ -217,7 +209,6 @@ class AssessmentService:
                 answer.feedback = grade.feedback
                 answer.is_correct = grade.points_earned > 0
 
-        # Recalculate total score
         total = sum(a.question.points for a in submission.answers if a.question)
         earned = sum(a.points_earned or Decimal("0") for a in submission.answers)
         submission.score = (earned / total * 100) if total else Decimal("0")
@@ -225,13 +216,18 @@ class AssessmentService:
         submission.graded_by = grader_id
         submission.graded_at = datetime.now(timezone.utc)
         await self.db.flush()
-        await self._upsert_grade_entry(submission, earned, Decimal(str(total)))
+        await self._upsert_grade_entry(submission)
         return submission
 
     @staticmethod
-    def _percentage_to_letter(pct: Decimal) -> str:
-        if pct >= 90: return "A"
-        if pct >= 80: return "B"
-        if pct >= 70: return "C"
-        if pct >= 60: return "D"
-        return "F"
+    def _score_to_grade(score_pct: Decimal) -> int:
+        """Convert a quiz score percentage (0-100) to Kosovo 1-5 grade."""
+        if score_pct >= 90:
+            return 5
+        if score_pct >= 75:
+            return 4
+        if score_pct >= 60:
+            return 3
+        if score_pct >= 45:
+            return 2
+        return 1

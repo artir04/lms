@@ -98,20 +98,20 @@ export function QuizBuilderPage() {
   }
 
   if (isLoading) return <PageLoader />
-  if (!quiz) return <div className="text-center text-slate-500 py-16">Quiz not found</div>
+  if (!quiz) return <div className="text-center text-ink-muted py-16">Quiz not found</div>
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <Link to={ROUTES.COURSE_DETAIL(courseId!)} className="text-slate-500 hover:text-slate-400">
+        <Link to={ROUTES.COURSE_DETAIL(courseId!)} className="text-ink-muted hover:text-ink-secondary transition-colors">
           <ArrowLeft className="h-5 w-5" />
         </Link>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold text-white">{quiz.title}</h1>
-          <p className="text-sm text-slate-500">
-            {quiz.question_count} questions · {quiz.total_points} pts
-            {quiz.is_published ? ' · Published' : ' · Draft'}
+          <h1 className="text-2xl font-bold text-ink font-display">{quiz.title}</h1>
+          <p className="text-sm text-ink-muted">
+            {quiz.question_count} questions \u00b7 {quiz.total_points} pts
+            {quiz.is_published ? ' \u00b7 Published' : ' \u00b7 Draft'}
           </p>
         </div>
         <button onClick={() => setShowSettings(true)} className="btn-secondary text-sm">
@@ -125,26 +125,26 @@ export function QuizBuilderPage() {
           <div key={q.id} className="card p-5">
             <div className="flex items-start justify-between gap-3">
               <div className="flex-1">
-                <p className="text-xs text-slate-500 mb-1">Q{idx + 1} · {QUESTION_TYPES.find((t) => t.value === q.question_type)?.label} · {q.points} pts</p>
-                <p className="font-medium text-white">{q.text}</p>
+                <p className="text-xs text-ink-muted mb-1">Q{idx + 1} \u00b7 {QUESTION_TYPES.find((t) => t.value === q.question_type)?.label} \u00b7 {q.points} pts</p>
+                <p className="font-medium text-ink">{q.text}</p>
                 {q.options.length > 0 && (
                   <ul className="mt-3 space-y-1.5">
                     {q.options.map((opt) => (
-                      <li key={opt.id} className={`flex items-center gap-2 text-sm rounded px-3 py-1.5 ${opt.is_correct ? 'bg-green-50 text-green-700' : 'bg-slate-800/50 text-slate-400'}`}>
-                        <span className={`w-2 h-2 rounded-full flex-shrink-0 ${opt.is_correct ? 'bg-green-500' : 'bg-gray-300'}`} />
+                      <li key={opt.id} className={`flex items-center gap-2 text-sm rounded-lg px-3 py-1.5 ${opt.is_correct ? 'bg-emerald-500/15 text-emerald-400' : 'bg-surface-elevated/50 text-ink-secondary'}`}>
+                        <span className={`w-2 h-2 rounded-full flex-shrink-0 ${opt.is_correct ? 'bg-emerald-500' : 'bg-ink-faint'}`} />
                         {opt.text}
                       </li>
                     ))}
                   </ul>
                 )}
-                {q.explanation && <p className="mt-2 text-xs text-slate-500 italic">Explanation: {q.explanation}</p>}
+                {q.explanation && <p className="mt-2 text-xs text-ink-muted italic">Explanation: {q.explanation}</p>}
               </div>
             </div>
           </div>
         ))}
 
         {!quiz.questions?.length && (
-          <div className="card p-10 text-center text-slate-500">
+          <div className="card p-10 text-center text-ink-muted">
             <p>No questions yet. Add your first question below.</p>
           </div>
         )}
@@ -177,7 +177,7 @@ export function QuizBuilderPage() {
           </div>
           <div className="flex items-center gap-3">
             <input type="checkbox" id="qz_published" {...settingsForm.register('is_published')} className="rounded" />
-            <label htmlFor="qz_published" className="text-sm text-slate-300">Published (visible to students)</label>
+            <label htmlFor="qz_published" className="text-sm text-ink-secondary">Published (visible to students)</label>
           </div>
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={() => setShowSettings(false)} className="btn-secondary flex-1">Cancel</button>
@@ -219,21 +219,21 @@ export function QuizBuilderPage() {
               <div className="space-y-2">
                 {options.map((opt, i) => (
                   <div key={i} className="flex items-center gap-2">
-                    <button type="button" onClick={() => toggleCorrect(i)} className={`w-5 h-5 rounded-full border-2 flex-shrink-0 ${opt.is_correct ? 'bg-green-500 border-green-500' : 'border-slate-600'}`} />
+                    <button type="button" onClick={() => toggleCorrect(i)} className={`w-5 h-5 rounded-full border-2 flex-shrink-0 ${opt.is_correct ? 'bg-emerald-500 border-emerald-500' : 'border-border-strong'}`} />
                     {questionType === 'true_false' ? (
-                      <span className="flex-1 input bg-slate-800/50">{opt.text}</span>
+                      <span className="flex-1 input bg-surface-elevated/50">{opt.text}</span>
                     ) : (
                       <input value={opt.text} onChange={(e) => setOptionText(i, e.target.value)} className="input flex-1" placeholder={`Option ${i + 1}`} />
                     )}
                     {questionType === 'mcq' && options.length > 2 && (
-                      <button type="button" onClick={() => removeOption(i)} className="text-red-400 hover:text-red-600">
+                      <button type="button" onClick={() => removeOption(i)} className="text-red-400 hover:text-red-300">
                         <Trash2 className="h-4 w-4" />
                       </button>
                     )}
                   </div>
                 ))}
                 {questionType === 'mcq' && options.length < 6 && (
-                  <button type="button" onClick={addOption} className="text-sm text-primary-600 hover:underline">+ Add option</button>
+                  <button type="button" onClick={addOption} className="text-sm text-primary-400 hover:underline">+ Add option</button>
                 )}
               </div>
             </div>

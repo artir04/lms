@@ -2,7 +2,7 @@ import uuid
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, and_
+from sqlalchemy import select, func, and_, Numeric
 
 from app.models.analytics import ActivityLog
 from app.models.grade import GradeEntry
@@ -45,10 +45,8 @@ class AnalyticsService:
         )
         active_today = (await self.db.execute(active_q)).scalar_one()
 
-        # Average grade
-        avg_grade_q = select(func.avg(GradeEntry.raw_score / GradeEntry.max_score * 100)).where(
-            GradeEntry.max_score > 0
-        )
+        # Average grade (1-5 scale)
+        avg_grade_q = select(func.avg(GradeEntry.grade.cast(Numeric)))
         avg_grade = (await self.db.execute(avg_grade_q)).scalar_one() or Decimal("0")
 
         return DashboardSummary(
@@ -62,47 +60,54 @@ class AnalyticsService:
     async def get_engagement(self, tenant_id: uuid.UUID, days: int = 30) -> EngagementReport:
         end = date.today()
         start = end - timedelta(days=days)
+
+        # Single aggregated query instead of 3 queries per day
+        day_col = func.date(ActivityLog.occurred_at).label("day")
+        q = (
+            select(
+                day_col,
+                ActivityLog.event_type,
+                func.count().label("cnt"),
+            )
+            .where(
+                ActivityLog.tenant_id == tenant_id,
+                ActivityLog.event_type.in_(["login", "lesson_view", "quiz_submit"]),
+                func.date(ActivityLog.occurred_at) >= start,
+                func.date(ActivityLog.occurred_at) <= end,
+            )
+            .group_by(day_col, ActivityLog.event_type)
+        )
+        rows = (await self.db.execute(q)).all()
+
+        # Build lookup: (date, event_type) -> count
+        counts: dict[tuple[date, str], int] = {}
+        for row in rows:
+            counts[(row.day, row.event_type)] = row.cnt
+
         points = []
         current = start
         while current <= end:
-            logins = (await self.db.execute(
-                select(func.count()).select_from(ActivityLog).where(
-                    ActivityLog.tenant_id == tenant_id,
-                    ActivityLog.event_type == "login",
-                    func.date(ActivityLog.occurred_at) == current,
-                )
-            )).scalar_one()
-
-            lesson_views = (await self.db.execute(
-                select(func.count()).select_from(ActivityLog).where(
-                    ActivityLog.tenant_id == tenant_id,
-                    ActivityLog.event_type == "lesson_view",
-                    func.date(ActivityLog.occurred_at) == current,
-                )
-            )).scalar_one()
-
-            submissions = (await self.db.execute(
-                select(func.count()).select_from(ActivityLog).where(
-                    ActivityLog.tenant_id == tenant_id,
-                    ActivityLog.event_type == "quiz_submit",
-                    func.date(ActivityLog.occurred_at) == current,
-                )
-            )).scalar_one()
-
-            points.append(EngagementPoint(date=current, logins=logins, lesson_views=lesson_views, submissions=submissions))
+            points.append(EngagementPoint(
+                date=current,
+                logins=counts.get((current, "login"), 0),
+                lesson_views=counts.get((current, "lesson_view"), 0),
+                submissions=counts.get((current, "quiz_submit"), 0),
+            ))
             current += timedelta(days=1)
 
         return EngagementReport(points=points)
 
     async def get_grade_distribution(self, course_id: uuid.UUID) -> GradeDistribution:
         result = await self.db.execute(
-            select(GradeEntry.letter_grade, func.count()).where(GradeEntry.course_id == course_id).group_by(GradeEntry.letter_grade)
+            select(GradeEntry.grade, func.count())
+            .where(GradeEntry.course_id == course_id)
+            .group_by(GradeEntry.grade)
         )
         rows = result.all()
         total = sum(r[1] for r in rows)
         buckets = [
             GradeDistributionBucket(
-                label=row[0] or "N/A",
+                label=str(row[0]),
                 count=row[1],
                 percentage=Decimal(str(round(row[1] / total * 100, 1))) if total else Decimal("0"),
             )
@@ -110,8 +115,8 @@ class AnalyticsService:
         ]
 
         avg_result = await self.db.execute(
-            select(func.avg(GradeEntry.raw_score / GradeEntry.max_score * 100))
-            .where(GradeEntry.course_id == course_id, GradeEntry.max_score > 0)
+            select(func.avg(GradeEntry.grade.cast(Numeric)))
+            .where(GradeEntry.course_id == course_id)
         )
         mean = Decimal(str(round(avg_result.scalar_one() or 0, 2)))
 

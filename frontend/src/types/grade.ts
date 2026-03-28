@@ -4,10 +4,9 @@ export interface GradeEntry {
   course_id: string
   quiz_id: string | null
   category: string
-  raw_score: number
-  max_score: number
-  percentage: number
-  letter_grade: string | null
+  label: string | null
+  grade: number // 1-5 Kosovo system
+  weight: number // e.g. 0.30 = 30%
   posted_at: string | null
   created_at: string
 }
@@ -17,8 +16,8 @@ export interface GradeBookRow {
   student_name: string
   email: string
   grades: GradeEntry[]
-  course_average: number
-  letter_grade: string | null
+  weighted_average: number // 1.0 - 5.0
+  final_grade: number | null // rounded 1-5
 }
 
 export interface GradeBookRead {
@@ -30,7 +29,7 @@ export interface GradeBookRead {
 export interface StudentGradeSummary {
   course_id: string
   course_title: string
-  average: number
-  letter_grade: string | null
+  weighted_average: number // 1.0 - 5.0
+  final_grade: number | null // rounded 1-5
   entries: GradeEntry[]
 }

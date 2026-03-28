@@ -377,12 +377,13 @@ COURSES = [
 STUDENT_SCORES = [92, 87, 78, 95, 65, 82, 71, 88, 56, 90]
 
 
-def letter_grade(pct: float) -> str:
-    if pct >= 90: return "A"
-    if pct >= 80: return "B"
-    if pct >= 70: return "C"
-    if pct >= 60: return "D"
-    return "F"
+def score_to_grade(pct: float) -> int:
+    """Convert quiz score percentage to Kosovo 1-5 grade."""
+    if pct >= 90: return 5
+    if pct >= 75: return 4
+    if pct >= 60: return 3
+    if pct >= 45: return 2
+    return 1
 
 
 # ─────────────────────────────────────────────
@@ -615,7 +616,7 @@ async def seed():
                 submission.score = round(score_pct, 2)
                 await db.flush()
 
-                # Grade entry
+                # Grade entry (Kosovo 1-5 system)
                 grade_r = await db.execute(
                     select(GradeEntry).where(
                         GradeEntry.student_id == student.id,
@@ -630,9 +631,9 @@ async def seed():
                         quiz_id=quiz.id,
                         submission_id=submission.id,
                         category="quiz",
-                        raw_score=round(score_pct, 2),
-                        max_score=100,
-                        letter_grade=letter_grade(score_pct),
+                        label=quiz_data["title"],
+                        grade=score_to_grade(score_pct),
+                        weight=1.0,
                         posted_at=now_utc(),
                     ))
 
@@ -705,6 +706,131 @@ async def seed():
         await db.commit()
 
         print(f"  ✓ Attendance records for {len(created_courses)} courses over the past 14 days")
+
+        # ── Parents ───────────────────────────────────
+        from app.models.parent import ParentStudent
+
+        parent_data = [
+            ("maria.wilson@lincoln-unified.edu", "Maria", "Wilson", "student01"),   # Emma Wilson's parent
+            ("carlos.thompson@lincoln-unified.edu", "Carlos", "Thompson", "student02"),  # Liam Thompson's parent
+            ("jennifer.martinez@lincoln-unified.edu", "Jennifer", "Martinez", "student03"),  # Olivia Martinez's parent
+        ]
+        parents_created = []
+        for email, first, last, child_prefix in parent_data:
+            parent = await get_or_create_user(
+                db, district.id, high_school.id,
+                email, first, last, "Parent123!", "parent",
+            )
+            parents_created.append(parent)
+
+            # Find and link child
+            child_email = f"{child_prefix}@lincoln-unified.edu"
+            child_r = await db.execute(select(User).where(User.email == child_email))
+            child = child_r.scalar_one_or_none()
+            if child:
+                existing_link = await db.execute(
+                    select(ParentStudent).where(
+                        ParentStudent.parent_id == parent.id,
+                        ParentStudent.student_id == child.id,
+                    )
+                )
+                if not existing_link.scalar_one_or_none():
+                    db.add(ParentStudent(parent_id=parent.id, student_id=child.id))
+
+        await db.commit()
+        print(f"  ✓ {len(parents_created)} parent accounts linked to students")
+
+        # ── Gamification: Badges & Points ─────────────
+        from app.models.gamification import Badge, UserBadge, PointEntry
+        from datetime import timezone as tz
+
+        badge_defs = [
+            ("First Steps", "Complete your first quiz", "rocket", "engagement", "quiz_count", 1),
+            ("Quiz Whiz", "Complete 5 quizzes", "brain", "academic", "quiz_count", 5),
+            ("Perfect Score", "Get a perfect score on a quiz", "star", "academic", "perfect_score", 1),
+            ("Rising Star", "Earn 50 points", "trending-up", "engagement", "total_points", 50),
+            ("Scholar", "Earn 100 points", "award", "academic", "total_points", 100),
+            ("Dedicated Learner", "Earn 200 points", "trophy", "engagement", "total_points", 200),
+        ]
+        badges = []
+        for name, desc, icon, cat, ctype, cval in badge_defs:
+            r = await db.execute(select(Badge).where(Badge.name == name))
+            badge = r.scalar_one_or_none()
+            if not badge:
+                badge = Badge(name=name, description=desc, icon=icon, category=cat, criteria_type=ctype, criteria_value=cval)
+                db.add(badge)
+                await db.flush()
+            badges.append(badge)
+
+        # Award points to students who submitted quizzes
+        for student_idx, student in enumerate(students[:7]):
+            # Points for quiz completions (one per course)
+            for course in created_courses:
+                existing_pt = await db.execute(
+                    select(PointEntry).where(
+                        PointEntry.user_id == student.id,
+                        PointEntry.reason == "quiz_completed",
+                        PointEntry.resource_id == course.id,
+                    )
+                )
+                if not existing_pt.scalar_one_or_none():
+                    db.add(PointEntry(user_id=student.id, points=10, reason="quiz_completed", resource_id=course.id))
+
+            # Perfect score bonus for high scorers
+            score = STUDENT_SCORES[student_idx]
+            if score >= 95:
+                existing_perf = await db.execute(
+                    select(PointEntry).where(
+                        PointEntry.user_id == student.id,
+                        PointEntry.reason == "perfect_score",
+                    )
+                )
+                if not existing_perf.scalar_one_or_none():
+                    db.add(PointEntry(user_id=student.id, points=25, reason="perfect_score"))
+
+        await db.flush()
+
+        # Award badges based on criteria
+        for student in students[:7]:
+            total_pts_r = await db.execute(
+                select(func.coalesce(func.sum(PointEntry.points), 0)).where(PointEntry.user_id == student.id)
+            )
+            total_pts = total_pts_r.scalar_one()
+            quiz_count_r = await db.execute(
+                select(func.count()).select_from(PointEntry).where(
+                    PointEntry.user_id == student.id, PointEntry.reason == "quiz_completed"
+                )
+            )
+            quiz_count = quiz_count_r.scalar_one()
+            perfect_count_r = await db.execute(
+                select(func.count()).select_from(PointEntry).where(
+                    PointEntry.user_id == student.id, PointEntry.reason == "perfect_score"
+                )
+            )
+            perfect_count = perfect_count_r.scalar_one()
+
+            for badge in badges:
+                earned = False
+                if badge.criteria_type == "total_points" and total_pts >= badge.criteria_value:
+                    earned = True
+                elif badge.criteria_type == "quiz_count" and quiz_count >= badge.criteria_value:
+                    earned = True
+                elif badge.criteria_type == "perfect_score" and perfect_count >= badge.criteria_value:
+                    earned = True
+
+                if earned:
+                    existing_b = await db.execute(
+                        select(UserBadge).where(
+                            UserBadge.user_id == student.id,
+                            UserBadge.badge_id == badge.id,
+                        )
+                    )
+                    if not existing_b.scalar_one_or_none():
+                        db.add(UserBadge(user_id=student.id, badge_id=badge.id, earned_at=now_utc()))
+
+        await db.commit()
+        print(f"  ✓ Badges and points for students")
+
         print("✅ Demo seed complete!")
         print()
         print("  District slug : lincoln-unified")
@@ -712,6 +838,9 @@ async def seed():
         print("  Teachers      : sarah.chen@lincoln-unified.edu / Teacher123!")
         print("                  james.rivera@lincoln-unified.edu / Teacher123!")
         print("                  mike.johnson@lincoln-unified.edu / Teacher123!")
+        print("  Parents       : maria.wilson@lincoln-unified.edu / Parent123!")
+        print("                  carlos.thompson@lincoln-unified.edu / Parent123!")
+        print("                  jennifer.martinez@lincoln-unified.edu / Parent123!")
         print("  Students      : student01@lincoln-unified.edu … student10@lincoln-unified.edu / Student123!")
 
 

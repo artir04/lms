@@ -32,24 +32,24 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-fade-in"
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in"
         onClick={onClose}
       />
 
       {/* Panel */}
       <div
         className={cn(
-          'relative w-full bg-slate-800 shadow-2xl animate-scale-in border border-slate-700',
+          'relative w-full bg-surface-elevated shadow-2xl animate-scale-in border border-border-strong',
           'rounded-t-2xl sm:rounded-2xl max-h-[90vh] flex flex-col',
           sizes[size]
         )}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0">
-          <h2 className="text-lg font-semibold text-white">{title}</h2>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
+          <h2 className="text-lg font-semibold text-ink font-display">{title}</h2>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+            className="p-1.5 rounded-lg text-ink-muted hover:text-ink hover:bg-surface-overlay transition-colors"
           >
             <X className="h-4 w-4" />
           </button>

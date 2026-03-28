@@ -9,14 +9,14 @@ interface CourseCardProps {
 }
 
 const GRADIENTS = [
-  'from-violet-500 to-indigo-600',
-  'from-sky-500 to-blue-600',
-  'from-emerald-500 to-teal-600',
-  'from-orange-500 to-amber-500',
-  'from-rose-500 to-pink-600',
-  'from-purple-500 to-violet-600',
-  'from-cyan-500 to-sky-600',
-  'from-lime-500 to-emerald-600',
+  'from-violet-600 to-indigo-700',
+  'from-sky-500 to-blue-700',
+  'from-emerald-500 to-teal-700',
+  'from-orange-500 to-amber-600',
+  'from-rose-500 to-pink-700',
+  'from-purple-500 to-violet-700',
+  'from-cyan-500 to-sky-700',
+  'from-lime-500 to-emerald-700',
 ]
 
 function getGradient(id: string): string {
@@ -41,7 +41,7 @@ export function CourseCard({ course }: CourseCardProps) {
           gradient
         )}
       >
-        <span className="absolute inset-0 flex items-center justify-center text-white/10 text-7xl font-black select-none leading-none">
+        <span className="absolute inset-0 flex items-center justify-center text-white/[0.08] text-7xl font-black select-none leading-none font-display">
           {initials}
         </span>
         <span
@@ -58,21 +58,21 @@ export function CourseCard({ course }: CourseCardProps) {
 
       {/* Content */}
       <div className="p-4">
-        <h3 className="font-semibold text-white text-sm leading-snug line-clamp-2 group-hover:text-primary-600 transition-colors">
+        <h3 className="font-semibold text-ink text-sm leading-snug line-clamp-2 group-hover:text-primary-400 transition-colors">
           {course.title}
         </h3>
         {course.description && (
-          <p className="mt-1 text-xs text-slate-500 line-clamp-2 leading-relaxed">
+          <p className="mt-1 text-xs text-ink-muted line-clamp-2 leading-relaxed">
             {course.description}
           </p>
         )}
 
-        <div className="mt-3 pt-3 border-t border-slate-50 flex items-center justify-between">
-          <span className="flex items-center gap-1.5 text-xs text-slate-400">
+        <div className="mt-3 pt-3 border-t border-border/60 flex items-center justify-between">
+          <span className="flex items-center gap-1.5 text-xs text-ink-secondary">
             <Users className="w-3 h-3" />
             {course.teacher?.full_name?.split(' ')[0] ?? 'Instructor'}
           </span>
-          <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-primary-500 transition-colors" />
+          <ChevronRight className="w-4 h-4 text-ink-faint group-hover:text-primary-400 transition-colors" />
         </div>
       </div>
     </Link>

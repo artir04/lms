@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 from decimal import Decimal
-from pydantic import BaseModel, computed_field
+from pydantic import BaseModel, Field
 
 
 class GradeEntryRead(BaseModel):
@@ -10,25 +10,28 @@ class GradeEntryRead(BaseModel):
     course_id: uuid.UUID
     quiz_id: uuid.UUID | None
     category: str
-    raw_score: Decimal
-    max_score: Decimal
-    letter_grade: str | None
+    label: str | None
+    grade: int  # 1-5
+    weight: Decimal
     posted_at: datetime | None
     created_at: datetime
-
-    @computed_field
-    @property
-    def percentage(self) -> Decimal:
-        if self.max_score:
-            return (self.raw_score / self.max_score * 100).quantize(Decimal("0.01"))
-        return Decimal("0")
 
     model_config = {"from_attributes": True}
 
 
+class GradeEntryCreate(BaseModel):
+    student_id: uuid.UUID
+    category: str = "assignment"
+    label: str | None = None
+    grade: int = Field(ge=1, le=5)
+    weight: Decimal = Decimal("1.0")
+
+
 class GradeEntryUpdate(BaseModel):
-    raw_score: Decimal | None = None
-    letter_grade: str | None = None
+    grade: int | None = Field(default=None, ge=1, le=5)
+    weight: Decimal | None = None
+    category: str | None = None
+    label: str | None = None
 
 
 class GradeBookRow(BaseModel):
@@ -36,8 +39,8 @@ class GradeBookRow(BaseModel):
     student_name: str
     email: str
     grades: list[GradeEntryRead]
-    course_average: Decimal
-    letter_grade: str | None
+    weighted_average: Decimal  # weighted average (1.0 - 5.0)
+    final_grade: int | None  # rounded to nearest integer 1-5
 
 
 class GradeBookRead(BaseModel):
@@ -49,6 +52,6 @@ class GradeBookRead(BaseModel):
 class StudentGradeSummary(BaseModel):
     course_id: uuid.UUID
     course_title: str
-    average: Decimal
-    letter_grade: str | None
+    weighted_average: Decimal  # 1.0 - 5.0
+    final_grade: int | None  # rounded integer 1-5
     entries: list[GradeEntryRead]

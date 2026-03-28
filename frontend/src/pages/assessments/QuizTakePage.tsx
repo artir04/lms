@@ -16,7 +16,7 @@ export function QuizTakePage() {
   const [result, setResult] = useState<Submission | null>(null)
 
   if (isLoading) return <PageLoader />
-  if (!quiz) return <div className="text-center text-slate-500 py-16">Quiz not found</div>
+  if (!quiz) return <div className="text-center text-ink-muted py-16">Quiz not found</div>
 
   if (result) {
     const score = result.score !== null && result.score !== undefined ? Number(result.score) : null
@@ -31,50 +31,50 @@ export function QuizTakePage() {
         <div className="card p-8 text-center">
           {isPending ? (
             <>
-              <Clock className="h-16 w-16 text-yellow-500 mx-auto mb-4" />
-              <h2 className="text-2xl font-bold text-white mb-2">Submitted for Grading</h2>
-              <p className="text-slate-500">Your essay answers require manual grading. You'll see your score once your teacher reviews them.</p>
+              <Clock className="h-16 w-16 text-amber-400 mx-auto mb-4" />
+              <h2 className="text-2xl font-bold text-ink mb-2 font-display">Submitted for Grading</h2>
+              <p className="text-ink-muted">Your essay answers require manual grading. You'll see your score once your teacher reviews them.</p>
             </>
           ) : (
             <>
-              <Trophy className={cn('h-16 w-16 mx-auto mb-4', score !== null && score >= 70 ? 'text-green-500' : 'text-red-500')} />
-              <h2 className="text-2xl font-bold text-white mb-1">Quiz Complete!</h2>
-              <p className="text-5xl font-bold text-primary-600 mb-2">{score !== null ? formatGrade(score) : '—'}</p>
-              <p className="text-slate-500">{correctCount} of {totalAnswered} questions correct</p>
+              <Trophy className={cn('h-16 w-16 mx-auto mb-4', score !== null && score >= 70 ? 'text-emerald-400' : 'text-red-400')} />
+              <h2 className="text-2xl font-bold text-ink mb-1 font-display">Quiz Complete!</h2>
+              <p className="text-5xl font-bold text-primary-400 mb-2 font-display">{score !== null ? formatGrade(score) : '\u2014'}</p>
+              <p className="text-ink-muted">{correctCount} of {totalAnswered} questions correct</p>
             </>
           )}
         </div>
 
         {/* Per-question breakdown */}
         {isGraded && result.answers && result.answers.length > 0 && (
-          <div className="card divide-y divide-slate-700/40">
-            <div className="px-6 py-3 bg-slate-800/50 rounded-t-xl">
-              <h3 className="text-sm font-semibold text-slate-300">Answer Review</h3>
+          <div className="card divide-y divide-border/60">
+            <div className="px-6 py-3 bg-surface-elevated/50 rounded-t-xl">
+              <h3 className="text-sm font-semibold text-ink-secondary font-display">Answer Review</h3>
             </div>
             {result.answers.map((answer, i) => {
               const question = quiz.questions?.find((q) => q.id === answer.question_id)
               return (
                 <div key={answer.id} className="px-6 py-4 flex items-start gap-3">
                   <div className="mt-0.5 flex-shrink-0">
-                    {answer.is_correct === true && <CheckCircle className="h-5 w-5 text-green-500" />}
-                    {answer.is_correct === false && <XCircle className="h-5 w-5 text-red-500" />}
-                    {answer.is_correct === null && <AlertCircle className="h-5 w-5 text-slate-500" />}
+                    {answer.is_correct === true && <CheckCircle className="h-5 w-5 text-emerald-400" />}
+                    {answer.is_correct === false && <XCircle className="h-5 w-5 text-red-400" />}
+                    {answer.is_correct === null && <AlertCircle className="h-5 w-5 text-ink-muted" />}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-white mb-1">
+                    <p className="text-sm font-medium text-ink mb-1">
                       Q{i + 1}. {question?.text ?? 'Question'}
                     </p>
                     {answer.text_response && (
-                      <p className="text-sm text-slate-400 italic">"{answer.text_response}"</p>
+                      <p className="text-sm text-ink-secondary italic">"{answer.text_response}"</p>
                     )}
                     {answer.feedback && (
-                      <p className="text-sm text-blue-600 mt-1">{answer.feedback}</p>
+                      <p className="text-sm text-sky-400 mt-1">{answer.feedback}</p>
                     )}
                   </div>
-                  <div className="text-sm font-semibold text-right flex-shrink-0">
+                  <div className="text-sm font-semibold text-right flex-shrink-0 text-ink-secondary">
                     {answer.points_earned !== null && answer.points_earned !== undefined
                       ? `${Number(answer.points_earned)}/${Number(question?.points ?? 0)} pts`
-                      : '—'}
+                      : '\u2014'}
                   </div>
                 </div>
               )
@@ -92,8 +92,8 @@ export function QuizTakePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-white">{quiz.title}</h1>
-        {quiz.instructions && <p className="mt-1 text-slate-500">{quiz.instructions}</p>}
+        <h1 className="text-2xl font-bold text-ink font-display">{quiz.title}</h1>
+        {quiz.instructions && <p className="mt-1 text-ink-muted">{quiz.instructions}</p>}
       </div>
       <QuizPlayer
         quiz={quiz}

@@ -16,7 +16,7 @@ export function AnalyticsPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-white">Analytics</h2>
+        <h2 className="text-2xl font-bold text-ink font-display">Analytics</h2>
         <select
           value={days}
           onChange={(e) => setDays(Number(e.target.value))}

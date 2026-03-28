@@ -72,3 +72,27 @@ async def upload_attachment(course_id: uuid.UUID, lesson_id: uuid.UUID, file: Up
     svc = ContentService(db)
     attachment = await svc.upload_attachment(lesson_id, file)
     return {**attachment.__dict__, "url": svc.get_attachment_url(attachment.storage_key)}
+
+
+@router.put("/modules/reorder", response_model=MessageResponse, dependencies=[require_roles(Role.TEACHER, Role.ADMIN)])
+async def reorder_modules(course_id: uuid.UUID, positions: list[dict], db=Depends(get_db)):
+    """Reorder modules. positions = [{"id": "...", "position": 0}, ...]"""
+    service = ContentService(db)
+    for item in positions:
+        mod = await service.get_module(uuid.UUID(item["id"]))
+        mod.position = item["position"]
+    await db.flush()
+    await db.commit()
+    return MessageResponse(message="Modules reordered")
+
+
+@router.put("/modules/{module_id}/lessons/reorder", response_model=MessageResponse, dependencies=[require_roles(Role.TEACHER, Role.ADMIN)])
+async def reorder_lessons(course_id: uuid.UUID, module_id: uuid.UUID, positions: list[dict], db=Depends(get_db)):
+    """Reorder lessons within a module. positions = [{"id": "...", "position": 0}, ...]"""
+    service = ContentService(db)
+    for item in positions:
+        lesson = await service.get_lesson(uuid.UUID(item["id"]))
+        lesson.position = item["position"]
+    await db.flush()
+    await db.commit()
+    return MessageResponse(message="Lessons reordered")

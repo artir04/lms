@@ -14,9 +14,9 @@ export function timeAgo(iso: string) {
 
 export function formatGrade(score: number | string | null | undefined): string {
   if (score === null || score === undefined) return '—'
-  const n = Number(score)
+  const n = typeof score === 'string' ? parseFloat(score) : score
   if (isNaN(n)) return '—'
-  return `${n.toFixed(1)}%`
+  return n.toFixed(2)
 }
 
 export function formatFileSize(bytes: number): string {
@@ -25,10 +25,11 @@ export function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-export const LETTER_GRADE_COLORS: Record<string, string> = {
-  A: 'badge-green',
-  B: 'badge-blue',
-  C: 'badge-yellow',
-  D: 'badge-yellow',
-  F: 'badge-red',
+/** Kosovo grading system: 5 (highest) to 1 (lowest) */
+export const NUMERIC_GRADE_COLORS: Record<number, string> = {
+  5: 'badge-green',
+  4: 'badge-blue',
+  3: 'badge-yellow',
+  2: 'badge-yellow',
+  1: 'badge-red',
 }

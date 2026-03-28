@@ -35,7 +35,7 @@ export function MessagingPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-white">Messages</h2>
+        <h2 className="text-2xl font-bold text-ink font-display">Messages</h2>
         <button onClick={() => setShowCompose(true)} className="btn-primary">
           <Plus className="h-4 w-4" />
           Compose
@@ -44,7 +44,7 @@ export function MessagingPage() {
 
       <div className="card flex overflow-hidden" style={{ height: 'calc(100vh - 200px)' }}>
         {/* Thread list */}
-        <div className="w-80 flex-shrink-0 border-r border-slate-700 overflow-y-auto">
+        <div className="w-80 flex-shrink-0 border-r border-border overflow-y-auto custom-scroll">
           {isLoading ? (
             <div className="flex justify-center py-8"><PageLoader /></div>
           ) : threads?.length ? (
@@ -53,24 +53,24 @@ export function MessagingPage() {
                 key={t.id}
                 onClick={() => setSelectedThreadId(t.id)}
                 className={cn(
-                  'w-full text-left px-4 py-4 border-b border-slate-700/60 hover:bg-slate-800/50 transition-colors',
-                  selectedThreadId === t.id && 'bg-primary-50'
+                  'w-full text-left px-4 py-4 border-b border-border/60 hover:bg-surface-elevated transition-colors',
+                  selectedThreadId === t.id && 'bg-primary-500/[0.06]'
                 )}
               >
                 <div className="flex items-center justify-between mb-1">
-                  <span className="font-medium text-sm text-white line-clamp-1">{t.subject}</span>
+                  <span className="font-medium text-sm text-ink line-clamp-1">{t.subject}</span>
                   {t.unread_count > 0 && (
-                    <span className="bg-primary-600 text-white text-xs rounded-full px-1.5 py-0.5">{t.unread_count}</span>
+                    <span className="bg-primary-500 text-white text-xs rounded-full px-1.5 py-0.5">{t.unread_count}</span>
                   )}
                 </div>
                 {t.last_message && (
-                  <p className="text-xs text-slate-500 line-clamp-1">{t.last_message.body}</p>
+                  <p className="text-xs text-ink-muted line-clamp-1">{t.last_message.body}</p>
                 )}
-                {t.created_at && <p className="text-xs text-slate-500 mt-1">{timeAgo(t.created_at)}</p>}
+                {t.created_at && <p className="text-xs text-ink-faint mt-1">{timeAgo(t.created_at)}</p>}
               </button>
             ))
           ) : (
-            <div className="text-center py-12 text-slate-500">
+            <div className="text-center py-12 text-ink-muted">
               <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-40" />
               <p className="text-sm">No messages yet</p>
             </div>
@@ -80,21 +80,21 @@ export function MessagingPage() {
         {/* Message thread */}
         {selectedThreadId && thread ? (
           <div className="flex-1 flex flex-col">
-            <div className="px-5 py-4 border-b border-slate-700">
-              <h3 className="font-semibold text-white">{(thread as any).subject}</h3>
+            <div className="px-5 py-4 border-b border-border">
+              <h3 className="font-semibold text-ink font-display">{(thread as any).subject}</h3>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-5 space-y-3">
+            <div className="flex-1 overflow-y-auto custom-scroll p-5 space-y-3">
               {(thread as any).messages?.map((msg: any) => {
                 const isOwn = msg.sender_id === user?.id
                 return (
                   <div key={msg.id} className={cn('flex gap-3', isOwn && 'flex-row-reverse')}>
                     <div className={cn(
                       'max-w-xs lg:max-w-sm px-4 py-2.5 rounded-2xl text-sm',
-                      isOwn ? 'bg-primary-600 text-white rounded-tr-sm' : 'bg-slate-700/50 text-slate-100 rounded-tl-sm'
+                      isOwn ? 'bg-primary-500 text-white rounded-tr-sm' : 'bg-surface-elevated text-ink rounded-tl-sm'
                     )}>
                       <p>{msg.body}</p>
-                      <p className={cn('text-xs mt-1', isOwn ? 'text-primary-200' : 'text-slate-500')}>
+                      <p className={cn('text-xs mt-1', isOwn ? 'text-primary-200' : 'text-ink-muted')}>
                         {timeAgo(msg.sent_at)}
                       </p>
                     </div>
@@ -103,7 +103,7 @@ export function MessagingPage() {
               })}
             </div>
 
-            <div className="p-4 border-t border-slate-700 flex gap-3">
+            <div className="p-4 border-t border-border flex gap-3">
               <input
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
@@ -117,9 +117,9 @@ export function MessagingPage() {
             </div>
           </div>
         ) : (
-          <div className="flex-1 flex items-center justify-center text-slate-500">
+          <div className="flex-1 flex items-center justify-center text-ink-muted">
             <div className="text-center">
-              <MessageSquare className="h-12 w-12 mx-auto mb-3 opacity-40" />
+              <MessageSquare className="h-12 w-12 mx-auto mb-3 opacity-30" />
               <p>Select a conversation</p>
             </div>
           </div>

@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { User } from '@/types/user'
 import { cookieManager } from '@/utils/cookieManager'
+import { queryClient } from '@/config/queryClient'
 
 interface AuthState {
   user: User | null
@@ -40,6 +41,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     cookieManager.delete('accessToken')
     cookieManager.delete('refreshToken')
     set({ user: null, accessToken: null, refreshToken: null, isAuthenticated: false })
+    queryClient.clear()
   },
 
   initializeFromCookies: () => {

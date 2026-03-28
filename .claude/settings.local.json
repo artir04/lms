@@ -26,7 +26,9 @@
       "Bash(find . -name *.log -maxdepth 3)",
       "Bash(python -c \"import ast; ast.parse\\(open\\(''app/services/analytics_service.py''\\).read\\(\\)\\); ast.parse\\(open\\(''app/services/gamification_service.py''\\).read\\(\\)\\); ast.parse\\(open\\(''app/api/v1/analytics.py''\\).read\\(\\)\\); print\\(''All files parse OK''\\)\")",
       "Bash(python -c \"import ast; ast.parse\\(open\\(''app/db/init_db.py''\\).read\\(\\)\\); print\\(''OK''\\)\")",
-      "Bash(docker compose:*)"
+      "Bash(docker compose:*)",
+      "Bash(find /c/Users/AralytiKS/Documents/GitHub/lms/frontend/src -type f \\\\\\(-name *quiz* -o -name *assessment* -o -name *submission* \\\\\\))",
+      "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")"
     ]
   },
   "enabledPlugins": {}

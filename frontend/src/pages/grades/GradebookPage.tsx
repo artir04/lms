@@ -114,24 +114,24 @@ export function GradebookPage() {
                             <span className={cn('text-lg font-bold', GRADE_BG[entry.grade] || 'text-ink-muted')}>
                               {entry.grade}
                             </span>
-                            <span className="text-[10px] text-ink-faint">\u00D7{entry.weight}</span>
+                            <span className="text-[10px] text-ink-faint">×{entry.weight}</span>
                             <Pencil className="h-3 w-3 text-ink-faint opacity-0 group-hover:opacity-100 transition-opacity" />
                           </button>
                         ) : (
-                          <span className="text-ink-faint">\u2014</span>
+                          <span className="text-ink-faint">—</span>
                         )}
                       </td>
                     )
                   })}
                   <td className="px-4 py-3 text-center font-medium text-ink">
-                    {Number(row.weighted_average) > 0 ? Number(row.weighted_average).toFixed(2) : '\u2014'}
+                    {Number(row.weighted_average) > 0 ? Number(row.weighted_average).toFixed(2) : '—'}
                   </td>
                   <td className="px-4 py-3 text-center">
                     {row.final_grade != null ? (
                       <span className={cn('badge', GRADE_COLORS[row.final_grade] || 'badge-gray')}>
                         {row.final_grade}
                       </span>
-                    ) : '\u2014'}
+                    ) : '—'}
                   </td>
                 </tr>
               ))}

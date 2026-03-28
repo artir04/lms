@@ -9,7 +9,6 @@ export const ROUTES = {
   QUIZ_TAKE: (quizId: string) => `/quizzes/${quizId}/take`,
   GRADEBOOK: (courseId: string) => `/courses/${courseId}/gradebook`,
   MY_GRADES: '/grades',
-  MESSAGING: '/messaging',
   ATTENDANCE: '/attendance',
   COURSE_ATTENDANCE: (id: string) => `/courses/${id}/attendance`,
   COURSE_ATTENDANCE_REPORT: (id: string) => `/courses/${id}/attendance/report`,

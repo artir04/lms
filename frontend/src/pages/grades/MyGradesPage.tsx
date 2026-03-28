@@ -41,7 +41,7 @@ export function MyGradesPage() {
                 <h3 className="font-semibold text-ink font-display">{summary.course_title}</h3>
                 <div className="flex items-center gap-3">
                   <span className="text-sm text-ink-secondary">
-                    Avg: <span className="text-ink font-medium">{Number(summary.weighted_average) > 0 ? Number(summary.weighted_average).toFixed(2) : '\u2014'}</span>
+                    Avg: <span className="text-ink font-medium">{Number(summary.weighted_average) > 0 ? Number(summary.weighted_average).toFixed(2) : '—'}</span>
                   </span>
                   {summary.final_grade != null && (
                     <span className={cn('w-9 h-9 flex items-center justify-center rounded-full text-sm font-bold', GRADE_COLORS[summary.final_grade] || 'text-ink-muted bg-surface-elevated')}>

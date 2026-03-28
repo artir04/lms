@@ -30,6 +30,9 @@ async def create_quiz(course_id: uuid.UUID, data: QuizCreate, db=Depends(get_db)
 
 @router.get("/quizzes/{quiz_id}", response_model=QuizDetailRead)
 async def get_quiz(quiz_id: uuid.UUID, payload: CurrentUserPayload, db=Depends(get_db)):
+    from sqlalchemy import select, func
+    from app.models.assessment import Submission
+
     service = AssessmentService(db)
     quiz = await service.get_quiz(quiz_id)
     is_student = "student" in payload.get("roles", []) and "teacher" not in payload.get("roles", [])
@@ -41,6 +44,15 @@ async def get_quiz(quiz_id: uuid.UUID, payload: CurrentUserPayload, db=Depends(g
         for q in quiz_read.questions:
             for opt in q.options:
                 opt.is_correct = None
+
+        # Include how many attempts the student has used
+        student_id = uuid.UUID(payload["sub"])
+        result = await db.execute(
+            select(func.count()).select_from(Submission).where(
+                Submission.quiz_id == quiz_id, Submission.student_id == student_id
+            )
+        )
+        quiz_read.attempts_used = result.scalar_one()
         return quiz_read
     return quiz
 

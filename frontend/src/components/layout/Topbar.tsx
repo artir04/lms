@@ -16,7 +16,6 @@ const PAGE_TITLES: Record<string, string> = {
   '/dashboard': 'Dashboard',
   '/courses': 'Courses',
   '/grades': 'My Grades',
-  '/messaging': 'Messages',
   '/analytics': 'Analytics',
   '/gamification': 'Achievements',
   '/parent': 'Parent Dashboard',
@@ -40,12 +39,11 @@ function getPageTitle(pathname: string): string {
 }
 
 const NOTIFICATION_ICONS: Record<string, string> = {
-  grade: '\u{1F4DD}',
-  attendance: '\u{1F4CB}',
-  quiz: '\u{1F4D6}',
-  message: '\u{1F4AC}',
-  badge: '\u{1F3C6}',
-  system: '\u{1F514}',
+  grade: '📝',
+  attendance: '📋',
+  quiz: '📖',
+  badge: '🏆',
+  system: '🔔',
 }
 
 export function Topbar({ title, onMenuClick }: TopbarProps) {
@@ -103,7 +101,7 @@ export function Topbar({ title, onMenuClick }: TopbarProps) {
         <Search className="w-3.5 h-3.5 shrink-0" />
         <span>Search...</span>
         <kbd className="ml-auto text-[10px] bg-surface-overlay text-ink-muted px-1.5 py-0.5 rounded font-mono hidden lg:block">
-          \u2318K
+          ⌘K
         </kbd>
       </button>
 

@@ -51,14 +51,14 @@ export function ReportsPage() {
         <div className="card p-5 text-center">
           <TrendingUp className="w-6 h-6 text-emerald-400 mx-auto mb-2" />
           <p className="text-2xl font-bold text-ink font-display">
-            {report.avg_platform_grade != null ? formatGrade(report.avg_platform_grade) : '\u2014'}
+            {report.avg_platform_grade != null ? formatGrade(report.avg_platform_grade) : '—'}
           </p>
           <p className="text-xs text-ink-muted uppercase mt-1">Avg Platform Grade</p>
         </div>
         <div className="card p-5 text-center">
           <Users className="w-6 h-6 text-amber-400 mx-auto mb-2" />
           <p className="text-2xl font-bold text-ink font-display">
-            {report.avg_attendance_rate != null ? `${report.avg_attendance_rate}%` : '\u2014'}
+            {report.avg_attendance_rate != null ? `${report.avg_attendance_rate}%` : '—'}
           </p>
           <p className="text-xs text-ink-muted uppercase mt-1">Avg Attendance Rate</p>
         </div>
@@ -89,7 +89,7 @@ export function ReportsPage() {
                   <td className="px-5 py-3 text-center">
                     {c.avg_grade != null ? (
                       <span className="text-ink font-medium">{formatGrade(c.avg_grade)}</span>
-                    ) : '\u2014'}
+                    ) : '—'}
                   </td>
                   <td className="px-5 py-3 text-center">
                     {c.avg_attendance_rate != null ? (
@@ -100,7 +100,7 @@ export function ReportsPage() {
                       )}>
                         {c.avg_attendance_rate}%
                       </span>
-                    ) : '\u2014'}
+                    ) : '—'}
                   </td>
                 </tr>
               ))}

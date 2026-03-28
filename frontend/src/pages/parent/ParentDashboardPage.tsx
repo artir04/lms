@@ -56,13 +56,13 @@ export function ParentDashboardPage() {
                   </div>
                   <div>
                     <p className="text-lg font-bold text-ink font-display">
-                      {child.overall_average != null ? formatGrade(child.overall_average) : '\u2014'}
+                      {child.overall_average != null ? formatGrade(child.overall_average) : '—'}
                     </p>
                     <p className="text-[10px] text-ink-muted uppercase">Average</p>
                   </div>
                   <div>
                     <p className={cn('text-lg font-bold font-display', child.attendance_rate != null && child.attendance_rate >= 90 ? 'text-emerald-400' : child.attendance_rate != null && child.attendance_rate >= 75 ? 'text-amber-400' : 'text-rose-400')}>
-                      {child.attendance_rate != null ? `${child.attendance_rate}%` : '\u2014'}
+                      {child.attendance_rate != null ? `${child.attendance_rate}%` : '—'}
                     </p>
                     <p className="text-[10px] text-ink-muted uppercase">Attendance</p>
                   </div>
@@ -127,14 +127,14 @@ export function ParentDashboardPage() {
                             <td className="px-5 py-3 text-ink font-medium">{c.course_title}</td>
                             <td className="px-5 py-3 text-center text-ink-secondary">{c.entry_count}</td>
                             <td className="px-5 py-3 text-center text-ink font-medium">
-                              {c.weighted_average != null ? formatGrade(c.weighted_average) : '\u2014'}
+                              {c.weighted_average != null ? formatGrade(c.weighted_average) : '—'}
                             </td>
                             <td className="px-5 py-3 text-center">
                               {c.final_grade != null ? (
                                 <span className={cn('text-lg font-bold', GRADE_COLORS[c.final_grade] || 'text-ink-muted')}>
                                   {c.final_grade}
                                 </span>
-                              ) : '\u2014'}
+                              ) : '—'}
                             </td>
                           </tr>
                         ))}

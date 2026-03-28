@@ -11,7 +11,6 @@ import { QuizTakePage } from '@/pages/assessments/QuizTakePage'
 import { QuizBuilderPage } from '@/pages/assessments/QuizBuilderPage'
 import { MyGradesPage } from '@/pages/grades/MyGradesPage'
 import { GradebookPage } from '@/pages/grades/GradebookPage'
-import { MessagingPage } from '@/pages/messaging/MessagingPage'
 import { AnalyticsPage } from '@/pages/analytics/AnalyticsPage'
 import { GamificationPage } from '@/pages/gamification/GamificationPage'
 import { ParentDashboardPage } from '@/pages/parent/ParentDashboardPage'
@@ -44,7 +43,6 @@ export const router = createBrowserRouter([
           { path: 'quizzes/:quizId/take', element: <QuizTakePage /> },
           { path: 'grades', element: <MyGradesPage /> },
           { path: 'attendance', element: <StudentAttendancePage /> },
-          { path: 'messaging', element: <MessagingPage /> },
           { path: 'gamification', element: <GamificationPage /> },
           // Parent only routes
           {

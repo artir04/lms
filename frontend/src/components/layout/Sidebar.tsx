@@ -3,7 +3,6 @@ import {
   LayoutDashboard,
   BookOpen,
   GraduationCap,
-  MessageSquare,
   BarChart3,
   Users,
   Settings,
@@ -64,7 +63,6 @@ export function Sidebar({ onClose }: SidebarProps) {
               { to: ROUTES.GAMIFICATION, icon: Trophy, label: 'Achievements' },
             ]
           : []),
-        { to: ROUTES.MESSAGING, icon: MessageSquare, label: 'Messages' },
         ...(isTeacher || isAdmin
           ? [{ to: ROUTES.ANALYTICS, icon: BarChart3, label: 'Analytics' }]
           : []),

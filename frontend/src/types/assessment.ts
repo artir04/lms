@@ -27,6 +27,7 @@ export interface Quiz {
   total_points: number
   created_at: string
   questions?: Question[]
+  attempts_used?: number | null
 }
 
 export interface Answer {

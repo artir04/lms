@@ -76,6 +76,7 @@ class QuizRead(BaseModel):
 
 class QuizDetailRead(QuizRead):
     questions: list[QuestionRead]
+    attempts_used: int | None = None
 
 
 class AnswerSubmit(BaseModel):

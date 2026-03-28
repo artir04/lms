@@ -165,7 +165,7 @@ export function LoginPage() {
                 <input
                   {...register('password')}
                   type={showPw ? 'text' : 'password'}
-                  placeholder="\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022"
+                  placeholder="••••••••"
                   className={cn(errors.password ? 'input input-error' : 'input', 'pr-10')}
                   autoComplete="current-password"
                 />

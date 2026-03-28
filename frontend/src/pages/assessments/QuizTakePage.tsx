@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom'
-import { CheckCircle, XCircle, Clock, Trophy, AlertCircle } from 'lucide-react'
+import { CheckCircle, XCircle, Clock, Trophy, AlertCircle, ShieldX } from 'lucide-react'
 import { useState } from 'react'
 import { useQuiz, useSubmitQuiz } from '@/api/assessments'
 import { QuizPlayer } from '@/components/assessment/QuizPlayer'
@@ -14,9 +14,28 @@ export function QuizTakePage() {
   const { data: quiz, isLoading } = useQuiz(quizId!)
   const { mutate: submit, isPending } = useSubmitQuiz(quizId!)
   const [result, setResult] = useState<Submission | null>(null)
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   if (isLoading) return <PageLoader />
   if (!quiz) return <div className="text-center text-ink-muted py-16">Quiz not found</div>
+
+  const attemptsExhausted =
+    quiz.attempts_used != null && quiz.attempts_used >= quiz.max_attempts
+
+  if (attemptsExhausted) {
+    return (
+      <div className="max-w-md mx-auto py-16 text-center space-y-4">
+        <ShieldX className="h-16 w-16 text-red-400 mx-auto" />
+        <h2 className="text-xl font-bold text-ink font-display">No Attempts Remaining</h2>
+        <p className="text-ink-muted">
+          You have used all {quiz.max_attempts} attempt{quiz.max_attempts !== 1 ? 's' : ''} for this quiz.
+        </p>
+        <button onClick={() => navigate(-1)} className="btn-primary">
+          Back to Course
+        </button>
+      </div>
+    )
+  }
 
   if (result) {
     const score = result.score !== null && result.score !== undefined ? Number(result.score) : null
@@ -39,7 +58,7 @@ export function QuizTakePage() {
             <>
               <Trophy className={cn('h-16 w-16 mx-auto mb-4', score !== null && score >= 70 ? 'text-emerald-400' : 'text-red-400')} />
               <h2 className="text-2xl font-bold text-ink mb-1 font-display">Quiz Complete!</h2>
-              <p className="text-5xl font-bold text-primary-400 mb-2 font-display">{score !== null ? formatGrade(score) : '\u2014'}</p>
+              <p className="text-5xl font-bold text-primary-400 mb-2 font-display">{score !== null ? formatGrade(score) : '—'}</p>
               <p className="text-ink-muted">{correctCount} of {totalAnswered} questions correct</p>
             </>
           )}
@@ -74,7 +93,7 @@ export function QuizTakePage() {
                   <div className="text-sm font-semibold text-right flex-shrink-0 text-ink-secondary">
                     {answer.points_earned !== null && answer.points_earned !== undefined
                       ? `${Number(answer.points_earned)}/${Number(question?.points ?? 0)} pts`
-                      : '\u2014'}
+                      : '—'}
                   </div>
                 </div>
               )
@@ -95,9 +114,22 @@ export function QuizTakePage() {
         <h1 className="text-2xl font-bold text-ink font-display">{quiz.title}</h1>
         {quiz.instructions && <p className="mt-1 text-ink-muted">{quiz.instructions}</p>}
       </div>
+      {submitError && (
+        <div className="bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 text-sm text-red-400">
+          {submitError}
+        </div>
+      )}
       <QuizPlayer
         quiz={quiz}
-        onSubmit={(answers) => submit(answers, { onSuccess: setResult })}
+        onSubmit={(answers) =>
+          submit(answers, {
+            onSuccess: setResult,
+            onError: (err: any) => {
+              const message = err?.response?.data?.detail || 'Failed to submit quiz. Please try again.'
+              setSubmitError(message)
+            },
+          })
+        }
         isSubmitting={isPending}
       />
     </div>

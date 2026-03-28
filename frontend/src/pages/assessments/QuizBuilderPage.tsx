@@ -110,8 +110,8 @@ export function QuizBuilderPage() {
         <div className="flex-1">
           <h1 className="text-2xl font-bold text-ink font-display">{quiz.title}</h1>
           <p className="text-sm text-ink-muted">
-            {quiz.question_count} questions \u00b7 {quiz.total_points} pts
-            {quiz.is_published ? ' \u00b7 Published' : ' \u00b7 Draft'}
+            {quiz.question_count} questions · {quiz.total_points} pts
+            {quiz.is_published ? ' · Published' : ' · Draft'}
           </p>
         </div>
         <button onClick={() => setShowSettings(true)} className="btn-secondary text-sm">
@@ -125,7 +125,7 @@ export function QuizBuilderPage() {
           <div key={q.id} className="card p-5">
             <div className="flex items-start justify-between gap-3">
               <div className="flex-1">
-                <p className="text-xs text-ink-muted mb-1">Q{idx + 1} \u00b7 {QUESTION_TYPES.find((t) => t.value === q.question_type)?.label} \u00b7 {q.points} pts</p>
+                <p className="text-xs text-ink-muted mb-1">Q{idx + 1} · {QUESTION_TYPES.find((t) => t.value === q.question_type)?.label} · {q.points} pts</p>
                 <p className="font-medium text-ink">{q.text}</p>
                 {q.options.length > 0 && (
                   <ul className="mt-3 space-y-1.5">

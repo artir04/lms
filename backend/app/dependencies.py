@@ -74,3 +74,7 @@ def require_teacher():
 
 def require_superadmin():
     return require_roles(Role.SUPERADMIN)
+
+
+def require_parent():
+    return require_roles(Role.PARENT)

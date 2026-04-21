@@ -19,9 +19,10 @@ export function useAuth() {
     roles.some((r) => currentUser?.roles.includes(r))
 
   const isStudent = hasRole('student')
+  const isParent = hasRole('parent')
   const isTeacher = hasRole('teacher', 'admin', 'superadmin')
   const isAdmin = hasRole('admin', 'superadmin')
   const isSuperAdmin = hasRole('superadmin')
 
-  return { user: currentUser, isAuthenticated, accessToken, logout, hasRole, isStudent, isTeacher, isAdmin, isSuperAdmin }
+  return { user: currentUser, isAuthenticated, accessToken, logout, hasRole, isStudent, isParent, isTeacher, isAdmin, isSuperAdmin }
 }

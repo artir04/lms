@@ -12,6 +12,7 @@ import {
   BookMarked,
   ChevronRight,
   Calendar,
+  Baby,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { Avatar } from '@/components/ui/Avatar'
@@ -32,7 +33,7 @@ interface NavSection {
 }
 
 export function Sidebar({ onClose }: SidebarProps) {
-  const { user, isStudent, isTeacher, isAdmin, logout } = useAuth()
+  const { user, isStudent, isParent, isTeacher, isAdmin, logout } = useAuth()
   const navigate = useNavigate()
 
   const handleLogout = () => {
@@ -44,8 +45,12 @@ export function Sidebar({ onClose }: SidebarProps) {
     {
       label: 'Main',
       items: [
-        { to: ROUTES.DASHBOARD, icon: LayoutDashboard, label: 'Dashboard', end: true },
-        { to: ROUTES.COURSES, icon: BookOpen, label: 'Courses' },
+        ...(isParent
+          ? [{ to: ROUTES.PARENT, icon: Baby, label: 'Parent Portal', end: true }]
+          : [
+              { to: ROUTES.DASHBOARD, icon: LayoutDashboard, label: 'Dashboard', end: true },
+              { to: ROUTES.COURSES, icon: BookOpen, label: 'Courses' },
+            ]),
       ],
     },
     {

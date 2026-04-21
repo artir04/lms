@@ -16,6 +16,10 @@ export const ROUTES = {
   ANALYTICS: '/analytics',
   ADMIN_USERS: '/admin/users',
   ADMIN_SETTINGS: '/admin/settings',
+  PARENT: '/parent',
+  PARENT_CHILD: (id: string) => `/parent/children/${id}`,
+  PARENT_CHILD_GRADES: (id: string) => `/parent/children/${id}/grades`,
+  PARENT_CHILD_ATTENDANCE: (id: string) => `/parent/children/${id}/attendance`,
   FORBIDDEN: '/403',
   NOT_FOUND: '/404',
 } as const

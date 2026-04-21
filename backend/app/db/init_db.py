@@ -9,7 +9,7 @@ from app.config import get_settings
 
 settings = get_settings()
 
-ROLES = ["superadmin", "admin", "teacher", "student"]
+ROLES = ["superadmin", "admin", "teacher", "student", "parent"]
 
 
 async def init_db():

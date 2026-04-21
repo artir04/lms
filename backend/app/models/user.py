@@ -8,6 +8,7 @@ from app.db.base import Base, UUIDPrimaryKeyMixin, TimestampMixin
 
 if TYPE_CHECKING:
     from app.models.tenant import District, School
+    from app.models.parent_child import ParentChildLink
 
 
 class Role(Base):
@@ -55,6 +56,13 @@ class User(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     school: Mapped["School | None"] = relationship("School", back_populates="users")
     user_roles: Mapped[list["UserRole"]] = relationship(
         "UserRole", back_populates="user", cascade="all, delete-orphan"
+    )
+    # Relationships for parent-child links
+    parent_children: Mapped[list["ParentChildLink"]] = relationship(
+        "ParentChildLink", foreign_keys="ParentChildLink.parent_id", back_populates="parent", cascade="all, delete-orphan"
+    )
+    student_parents: Mapped[list["ParentChildLink"]] = relationship(
+        "ParentChildLink", foreign_keys="ParentChildLink.student_id", back_populates="student", cascade="all, delete-orphan"
     )
 
     @property

@@ -6,10 +6,12 @@ class Role(StrEnum):
     ADMIN = "admin"
     TEACHER = "teacher"
     STUDENT = "student"
+    PARENT = "parent"
 
 
 # Role hierarchy: higher index = more privilege
-ROLE_HIERARCHY = [Role.STUDENT, Role.TEACHER, Role.ADMIN, Role.SUPERADMIN]
+# Parent is at the same level as student but has different access patterns (read-only child data)
+ROLE_HIERARCHY = [Role.STUDENT, Role.PARENT, Role.TEACHER, Role.ADMIN, Role.SUPERADMIN]
 
 
 def has_role(user_roles: list[str], required: Role) -> bool:

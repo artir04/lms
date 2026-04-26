@@ -1,14 +1,25 @@
 import uuid
+import logging
 from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
 from sqlalchemy.orm import selectinload
 
+from app.config import get_settings
 from app.models.user import User
 from app.models.tenant import District
-from app.core.security import verify_password, create_access_token, create_refresh_token, decode_token
-from app.core.exceptions import UnauthorizedError, NotFoundError
-from app.schemas.auth import LoginRequest, TokenResponse
+from app.core.security import (
+    verify_password,
+    hash_password,
+    create_access_token,
+    create_refresh_token,
+    create_password_reset_token,
+    decode_token,
+)
+from app.core.exceptions import UnauthorizedError, BadRequestError
+from app.schemas.auth import LoginRequest
+
+logger = logging.getLogger(__name__)
 
 
 class AuthService:
@@ -77,3 +88,55 @@ class AuthService:
             "refresh_token": create_refresh_token(user.id),
             "token_type": "bearer",
         }
+
+    async def forgot_password(self, email: str, tenant_slug: str) -> None:
+        """Generate a password reset token and dispatch the reset link.
+
+        Always succeeds silently — never reveals whether the account exists.
+        Email is `console` in dev, so the reset link is logged to stdout.
+        """
+        result = await self.db.execute(
+            select(District).where(District.slug == tenant_slug, District.is_active == True)
+        )
+        district = result.scalar_one_or_none()
+        if not district:
+            return
+
+        result = await self.db.execute(
+            select(User).where(
+                and_(
+                    User.email == email.lower(),
+                    User.tenant_id == district.id,
+                    User.is_active == True,
+                )
+            )
+        )
+        user = result.scalar_one_or_none()
+        if not user:
+            return
+
+        token = create_password_reset_token(user.id)
+        frontend_url = get_settings().FRONTEND_URL.rstrip("/")
+        reset_link = f"{frontend_url}/reset-password?token={token}"
+        logger.warning(
+            "[password-reset] %s -> %s (token expires in 1h)", user.email, reset_link
+        )
+
+    async def reset_password(self, token: str, new_password: str) -> None:
+        try:
+            payload = decode_token(token)
+        except ValueError:
+            raise BadRequestError("Invalid or expired reset token")
+        if payload.get("type") != "password_reset":
+            raise BadRequestError("Invalid token type")
+
+        user_id = uuid.UUID(payload["sub"])
+        result = await self.db.execute(
+            select(User).where(User.id == user_id, User.is_active == True)
+        )
+        user = result.scalar_one_or_none()
+        if not user:
+            raise BadRequestError("User not found")
+
+        user.password_hash = hash_password(new_password)
+        await self.db.flush()

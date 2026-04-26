@@ -4,6 +4,16 @@ export interface LoginRequest {
   tenant_slug: string
 }
 
+export interface ForgotPasswordRequest {
+  email: string
+  tenant_slug: string
+}
+
+export interface ResetPasswordRequest {
+  token: string
+  new_password: string
+}
+
 export interface TokenResponse {
   access_token: string
   refresh_token: string

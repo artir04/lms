@@ -2,6 +2,8 @@ import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { AppShell } from '@/components/layout/AppShell'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { LoginPage } from '@/pages/auth/LoginPage'
+import { ForgotPasswordPage } from '@/pages/auth/ForgotPasswordPage'
+import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage'
 import { DashboardPage } from '@/pages/dashboard/DashboardPage'
 import { CourseListPage } from '@/pages/courses/CourseListPage'
 import { CourseDetailPage } from '@/pages/courses/CourseDetailPage'
@@ -26,6 +28,14 @@ export const router = createBrowserRouter([
   {
     path: '/login',
     element: <LoginPage />,
+  },
+  {
+    path: '/forgot-password',
+    element: <ForgotPasswordPage />,
+  },
+  {
+    path: '/reset-password',
+    element: <ResetPasswordPage />,
   },
   {
     path: '/',

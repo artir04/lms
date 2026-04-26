@@ -1,7 +1,7 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import {
   Sparkles,
   AlertCircle,
@@ -160,7 +160,15 @@ export function LoginPage() {
             </div>
 
             <div>
-              <label className="label">Password</label>
+              <div className="flex items-center justify-between">
+                <label className="label">Password</label>
+                <Link
+                  to={ROUTES.FORGOT_PASSWORD}
+                  className="text-xs text-primary-400 hover:text-primary-300 transition-colors"
+                >
+                  Forgot password?
+                </Link>
+              </div>
               <div className="relative">
                 <input
                   {...register('password')}

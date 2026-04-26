@@ -9,7 +9,7 @@ from app.models.course import Course, Section, Enrollment
 from app.models.grade import GradeEntry
 from app.models.attendance import Attendance
 from app.models.assessment import Quiz, Submission
-from app.core.exceptions import NotFoundError, ForbiddenError
+from app.core.exceptions import NotFoundError, ForbiddenError, ConflictError
 from app.schemas.parent import (
     ChildSummary, ParentDigest, ChildProgressDetail,
     ChildCourseProgress, UpcomingItem, ChildAttendanceSummary,
@@ -22,6 +22,15 @@ class ParentService:
         self.db = db
 
     async def link_child(self, parent_id: uuid.UUID, student_id: uuid.UUID) -> ParentStudent:
+        existing = await self.db.execute(
+            select(ParentStudent).where(
+                ParentStudent.parent_id == parent_id,
+                ParentStudent.student_id == student_id,
+            )
+        )
+        if existing.scalar_one_or_none():
+            raise ConflictError("Parent is already linked to this student")
+
         link = ParentStudent(parent_id=parent_id, student_id=student_id)
         self.db.add(link)
         await self.db.flush()

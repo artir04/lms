@@ -76,8 +76,7 @@ class UserService:
                 self.db.add(UserRole(user_id=user.id, role_id=role.id))
 
         await self.db.flush()
-        await self.db.refresh(user)
-        return user
+        return await self.get_by_id(user.id, tenant_id)
 
     async def update_user(self, user_id: uuid.UUID, data: UserUpdate, tenant_id: uuid.UUID) -> User:
         user = await self.get_by_id(user_id, tenant_id)

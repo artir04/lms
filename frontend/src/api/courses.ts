@@ -10,7 +10,12 @@ export const courseKeys = {
   sections: (courseId: string) => [...courseKeys.detail(courseId), 'sections'] as const,
 }
 
-export function useCourses(params?: { page?: number; page_size?: number; search?: string }) {
+export function useCourses(params?: {
+  page?: number
+  page_size?: number
+  search?: string
+  teacher_id?: string
+}) {
   return useQuery<PaginatedResponse<Course>>({
     queryKey: courseKeys.list(params),
     queryFn: () => api.get('/courses', { params }).then((r) => r.data),

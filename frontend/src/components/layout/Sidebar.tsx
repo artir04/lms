@@ -68,6 +68,17 @@ export function Sidebar({ onClose }: SidebarProps) {
           : []),
       ],
     },
+    ...(isTeacher && !isAdmin
+      ? [
+          {
+            label: 'Teaching',
+            items: [
+              { to: ROUTES.TEACHER_ATTENDANCE, icon: Calendar, label: 'Attendance' },
+              { to: ROUTES.MY_STUDENTS, icon: Users, label: 'My Students' },
+            ],
+          },
+        ]
+      : []),
     ...(isAdmin
       ? [
           {

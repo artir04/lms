@@ -5,7 +5,6 @@ from app.schemas.user import UserSummary
 
 
 class AttendanceCreate(BaseModel):
-    date: date
     student_id: uuid.UUID
     status: str
     notes: str | None = None
@@ -56,3 +55,19 @@ class StudentAttendanceSummary(BaseModel):
     course_title: str
     attendance_records: list[AttendanceRead]
     attendance_rate: float
+
+
+class TeacherCourseAttendance(BaseModel):
+    course_id: uuid.UUID
+    course_title: str
+    student_count: int
+    marked_today: bool
+    today_present: int
+    today_absent: int
+    today_tardy: int
+    today_excused: int
+
+
+class TeacherAttendanceOverview(BaseModel):
+    date: date
+    courses: list[TeacherCourseAttendance]

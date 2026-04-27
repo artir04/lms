@@ -90,7 +90,12 @@ class AttendanceService:
         enrolled_student_ids = {e.student_id for e in section_result.scalars().all()}
 
         # Process each record
-        valid_statuses = [AttendanceStatus.PRESENT, AttendanceStatus.ABSENT, AttendanceStatus.TARDY]
+        valid_statuses = [
+            AttendanceStatus.PRESENT,
+            AttendanceStatus.ABSENT,
+            AttendanceStatus.TARDY,
+            AttendanceStatus.EXCUSED,
+        ]
         created_or_updated = []
 
         for record in records:

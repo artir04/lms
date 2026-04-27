@@ -51,3 +51,23 @@ export interface Submission {
   status: 'in_progress' | 'submitted' | 'graded'
   answers: Answer[]
 }
+
+export interface SubmissionListItem {
+  id: string
+  quiz_id: string
+  student_id: string
+  student_name: string
+  student_email: string
+  attempt_num: number
+  started_at: string
+  submitted_at: string | null
+  score: number | null
+  status: 'in_progress' | 'submitted' | 'graded'
+  needs_review: boolean
+}
+
+export interface ManualGradeItem {
+  answer_id: string
+  points_earned: number
+  feedback?: string | null
+}

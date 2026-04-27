@@ -54,24 +54,24 @@ export function DashboardPage() {
           <p className="text-ink-secondary mt-1.5 text-sm">
             {isStudent
               ? 'Keep up the great work on your courses!'
-              : "Here's an overview of your platform today."}
+              : isAdmin
+                ? "Here's an overview of your platform today."
+                : "Here's an overview of your classes today."}
           </p>
         </div>
       </div>
 
-      {/* KPI stats — admin/teacher */}
+      {/* KPI stats — admin/teacher (teacher sees own-courses scope; admin sees tenant scope) */}
       {(isAdmin || isTeacher) && dashboard && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
-            title="Total Students"
+            title={isAdmin ? 'Total Students' : 'My Students'}
             value={dashboard.total_students}
             icon={<Users className="h-5 w-5" />}
             color="indigo"
-            trend="+5% vs last month"
-            trendUp={true}
           />
           <StatCard
-            title="Active Courses"
+            title={isAdmin ? 'Active Courses' : 'My Courses'}
             value={dashboard.total_courses}
             icon={<BookOpen className="h-5 w-5" />}
             color="emerald"
@@ -81,15 +81,13 @@ export function DashboardPage() {
             value={formatGrade(dashboard.avg_grade)}
             icon={<TrendingUp className="h-5 w-5" />}
             color="yellow"
-            trend="Across all courses"
+            trend={isAdmin ? 'Across all courses' : 'Across your courses'}
           />
           <StatCard
             title="Active Today"
             value={dashboard.active_users_today}
             icon={<Activity className="h-5 w-5" />}
             color="sky"
-            trend="+12% vs yesterday"
-            trendUp={true}
           />
         </div>
       )}
@@ -205,7 +203,9 @@ export function DashboardPage() {
         {(isAdmin || isTeacher) && (
           <div className="xl:col-span-2 card">
             <div className="card-header flex items-center justify-between">
-              <h3 className="font-semibold text-ink text-sm font-display">Platform Engagement</h3>
+              <h3 className="font-semibold text-ink text-sm font-display">
+                {isAdmin ? 'Platform Engagement' : 'Class Engagement'}
+              </h3>
               <div className="flex gap-1">
                 {[7, 14, 30].map((d) => (
                   <button

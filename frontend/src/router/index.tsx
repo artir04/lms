@@ -11,6 +11,8 @@ import { CourseEditorPage } from '@/pages/courses/CourseEditorPage'
 import { LessonPage } from '@/pages/courses/LessonPage'
 import { QuizTakePage } from '@/pages/assessments/QuizTakePage'
 import { QuizBuilderPage } from '@/pages/assessments/QuizBuilderPage'
+import { QuizSubmissionsPage } from '@/pages/assessments/QuizSubmissionsPage'
+import { SubmissionGradingPage } from '@/pages/assessments/SubmissionGradingPage'
 import { MyGradesPage } from '@/pages/grades/MyGradesPage'
 import { GradebookPage } from '@/pages/grades/GradebookPage'
 import { AnalyticsPage } from '@/pages/analytics/AnalyticsPage'
@@ -23,6 +25,8 @@ import { NotFoundPage, ForbiddenPage } from '@/pages/errors/NotFoundPage'
 import { AttendanceMarkingPage } from '@/pages/attendance/AttendanceMarkingPage'
 import { AttendanceReportPage } from '@/pages/attendance/AttendanceReportPage'
 import { StudentAttendancePage } from '@/pages/attendance/StudentAttendancePage'
+import { TeacherAttendanceOverviewPage } from '@/pages/attendance/TeacherAttendanceOverviewPage'
+import { MyStudentsPage } from '@/pages/users/MyStudentsPage'
 
 export const router = createBrowserRouter([
   {
@@ -68,8 +72,12 @@ export const router = createBrowserRouter([
               { path: 'courses/:courseId/edit', element: <CourseEditorPage /> },
               { path: 'courses/:courseId/gradebook', element: <GradebookPage /> },
               { path: 'courses/:courseId/quizzes/:quizId/build', element: <QuizBuilderPage /> },
+              { path: 'courses/:courseId/quizzes/:quizId/submissions', element: <QuizSubmissionsPage /> },
+              { path: 'submissions/:submissionId', element: <SubmissionGradingPage /> },
               { path: 'courses/:courseId/attendance', element: <AttendanceMarkingPage /> },
               { path: 'courses/:courseId/attendance/report', element: <AttendanceReportPage /> },
+              { path: 'teacher/attendance', element: <TeacherAttendanceOverviewPage /> },
+              { path: 'teacher/students', element: <MyStudentsPage /> },
               { path: 'analytics', element: <AnalyticsPage /> },
             ],
           },

@@ -115,6 +115,22 @@ class SubmissionRead(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class SubmissionListItem(BaseModel):
+    id: uuid.UUID
+    quiz_id: uuid.UUID
+    student_id: uuid.UUID
+    student_name: str
+    student_email: str
+    attempt_num: int
+    started_at: datetime
+    submitted_at: datetime | None
+    score: Decimal | None
+    status: str
+    needs_review: bool = False
+
+    model_config = {"from_attributes": True}
+
+
 class ManualGradeRequest(BaseModel):
     answer_id: uuid.UUID
     points_earned: Decimal

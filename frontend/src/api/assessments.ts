@@ -1,6 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/config/axios'
-import type { Quiz, Submission } from '@/types/assessment'
+import type {
+  Quiz,
+  Submission,
+  SubmissionListItem,
+  ManualGradeItem,
+} from '@/types/assessment'
 
 export const assessmentKeys = {
   quizzes: (courseId: string) => ['quizzes', courseId] as const,
@@ -43,9 +48,29 @@ export function useSubmitQuiz(quizId: string) {
 }
 
 export function useSubmissions(quizId: string) {
-  return useQuery<Submission[]>({
+  return useQuery<SubmissionListItem[]>({
     queryKey: assessmentKeys.submissions(quizId),
     queryFn: () => api.get(`/assessments/quizzes/${quizId}/submissions`).then((r) => r.data),
     enabled: !!quizId,
+  })
+}
+
+export function useSubmission(submissionId: string) {
+  return useQuery<Submission>({
+    queryKey: assessmentKeys.submission(submissionId),
+    queryFn: () => api.get(`/assessments/submissions/${submissionId}`).then((r) => r.data),
+    enabled: !!submissionId,
+  })
+}
+
+export function useManualGrade(submissionId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (items: ManualGradeItem[]) =>
+      api.patch<Submission>(`/assessments/submissions/${submissionId}/grade`, items).then((r) => r.data),
+    onSuccess: (data) => {
+      qc.setQueryData(assessmentKeys.submission(submissionId), data)
+      qc.invalidateQueries({ queryKey: assessmentKeys.submissions(data.quiz_id) })
+    },
   })
 }

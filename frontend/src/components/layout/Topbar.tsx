@@ -6,6 +6,7 @@ import { Avatar } from '@/components/ui/Avatar'
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { timeAgo } from '@/utils/formatters'
+import { formatNotification, notificationIcon } from '@/utils/notification'
 
 interface TopbarProps {
   title?: string
@@ -36,14 +37,6 @@ function getPageTitle(pathname: string): string {
   if (pathname.includes('/attendance')) return 'Mark Attendance'
   if (pathname.match(/\/courses\/[^/]+$/)) return 'Course Details'
   return 'EduDitari'
-}
-
-const NOTIFICATION_ICONS: Record<string, string> = {
-  grade: '📝',
-  attendance: '📋',
-  quiz: '📖',
-  badge: '🏆',
-  system: '🔔',
 }
 
 export function Topbar({ title, onMenuClick }: TopbarProps) {
@@ -137,30 +130,31 @@ export function Topbar({ title, onMenuClick }: TopbarProps) {
                 </div>
               ) : (
                 <div className="divide-y divide-border/60">
-                  {notifData.items.map((n) => (
-                    <div
-                      key={n.id}
-                      className={`flex items-start gap-3 px-4 py-3 transition-colors ${
-                        n.is_read ? '' : 'bg-primary-500/[0.06]'
-                      }`}
-                    >
-                      <span className="text-lg shrink-0 mt-0.5">
-                        {NOTIFICATION_ICONS[n.type] || NOTIFICATION_ICONS.system}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <p className={`text-sm leading-tight ${n.is_read ? 'text-ink-secondary' : 'text-ink'}`}>
-                          {n.title}
-                        </p>
-                        {n.body && (
-                          <p className="text-xs text-ink-muted mt-0.5 truncate">{n.body}</p>
+                  {notifData.items.map((n) => {
+                    const { title: nTitle, body: nBody } = formatNotification(n)
+                    return (
+                      <div
+                        key={n.id}
+                        className={`flex items-start gap-3 px-4 py-3 transition-colors ${
+                          n.is_read ? '' : 'bg-primary-500/[0.06]'
+                        }`}
+                      >
+                        <span className="text-lg shrink-0 mt-0.5">{notificationIcon(n.type)}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-sm leading-tight ${n.is_read ? 'text-ink-secondary' : 'text-ink'}`}>
+                            {nTitle}
+                          </p>
+                          {nBody && (
+                            <p className="text-xs text-ink-muted mt-0.5 truncate">{nBody}</p>
+                          )}
+                          <p className="text-[10px] text-ink-faint mt-1">{timeAgo(n.created_at)}</p>
+                        </div>
+                        {!n.is_read && (
+                          <span className="w-2 h-2 bg-primary-500 rounded-full shrink-0 mt-1.5" />
                         )}
-                        <p className="text-[10px] text-ink-faint mt-1">{timeAgo(n.created_at)}</p>
                       </div>
-                      {!n.is_read && (
-                        <span className="w-2 h-2 bg-primary-500 rounded-full shrink-0 mt-1.5" />
-                      )}
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </div>

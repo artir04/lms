@@ -33,7 +33,8 @@ export function useNotifications(page = 1, pageSize = 10) {
 export function useMarkNotificationsRead() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (ids: string[]) => api.post('/notifications/read', { ids }),
+    mutationFn: (ids: string[]) =>
+      api.post('/notifications/read', { notification_ids: ids }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['notifications'] }),
   })
 }

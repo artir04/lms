@@ -17,7 +17,6 @@ import { MyGradesPage } from '@/pages/grades/MyGradesPage'
 import { GradebookPage } from '@/pages/grades/GradebookPage'
 import { AnalyticsPage } from '@/pages/analytics/AnalyticsPage'
 import { GamificationPage } from '@/pages/gamification/GamificationPage'
-import { ParentDashboardPage } from '@/pages/parent/ParentDashboardPage'
 import { UserManagementPage } from '@/pages/admin/UserManagementPage'
 import { ReportsPage } from '@/pages/admin/ReportsPage'
 import { SettingsPage } from '@/pages/admin/SettingsPage'
@@ -58,14 +57,12 @@ export const router = createBrowserRouter([
           { path: 'quizzes/:quizId/take', element: <QuizTakePage /> },
           { path: 'grades', element: <MyGradesPage /> },
           { path: 'attendance', element: <StudentAttendancePage /> },
-          { path: 'gamification', element: <GamificationPage /> },
-          // Parent only routes
-          {
-            element: <ProtectedRoute roles={['parent']} />,
-            children: [
-              { path: 'parent', element: <ParentDashboardPage /> },
-            ],
           },
+          // Admin only routes
+          {
+            element: <ProtectedRoute roles={['admin', 'superadmin']} />,
+            children: [
+              { path: 'admin/users', element: <UserManagementPage /> },
           // Teacher & Admin only routes
           {
             element: <ProtectedRoute roles={['teacher', 'admin', 'superadmin']} />,
@@ -91,20 +88,3 @@ export const router = createBrowserRouter([
               { path: 'admin/settings', element: <SettingsPage /> },
             ],
           },
-          // Parent only routes
-          {
-            element: <ProtectedRoute roles={['parent']} />,
-            children: [
-              { path: 'parent', element: <ParentDashboardPage /> },
-              { path: 'parent/children/:studentId', element: <ParentChildGradesPage /> },
-              { path: 'parent/children/:studentId/grades', element: <ParentChildGradesPage /> },
-              { path: 'parent/children/:studentId/attendance', element: <ParentChildAttendancePage /> },
-            ],
-          },
-        ],
-      },
-    ],
-  },
-  { path: '/403', element: <ForbiddenPage /> },
-  { path: '*', element: <NotFoundPage /> },
-])

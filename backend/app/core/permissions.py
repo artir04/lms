@@ -10,6 +10,7 @@ class Role(StrEnum):
 
 
 # Role hierarchy: higher index = more privilege
+# Parent is at the same level as student but has different access patterns (read-only child data)
 ROLE_HIERARCHY = [Role.STUDENT, Role.PARENT, Role.TEACHER, Role.ADMIN, Role.SUPERADMIN]
 
 

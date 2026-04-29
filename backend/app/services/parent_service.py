@@ -1,25 +1,39 @@
 import uuid
-from decimal import Decimal
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, and_, Numeric
+from datetime import date
+from decimal import Decimal, ROUND_HALF_UP
 
-from app.models.parent import ParentStudent
-from app.models.user import User
-from app.models.course import Course, Section, Enrollment
-from app.models.grade import GradeEntry
-from app.models.attendance import Attendance
+from sqlalchemy import Numeric, and_, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
+from app.core.exceptions import ForbiddenError, NotFoundError
 from app.models.assessment import Quiz, Submission
-from app.core.exceptions import NotFoundError, ForbiddenError
+from app.models.attendance import Attendance
+from app.models.course import Course, Enrollment, Section
+from app.models.grade import GradeEntry
+from app.models.parent import ParentStudent
+from app.models.parent_child import ParentChildLink
+from app.models.user import User
+from app.schemas.attendance import StudentAttendanceSummary
+from app.schemas.grade import StudentGradeSummary
 from app.schemas.parent import (
-    ChildSummary, ParentDigest, ChildProgressDetail,
-    ChildCourseProgress, UpcomingItem, ChildAttendanceSummary,
+    ChildAttendanceSummary,
+    ChildCourseProgress,
+    ChildProgressDetail,
+    ChildSummary,
+    ParentDigest,
+    UpcomingItem,
 )
 from app.schemas.user import UserSummary
+from app.services.attendance_service import AttendanceService
+from app.services.grade_service import GradeService
 
 
 class ParentService:
     def __init__(self, db: AsyncSession):
         self.db = db
+        self.grade_service = GradeService(db)
+        self.attendance_service = AttendanceService(db)
 
     async def link_child(self, parent_id: uuid.UUID, student_id: uuid.UUID) -> ParentStudent:
         link = ParentStudent(parent_id=parent_id, student_id=student_id)
@@ -52,14 +66,12 @@ class ParentService:
             if not user:
                 continue
 
-            # Course count
             course_count = (await self.db.execute(
                 select(func.count()).select_from(Enrollment)
                 .join(Section, Section.id == Enrollment.section_id)
                 .where(Enrollment.student_id == child_id, Enrollment.status == "active")
             )).scalar_one()
 
-            # Overall average (1-5 scale)
             avg_r = await self.db.execute(
                 select(func.avg(GradeEntry.grade.cast(Numeric)))
                 .where(GradeEntry.student_id == child_id)
@@ -67,7 +79,6 @@ class ParentService:
             avg = avg_r.scalar_one()
             overall_avg = Decimal(str(round(avg, 2))) if avg else None
 
-            # Attendance rate
             total_att = (await self.db.execute(
                 select(func.count()).select_from(Attendance).where(Attendance.student_id == child_id)
             )).scalar_one()
@@ -79,8 +90,11 @@ class ParentService:
 
             children.append(ChildSummary(
                 student=UserSummary(
-                    id=user.id, full_name=user.full_name,
-                    email=user.email, avatar_url=user.avatar_url, roles=None,
+                    id=user.id,
+                    full_name=user.full_name,
+                    email=user.email,
+                    avatar_url=user.avatar_url,
+                    roles=None,
                 ),
                 course_count=course_count,
                 overall_average=overall_avg,
@@ -98,7 +112,6 @@ class ParentService:
         if not user:
             raise NotFoundError("Student")
 
-        # Courses with grades
         courses_r = await self.db.execute(
             select(Course)
             .join(Section, Section.course_id == Course.id)
@@ -122,7 +135,6 @@ class ParentService:
                     avg = sum(Decimal(str(e.grade)) * e.weight for e in entries) / total_weight
                 else:
                     avg = Decimal("0")
-                from decimal import ROUND_HALF_UP
                 rounded = int(avg.quantize(Decimal("1"), rounding=ROUND_HALF_UP))
                 grade = max(1, min(5, rounded))
             else:
@@ -137,7 +149,6 @@ class ParentService:
                 entry_count=len(entries),
             ))
 
-        # Upcoming quizzes
         upcoming = []
         for course in courses:
             quizzes_r = await self.db.execute(
@@ -163,7 +174,6 @@ class ParentService:
                     is_submitted=is_submitted,
                 ))
 
-        # Attendance summary
         total = (await self.db.execute(
             select(func.count()).select_from(Attendance).where(Attendance.student_id == student_id)
         )).scalar_one()
@@ -182,8 +192,11 @@ class ParentService:
 
         return ChildProgressDetail(
             student=UserSummary(
-                id=user.id, full_name=user.full_name,
-                email=user.email, avatar_url=user.avatar_url, roles=None,
+                id=user.id,
+                full_name=user.full_name,
+                email=user.email,
+                avatar_url=user.avatar_url,
+                roles=None,
             ),
             courses=course_progress,
             upcoming_assignments=upcoming,
@@ -195,3 +208,105 @@ class ParentService:
                 attendance_rate=Decimal(str(round(present / total * 100, 1))) if total else Decimal("0"),
             ),
         )
+
+    async def verify_parent_child_access(self, parent_id: uuid.UUID, student_id: uuid.UUID, tenant_id: uuid.UUID) -> ParentChildLink:
+        """Verify that a parent has access to a specific student's data."""
+        result = await self.db.execute(
+            select(ParentChildLink)
+            .options(
+                selectinload(ParentChildLink.parent),
+                selectinload(ParentChildLink.student),
+                selectinload(ParentChildLink.relationship),
+            )
+            .where(
+                and_(
+                    ParentChildLink.parent_id == parent_id,
+                    ParentChildLink.student_id == student_id,
+                    ParentChildLink.parent.has(tenant_id=tenant_id),
+                    ParentChildLink.student.has(tenant_id=tenant_id),
+                )
+            )
+        )
+        link = result.scalar_one_or_none()
+        if not link:
+            raise ForbiddenError("You do not have permission to access this student's data")
+        return link
+
+    async def get_parent_children(self, parent_id: uuid.UUID, tenant_id: uuid.UUID) -> list[dict]:
+        result = await self.db.execute(
+            select(ParentChildLink)
+            .options(
+                selectinload(ParentChildLink.student),
+                selectinload(ParentChildLink.relationship),
+            )
+            .where(
+                and_(
+                    ParentChildLink.parent_id == parent_id,
+                    ParentChildLink.parent.has(tenant_id=tenant_id),
+                    ParentChildLink.student.has(is_active=True),
+                )
+            )
+        )
+        links = result.scalars().all()
+
+        children = []
+        for link in links:
+            if link.student:
+                children.append({
+                    "student_id": link.student.id,
+                    "student_name": link.student.full_name,
+                    "email": link.student.email,
+                    "relationship": link.relationship.name if link.relationship else "unknown",
+                    "is_primary_contact": link.is_primary_contact,
+                    "school_id": link.student.school_id,
+                    "last_login": link.student.last_login_at,
+                })
+
+        return children
+
+    async def get_child_overview(
+        self,
+        parent_id: uuid.UUID,
+        student_id: uuid.UUID,
+        tenant_id: uuid.UUID,
+    ) -> dict:
+        link = await self.verify_parent_child_access(parent_id, student_id, tenant_id)
+
+        student_result = await self.db.execute(
+            select(User).where(User.id == student_id, User.tenant_id == tenant_id)
+        )
+        student = student_result.scalar_one_or_none()
+        if not student:
+            raise NotFoundError("Student")
+
+        return {
+            "student_id": student.id,
+            "student_name": student.full_name,
+            "email": student.email,
+            "school_id": student.school_id,
+            "is_active": student.is_active,
+            "last_login": student.last_login_at,
+            "created_at": student.created_at,
+            "relationship": link.relationship.name if link.relationship else "unknown",
+            "is_primary_contact": link.is_primary_contact,
+        }
+
+    async def get_child_grades(
+        self,
+        parent_id: uuid.UUID,
+        student_id: uuid.UUID,
+        tenant_id: uuid.UUID,
+    ) -> list[StudentGradeSummary]:
+        await self.verify_parent_child_access(parent_id, student_id, tenant_id)
+        return await self.grade_service.get_student_grades(student_id, tenant_id)
+
+    async def get_child_attendance(
+        self,
+        parent_id: uuid.UUID,
+        student_id: uuid.UUID,
+        tenant_id: uuid.UUID,
+        date_from: date | None = None,
+        date_to: date | None = None,
+    ) -> list[StudentAttendanceSummary]:
+        await self.verify_parent_child_access(parent_id, student_id, tenant_id)
+        return await self.attendance_service.get_student_attendance_summary(student_id, tenant_id)

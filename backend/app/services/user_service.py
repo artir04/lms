@@ -50,6 +50,10 @@ class UserService:
         return PaginatedResponse.create(users, total, params)
 
     async def create_user(self, data: UserCreate, tenant_id: uuid.UUID) -> User:
+        # Enforce parent-only policy: parent role cannot co-exist with other roles
+        if "parent" in data.roles and len(data.roles) > 1:
+            raise ForbiddenError("Parent role cannot be combined with other roles")
+
         # Check email uniqueness within tenant
         existing = await self.db.execute(
             select(User).where(User.email == data.email.lower(), User.tenant_id == tenant_id)

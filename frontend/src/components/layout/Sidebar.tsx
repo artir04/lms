@@ -11,9 +11,9 @@ import {
   ChevronRight,
   Calendar,
   Trophy,
-  UserCheck,
   FileBarChart,
   Sparkles,
+  Baby,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { Avatar } from '@/components/ui/Avatar'
@@ -46,11 +46,12 @@ export function Sidebar({ onClose }: SidebarProps) {
     {
       label: 'Main',
       items: [
-        { to: ROUTES.DASHBOARD, icon: LayoutDashboard, label: 'Dashboard', end: true },
-        { to: ROUTES.COURSES, icon: BookOpen, label: 'Courses' },
         ...(isParent
-          ? [{ to: ROUTES.PARENT_DASHBOARD, icon: UserCheck, label: 'My Children' }]
-          : []),
+          ? [{ to: ROUTES.PARENT, icon: Baby, label: 'Parent Portal', end: true }]
+          : [
+              { to: ROUTES.DASHBOARD, icon: LayoutDashboard, label: 'Dashboard', end: true },
+              { to: ROUTES.COURSES, icon: BookOpen, label: 'Courses' },
+            ]),
       ],
     },
     {

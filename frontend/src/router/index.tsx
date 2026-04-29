@@ -21,6 +21,7 @@ import { NotFoundPage, ForbiddenPage } from '@/pages/errors/NotFoundPage'
 import { AttendanceMarkingPage } from '@/pages/attendance/AttendanceMarkingPage'
 import { AttendanceReportPage } from '@/pages/attendance/AttendanceReportPage'
 import { StudentAttendancePage } from '@/pages/attendance/StudentAttendancePage'
+import { ParentDashboardPage, ParentChildGradesPage, ParentChildAttendancePage } from '@/pages/parents'
 
 export const router = createBrowserRouter([
   {
@@ -70,6 +71,16 @@ export const router = createBrowserRouter([
               { path: 'admin/users', element: <UserManagementPage /> },
               { path: 'admin/reports', element: <ReportsPage /> },
               { path: 'admin/settings', element: <SettingsPage /> },
+            ],
+          },
+          // Parent only routes
+          {
+            element: <ProtectedRoute roles={['parent']} />,
+            children: [
+              { path: 'parent', element: <ParentDashboardPage /> },
+              { path: 'parent/children/:studentId', element: <ParentChildGradesPage /> },
+              { path: 'parent/children/:studentId/grades', element: <ParentChildGradesPage /> },
+              { path: 'parent/children/:studentId/attendance', element: <ParentChildAttendancePage /> },
             ],
           },
         ],

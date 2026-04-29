@@ -18,14 +18,23 @@ class AnalyticsService:
         self.db = db
 
     async def get_dashboard(self, tenant_id: uuid.UUID, teacher_id: uuid.UUID | None = None) -> DashboardSummary:
-        # Total students
+        # When scoped to a teacher, every metric is restricted to that teacher's
+        # courses (and the students enrolled in them, the grades within them, etc.)
         student_q = (
-            select(func.count())
+            select(func.count(User.id.distinct()))
             .select_from(User)
             .join(UserRole, UserRole.user_id == User.id)
             .join(Role, Role.id == UserRole.role_id)
             .where(User.tenant_id == tenant_id, Role.name == "student", User.is_active == True)
         )
+        if teacher_id:
+            student_q = (
+                student_q
+                .join(Enrollment, Enrollment.student_id == User.id)
+                .join(Section, Section.id == Enrollment.section_id)
+                .join(Course, Course.id == Section.course_id)
+                .where(Course.teacher_id == teacher_id)
+            )
         total_students = (await self.db.execute(student_q)).scalar_one()
 
         # Total courses
@@ -34,7 +43,7 @@ class AnalyticsService:
             course_q = course_q.where(Course.teacher_id == teacher_id)
         total_courses = (await self.db.execute(course_q)).scalar_one()
 
-        # Active users today
+        # Active users today (scoped to students enrolled in the teacher's courses)
         today = date.today()
         active_q = (
             select(func.count(ActivityLog.user_id.distinct()))
@@ -43,10 +52,24 @@ class AnalyticsService:
                 func.date(ActivityLog.occurred_at) == today,
             )
         )
+        if teacher_id:
+            teacher_student_ids = (
+                select(Enrollment.student_id.distinct())
+                .join(Section, Section.id == Enrollment.section_id)
+                .join(Course, Course.id == Section.course_id)
+                .where(Course.teacher_id == teacher_id)
+            )
+            active_q = active_q.where(ActivityLog.user_id.in_(teacher_student_ids))
         active_today = (await self.db.execute(active_q)).scalar_one()
 
         # Average grade (1-5 scale)
         avg_grade_q = select(func.avg(GradeEntry.grade.cast(Numeric)))
+        if teacher_id:
+            avg_grade_q = (
+                avg_grade_q
+                .join(Course, Course.id == GradeEntry.course_id)
+                .where(Course.teacher_id == teacher_id)
+            )
         avg_grade = (await self.db.execute(avg_grade_q)).scalar_one() or Decimal("0")
 
         return DashboardSummary(
@@ -57,7 +80,7 @@ class AnalyticsService:
             at_risk_count=0,  # simplified
         )
 
-    async def get_engagement(self, tenant_id: uuid.UUID, days: int = 30) -> EngagementReport:
+    async def get_engagement(self, tenant_id: uuid.UUID, days: int = 30, teacher_id: uuid.UUID | None = None) -> EngagementReport:
         end = date.today()
         start = end - timedelta(days=days)
 
@@ -77,6 +100,14 @@ class AnalyticsService:
             )
             .group_by(day_col, ActivityLog.event_type)
         )
+        if teacher_id:
+            teacher_student_ids = (
+                select(Enrollment.student_id.distinct())
+                .join(Section, Section.id == Enrollment.section_id)
+                .join(Course, Course.id == Section.course_id)
+                .where(Course.teacher_id == teacher_id)
+            )
+            q = q.where(ActivityLog.user_id.in_(teacher_student_ids))
         rows = (await self.db.execute(q)).all()
 
         # Build lookup: (date, event_type) -> count

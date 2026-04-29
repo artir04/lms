@@ -5,24 +5,52 @@ from app.db.session import get_db
 from app.dependencies import CurrentUserPayload, require_roles
 from app.services.grade_service import GradeService
 from app.core.permissions import Role
+from app.core.exceptions import ForbiddenError, NotFoundError
+from app.models.course import Course
+from app.models.grade import GradeEntry
 from app.schemas.grade import GradeBookRead, GradeEntryUpdate, GradeEntryRead, GradeEntryCreate, StudentGradeSummary
 from app.schemas.upcoming import UpcomingAssignment
 
 router = APIRouter(prefix="/gradebook", tags=["grades"])
 
 
+async def _assert_course_access(course_id: uuid.UUID, payload: dict, db) -> None:
+    """Raise unless the caller is admin/superadmin or the course's owning teacher."""
+    course_r = await db.execute(
+        select(Course).where(
+            Course.id == course_id,
+            Course.tenant_id == uuid.UUID(payload["tenant_id"]),
+        )
+    )
+    course = course_r.scalar_one_or_none()
+    if not course:
+        raise NotFoundError("Course")
+    roles = payload.get("roles", [])
+    if any(r in roles for r in ("admin", "superadmin")):
+        return
+    if course.teacher_id != uuid.UUID(payload["sub"]):
+        raise ForbiddenError("You can only access your own course gradebooks")
+
+
 @router.get("/courses/{course_id}", response_model=GradeBookRead, dependencies=[require_roles(Role.TEACHER, Role.ADMIN)])
-async def get_gradebook(course_id: uuid.UUID, db=Depends(get_db)):
+async def get_gradebook(course_id: uuid.UUID, payload: CurrentUserPayload, db=Depends(get_db)):
+    await _assert_course_access(course_id, payload, db)
     return await GradeService(db).get_gradebook(course_id)
 
 
 @router.post("/courses/{course_id}/entries", response_model=GradeEntryRead, dependencies=[require_roles(Role.TEACHER, Role.ADMIN)])
-async def create_entry(course_id: uuid.UUID, data: GradeEntryCreate, db=Depends(get_db)):
+async def create_entry(course_id: uuid.UUID, data: GradeEntryCreate, payload: CurrentUserPayload, db=Depends(get_db)):
+    await _assert_course_access(course_id, payload, db)
     return await GradeService(db).create_entry(course_id, data)
 
 
 @router.patch("/entries/{entry_id}", response_model=GradeEntryRead, dependencies=[require_roles(Role.TEACHER, Role.ADMIN)])
-async def update_entry(entry_id: uuid.UUID, data: GradeEntryUpdate, db=Depends(get_db)):
+async def update_entry(entry_id: uuid.UUID, data: GradeEntryUpdate, payload: CurrentUserPayload, db=Depends(get_db)):
+    entry_r = await db.execute(select(GradeEntry).where(GradeEntry.id == entry_id))
+    entry = entry_r.scalar_one_or_none()
+    if not entry:
+        raise NotFoundError("Grade entry")
+    await _assert_course_access(entry.course_id, payload, db)
     return await GradeService(db).update_entry(entry_id, data)
 
 

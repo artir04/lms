@@ -11,6 +11,8 @@ from app.schemas.attendance import (
     AttendanceReport,
     StudentAttendanceSummary,
     MarkAttendanceRequest,
+    TeacherAttendanceOverview,
+    TeacherCourseAttendance,
 )
 from app.schemas.common import MessageResponse
 from app.models.course import Course
@@ -212,6 +214,80 @@ async def get_course_attendance_by_date(
         attendance_date=attendance_date,
         tenant_id=tenant_id
     )
+
+
+# ─────────────────────────────────────────────
+# Teacher overview (across all owned courses)
+# ─────────────────────────────────────────────
+
+
+@router.get("/teacher/overview", response_model=TeacherAttendanceOverview)
+async def get_teacher_attendance_overview(
+    payload: CurrentUserPayload,
+    db=Depends(get_db),
+    on_date: date | None = Query(None),
+):
+    """Per-course attendance status for every course the teacher owns,
+    on a given date (default = today). Admin/superadmin sees every course in tenant."""
+    from sqlalchemy import func
+    from app.models.course import Section, Enrollment
+    from app.models.attendance import Attendance
+    from app.core.exceptions import ForbiddenError
+
+    user_id = uuid.UUID(payload["sub"])
+    tenant_id = uuid.UUID(payload["tenant_id"])
+    roles = payload.get("roles", [])
+    is_admin = any(r in roles for r in ("admin", "superadmin"))
+    is_teacher = "teacher" in roles
+    if not is_teacher and not is_admin:
+        raise ForbiddenError()
+
+    target_date = on_date or date.today()
+
+    # Courses to consider
+    course_q = select(Course).where(Course.tenant_id == tenant_id)
+    if not is_admin:
+        course_q = course_q.where(Course.teacher_id == user_id)
+    courses = (await db.execute(course_q.order_by(Course.title))).scalars().all()
+
+    if not courses:
+        return TeacherAttendanceOverview(date=target_date, courses=[])
+
+    course_ids = [c.id for c in courses]
+
+    # Enrolled student counts per course (one query)
+    counts_r = await db.execute(
+        select(Section.course_id, func.count(Enrollment.id.distinct()))
+        .join(Enrollment, Enrollment.section_id == Section.id)
+        .where(Section.course_id.in_(course_ids), Enrollment.status == "active")
+        .group_by(Section.course_id)
+    )
+    student_counts = dict(counts_r.all())
+
+    # Today's attendance breakdown per course
+    today_r = await db.execute(
+        select(Attendance.course_id, Attendance.status, func.count())
+        .where(Attendance.course_id.in_(course_ids), Attendance.date == target_date)
+        .group_by(Attendance.course_id, Attendance.status)
+    )
+    by_course: dict[uuid.UUID, dict[str, int]] = {}
+    for row in today_r.all():
+        by_course.setdefault(row[0], {})[row[1]] = row[2]
+
+    items = []
+    for c in courses:
+        breakdown = by_course.get(c.id, {})
+        items.append(TeacherCourseAttendance(
+            course_id=c.id,
+            course_title=c.title,
+            student_count=int(student_counts.get(c.id, 0)),
+            marked_today=bool(breakdown),
+            today_present=int(breakdown.get("present", 0)),
+            today_absent=int(breakdown.get("absent", 0)),
+            today_tardy=int(breakdown.get("tardy", 0)),
+            today_excused=int(breakdown.get("excused", 0)),
+        ))
+    return TeacherAttendanceOverview(date=target_date, courses=items)
 
 
 # ─────────────────────────────────────────────

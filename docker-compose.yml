@@ -102,6 +102,11 @@ services:
       - "3000:3000"
     env_file:
       - ./frontend/.env
+    environment:
+      VITE_PROXY_TARGET: http://backend:8000
+    depends_on:
+      backend:
+        condition: service_healthy
     volumes:
       - ./frontend:/app
       - /app/node_modules

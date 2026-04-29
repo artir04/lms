@@ -17,6 +17,7 @@ class AttendanceStatus:
     PRESENT = "present"
     ABSENT = "absent"
     TARDY = "tardy"
+    EXCUSED = "excused"
 
 
 class Attendance(UUIDPrimaryKeyMixin, TimestampMixin, Base):

@@ -6,7 +6,7 @@ from sqlalchemy import Numeric, and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.core.exceptions import ForbiddenError, NotFoundError
+from app.core.exceptions import ConflictError, ForbiddenError, NotFoundError
 from app.models.assessment import Quiz, Submission
 from app.models.attendance import Attendance
 from app.models.course import Course, Enrollment, Section
@@ -36,6 +36,15 @@ class ParentService:
         self.attendance_service = AttendanceService(db)
 
     async def link_child(self, parent_id: uuid.UUID, student_id: uuid.UUID) -> ParentStudent:
+        existing = await self.db.execute(
+            select(ParentStudent).where(
+                ParentStudent.parent_id == parent_id,
+                ParentStudent.student_id == student_id,
+            )
+        )
+        if existing.scalar_one_or_none():
+            raise ConflictError("Parent is already linked to this student")
+
         link = ParentStudent(parent_id=parent_id, student_id=student_id)
         self.db.add(link)
         await self.db.flush()

@@ -1,37 +1,62 @@
-import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { Settings, Shield, School, Users, Save, CheckCircle2 } from 'lucide-react'
-import api from '@/config/axios'
+import { Settings, Shield, School, Users, Save, CheckCircle2, AlertCircle } from 'lucide-react'
+import { useTenantSettings, useUpdateTenantSettings } from '@/api/tenants'
 import { PageLoader } from '@/components/ui/Spinner'
-import { useAuth } from '@/hooks/useAuth'
 import { cn } from '@/utils/cn'
-
-interface TenantSettings {
-  id: string
-  name: string
-  slug: string
-  settings: Record<string, any>
-}
 
 type Tab = 'general' | 'roles' | 'security'
 
+interface GeneralSettingsValues {
+  platform_name: string
+  support_email: string
+  timezone: string
+  academic_year: string
+  grading_system: string
+  allow_student_enrollment: boolean
+}
+
+interface SecuritySettingsValues {
+  session_timeout_min: number
+  max_login_attempts: number
+  password_min_length: number
+  require_uppercase: boolean
+  require_numbers: boolean
+  enable_2fa: boolean
+}
+
+const GENERAL_DEFAULTS: GeneralSettingsValues = {
+  platform_name: 'EduDitari',
+  support_email: '',
+  timezone: 'Europe/Belgrade',
+  academic_year: '2025-2026',
+  grading_system: 'kosovo_1_5',
+  allow_student_enrollment: false,
+}
+
+const SECURITY_DEFAULTS: SecuritySettingsValues = {
+  session_timeout_min: 15,
+  max_login_attempts: 5,
+  password_min_length: 8,
+  require_uppercase: true,
+  require_numbers: true,
+  enable_2fa: false,
+}
+
 export function SettingsPage() {
   const [tab, setTab] = useState<Tab>('general')
-  const { isSuperAdmin } = useAuth()
-  const qc = useQueryClient()
-
-  const { data: tenants, isLoading } = useQuery<TenantSettings[]>({
-    queryKey: ['tenants'],
-    queryFn: () => api.get('/tenants').then((r) => r.data),
-    enabled: isSuperAdmin,
-  })
+  const { data: settings, isLoading } = useTenantSettings()
 
   const tabs: { key: Tab; label: string; icon: React.ElementType }[] = [
     { key: 'general', label: 'General', icon: School },
     { key: 'roles', label: 'Roles & Permissions', icon: Shield },
     { key: 'security', label: 'Security', icon: Settings },
   ]
+
+  if (isLoading) return <PageLoader />
+
+  const general = { ...GENERAL_DEFAULTS, ...((settings?.general as Partial<GeneralSettingsValues>) ?? {}) }
+  const security = { ...SECURITY_DEFAULTS, ...((settings?.security as Partial<SecuritySettingsValues>) ?? {}) }
 
   return (
     <div className="space-y-6">
@@ -55,30 +80,36 @@ export function SettingsPage() {
         ))}
       </div>
 
-      {tab === 'general' && <GeneralSettings />}
+      {tab === 'general' && <GeneralSettings initial={general} />}
       {tab === 'roles' && <RolesSettings />}
-      {tab === 'security' && <SecuritySettings />}
+      {tab === 'security' && <SecuritySettings initial={security} />}
     </div>
   )
 }
 
-function GeneralSettings() {
+function GeneralSettings({ initial }: { initial: GeneralSettingsValues }) {
   const [saved, setSaved] = useState(false)
-  const form = useForm({
-    defaultValues: {
-      platform_name: 'EduDitari',
-      support_email: '',
-      timezone: 'Europe/Belgrade',
-      academic_year: '2025-2026',
-      grading_system: 'kosovo_1_5',
-      allow_student_enrollment: false,
-    },
-  })
+  const { mutate, isPending, error } = useUpdateTenantSettings()
+  const form = useForm<GeneralSettingsValues>({ defaultValues: initial })
 
-  const onSubmit = form.handleSubmit(() => {
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
-  })
+  useEffect(() => {
+    form.reset(initial)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(initial)])
+
+  const onSubmit = form.handleSubmit((values) =>
+    mutate(
+      { general: values },
+      {
+        onSuccess: () => {
+          setSaved(true)
+          setTimeout(() => setSaved(false), 2000)
+        },
+      }
+    )
+  )
+
+  const apiError = (error as any)?.response?.data?.detail
 
   return (
     <form onSubmit={onSubmit} className="card p-6 max-w-2xl space-y-5">
@@ -127,12 +158,17 @@ function GeneralSettings() {
       </div>
 
       <div className="flex items-center gap-3 pt-2">
-        <button type="submit" className="btn-primary flex items-center gap-2">
-          <Save className="w-4 h-4" /> Save Settings
+        <button type="submit" disabled={isPending} className="btn-primary flex items-center gap-2">
+          <Save className="w-4 h-4" /> {isPending ? 'Saving...' : 'Save Settings'}
         </button>
         {saved && (
           <span className="text-sm text-emerald-400 flex items-center gap-1">
             <CheckCircle2 className="w-4 h-4" /> Saved
+          </span>
+        )}
+        {apiError && (
+          <span className="text-sm text-red-400 flex items-center gap-1">
+            <AlertCircle className="w-4 h-4" /> {typeof apiError === 'string' ? apiError : 'Save failed'}
           </span>
         )}
       </div>
@@ -209,23 +245,29 @@ function RolesSettings() {
   )
 }
 
-function SecuritySettings() {
+function SecuritySettings({ initial }: { initial: SecuritySettingsValues }) {
   const [saved, setSaved] = useState(false)
-  const form = useForm({
-    defaultValues: {
-      session_timeout_min: 15,
-      max_login_attempts: 5,
-      password_min_length: 8,
-      require_uppercase: true,
-      require_numbers: true,
-      enable_2fa: false,
-    },
-  })
+  const { mutate, isPending, error } = useUpdateTenantSettings()
+  const form = useForm<SecuritySettingsValues>({ defaultValues: initial })
 
-  const onSubmit = form.handleSubmit(() => {
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
-  })
+  useEffect(() => {
+    form.reset(initial)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(initial)])
+
+  const onSubmit = form.handleSubmit((values) =>
+    mutate(
+      { security: values },
+      {
+        onSuccess: () => {
+          setSaved(true)
+          setTimeout(() => setSaved(false), 2000)
+        },
+      }
+    )
+  )
+
+  const apiError = (error as any)?.response?.data?.detail
 
   return (
     <form onSubmit={onSubmit} className="card p-6 max-w-2xl space-y-5">
@@ -264,12 +306,17 @@ function SecuritySettings() {
       </div>
 
       <div className="flex items-center gap-3 pt-2">
-        <button type="submit" className="btn-primary flex items-center gap-2">
-          <Save className="w-4 h-4" /> Save Security Settings
+        <button type="submit" disabled={isPending} className="btn-primary flex items-center gap-2">
+          <Save className="w-4 h-4" /> {isPending ? 'Saving...' : 'Save Security Settings'}
         </button>
         {saved && (
           <span className="text-sm text-emerald-400 flex items-center gap-1">
             <CheckCircle2 className="w-4 h-4" /> Saved
+          </span>
+        )}
+        {apiError && (
+          <span className="text-sm text-red-400 flex items-center gap-1">
+            <AlertCircle className="w-4 h-4" /> {typeof apiError === 'string' ? apiError : 'Save failed'}
           </span>
         )}
       </div>

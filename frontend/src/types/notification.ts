@@ -1,10 +1,7 @@
 export interface Notification {
   id: string
-  user_id: string
   type: string
-  title: string
-  body: string
-  payload: Record<string, any> | null
+  payload: Record<string, unknown> | null
   is_read: boolean
   created_at: string
 }

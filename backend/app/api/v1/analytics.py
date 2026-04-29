@@ -11,11 +11,21 @@ from app.schemas.report import AdminReport
 router = APIRouter(prefix="/analytics", tags=["analytics"])
 
 
+def _teacher_scope(payload: dict) -> uuid.UUID | None:
+    """Return the user's id when they're a *plain* teacher (not also admin),
+    so analytics can scope to their own courses. Admins/superadmins see everything."""
+    roles = payload.get("roles", [])
+    if any(r in roles for r in ("admin", "superadmin")):
+        return None
+    if "teacher" in roles:
+        return uuid.UUID(payload["sub"])
+    return None
+
+
 @router.get("/dashboard", response_model=DashboardSummary, dependencies=[require_roles(Role.TEACHER, Role.ADMIN)])
 async def dashboard(payload: CurrentUserPayload, db=Depends(get_db)):
     service = AnalyticsService(db)
-    teacher_id = uuid.UUID(payload["sub"]) if "teacher" in payload.get("roles", []) else None
-    return await service.get_dashboard(uuid.UUID(payload["tenant_id"]), teacher_id)
+    return await service.get_dashboard(uuid.UUID(payload["tenant_id"]), _teacher_scope(payload))
 
 
 @router.get("/engagement", response_model=EngagementReport, dependencies=[require_roles(Role.TEACHER, Role.ADMIN)])
@@ -25,11 +35,29 @@ async def engagement(
     days: int = Query(30, ge=7, le=365),
 ):
     service = AnalyticsService(db)
-    return await service.get_engagement(uuid.UUID(payload["tenant_id"]), days)
+    return await service.get_engagement(
+        uuid.UUID(payload["tenant_id"]), days, _teacher_scope(payload)
+    )
 
 
 @router.get("/grade-distribution/{course_id}", response_model=GradeDistribution, dependencies=[require_roles(Role.TEACHER, Role.ADMIN)])
-async def grade_distribution(course_id: uuid.UUID, db=Depends(get_db)):
+async def grade_distribution(course_id: uuid.UUID, payload: CurrentUserPayload, db=Depends(get_db)):
+    from app.core.exceptions import ForbiddenError, NotFoundError
+    from app.models.course import Course
+
+    course_r = await db.execute(
+        select(Course).where(
+            Course.id == course_id,
+            Course.tenant_id == uuid.UUID(payload["tenant_id"]),
+        )
+    )
+    course = course_r.scalar_one_or_none()
+    if not course:
+        raise NotFoundError("Course")
+    teacher_id = _teacher_scope(payload)
+    if teacher_id and course.teacher_id != teacher_id:
+        raise ForbiddenError("You can only view distributions for your own courses")
+
     service = AnalyticsService(db)
     return await service.get_grade_distribution(course_id)
 

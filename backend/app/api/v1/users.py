@@ -18,6 +18,75 @@ async def get_me(current_user=Depends(get_current_user)):
     return current_user
 
 
+@router.get("/teacher/students")
+async def get_teacher_students(payload: CurrentUserPayload, db=Depends(get_db)):
+    """Return the distinct students enrolled in courses the caller teaches,
+    along with which courses each is in. Admin/superadmin sees every student
+    in the tenant."""
+    from sqlalchemy import select, func
+    from sqlalchemy.orm import selectinload
+    from app.models.user import User as UserModel
+    from app.models.course import Course, Section, Enrollment
+    from app.core.exceptions import ForbiddenError
+
+    user_id = uuid.UUID(payload["sub"])
+    tenant_id = uuid.UUID(payload["tenant_id"])
+    roles = payload.get("roles", [])
+    is_admin = any(r in roles for r in ("admin", "superadmin"))
+    is_teacher = "teacher" in roles
+    if not is_teacher and not is_admin:
+        raise ForbiddenError()
+
+    course_q = select(Course).where(Course.tenant_id == tenant_id)
+    if not is_admin:
+        course_q = course_q.where(Course.teacher_id == user_id)
+    courses = (await db.execute(course_q)).scalars().all()
+    if not courses:
+        return []
+    course_ids = [c.id for c in courses]
+    course_titles = {c.id: c.title for c in courses}
+
+    rows_r = await db.execute(
+        select(
+            UserModel.id,
+            UserModel.first_name,
+            UserModel.last_name,
+            UserModel.email,
+            UserModel.avatar_url,
+            Section.course_id,
+        )
+        .join(Enrollment, Enrollment.student_id == UserModel.id)
+        .join(Section, Section.id == Enrollment.section_id)
+        .where(
+            Section.course_id.in_(course_ids),
+            Enrollment.status == "active",
+            UserModel.is_active == True,
+        )
+        .distinct()
+    )
+
+    students: dict[uuid.UUID, dict] = {}
+    for row in rows_r.all():
+        sid = row[0]
+        if sid not in students:
+            students[sid] = {
+                "id": str(sid),
+                "first_name": row[1],
+                "last_name": row[2],
+                "full_name": f"{row[1]} {row[2]}",
+                "email": row[3],
+                "avatar_url": row[4],
+                "course_count": 0,
+                "courses": [],
+            }
+        students[sid]["course_count"] += 1
+        students[sid]["courses"].append(
+            {"id": str(row[5]), "title": course_titles[row[5]]}
+        )
+
+    return sorted(students.values(), key=lambda s: s["full_name"].lower())
+
+
 @router.patch("/me", response_model=UserRead)
 async def update_me(data: UserUpdate, current_user=Depends(get_current_user), db=Depends(get_db)):
     service = UserService(db)

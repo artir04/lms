@@ -7,6 +7,7 @@ import { PageLoader } from '@/components/ui/Spinner'
 import { useAuth } from '@/hooks/useAuth'
 import api from '@/config/axios'
 import { useQuery } from '@tanstack/react-query'
+import { toast } from '@/store/toastStore'
 import type { AttendanceStatus, AttendanceRecord } from '@/types/attendance'
 
 const STATUS_CONFIG: Record<AttendanceStatus, { icon: React.ReactNode; label: string; color: string; activeColor: string }> = {
@@ -73,7 +74,22 @@ export function AttendanceMarkingPage() {
       notes: notes[studentId] || null,
     }))
     markAttendance({ courseId, data: { date: selectedDate, records } }, {
-      onSuccess: () => { alert('Attendance marked successfully!') },
+      onSuccess: () => {
+        toast.success('Attendance saved', { title: 'Saved' })
+      },
+      onError: (err: any) => {
+        const detail =
+          err?.response?.data?.detail ??
+          err?.response?.data?.message ??
+          err?.message ??
+          'Unknown error'
+        const message = Array.isArray(detail)
+          ? detail.map((d: any) => d?.msg ?? JSON.stringify(d)).join('\n')
+          : typeof detail === 'string'
+            ? detail
+            : JSON.stringify(detail)
+        toast.error(message, { title: 'Failed to save attendance' })
+      },
     })
   }
 

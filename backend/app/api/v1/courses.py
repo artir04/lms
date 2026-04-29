@@ -52,9 +52,10 @@ async def update_course(course_id: uuid.UUID, data: CourseUpdate, payload: Curre
 async def toggle_publish(course_id: uuid.UUID, payload: CurrentUserPayload, db=Depends(get_db)):
     service = CourseService(db)
     course = await service.get_by_id(course_id, uuid.UUID(payload["tenant_id"]))
+    is_admin = any(r in payload.get("roles", []) for r in ["admin", "superadmin"])
     return await service.update_course(
         course_id, CourseUpdate(is_published=not course.is_published),
-        uuid.UUID(payload["sub"]), uuid.UUID(payload["tenant_id"]), True
+        uuid.UUID(payload["sub"]), uuid.UUID(payload["tenant_id"]), is_admin
     )
 
 

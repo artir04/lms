@@ -1,7 +1,7 @@
 import { useParams, Link } from 'react-router-dom'
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Plus, Trash2, Settings } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, Settings, ClipboardCheck } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { Modal } from '@/components/ui/Modal'
 import { PageLoader } from '@/components/ui/Spinner'
@@ -114,6 +114,12 @@ export function QuizBuilderPage() {
             {quiz.is_published ? ' · Published' : ' · Draft'}
           </p>
         </div>
+        <Link
+          to={ROUTES.QUIZ_SUBMISSIONS(courseId!, quizId!)}
+          className="btn-secondary text-sm"
+        >
+          <ClipboardCheck className="h-4 w-4" /> Submissions
+        </Link>
         <button onClick={() => setShowSettings(true)} className="btn-secondary text-sm">
           <Settings className="h-4 w-4" /> Settings
         </button>

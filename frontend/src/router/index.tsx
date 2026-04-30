@@ -57,12 +57,16 @@ export const router = createBrowserRouter([
           { path: 'quizzes/:quizId/take', element: <QuizTakePage /> },
           { path: 'grades', element: <MyGradesPage /> },
           { path: 'attendance', element: <StudentAttendancePage /> },
-          },
-          // Admin only routes
+          { path: 'gamification', element: <GamificationPage /> },
+          // Parent routes
           {
-            element: <ProtectedRoute roles={['admin', 'superadmin']} />,
+            element: <ProtectedRoute roles={['parent']} />,
             children: [
-              { path: 'admin/users', element: <UserManagementPage /> },
+              { path: 'parent/dashboard', element: <ParentDashboardPage /> },
+              { path: 'parent/children/:studentId/grades', element: <ParentChildGradesPage /> },
+              { path: 'parent/children/:studentId/attendance', element: <ParentChildAttendancePage /> },
+            ],
+          },
           // Teacher & Admin only routes
           {
             element: <ProtectedRoute roles={['teacher', 'admin', 'superadmin']} />,
@@ -88,3 +92,10 @@ export const router = createBrowserRouter([
               { path: 'admin/settings', element: <SettingsPage /> },
             ],
           },
+          { path: '403', element: <ForbiddenPage /> },
+          { path: '*', element: <NotFoundPage /> },
+        ],
+      },
+    ],
+  },
+])

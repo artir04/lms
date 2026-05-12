@@ -3,8 +3,11 @@ import { useAuthStore } from '@/store/authStore'
 import { queryClient } from '@/config/queryClient'
 import { cookieManager } from '@/utils/cookieManager'
 
+// Get backend URL from env or default to localhost:8000
+const backendUrl = (import.meta as any).env.VITE_API_BASE_URL || 'http://localhost:8000'
+
 const api = axios.create({
-  baseURL: '/api/v1',
+  baseURL: `${backendUrl}/api/v1`,
   headers: { 'Content-Type': 'application/json' },
 })
 
@@ -27,7 +30,7 @@ api.interceptors.response.use(
       const refreshToken = cookieManager.get('refreshToken')
       if (refreshToken) {
         try {
-          const { data } = await axios.post('/api/v1/auth/refresh', { refresh_token: refreshToken })
+          const { data } = await axios.post(`${backendUrl}/api/v1/auth/refresh`, { refresh_token: refreshToken })
           useAuthStore.getState().setTokens(data.access_token, data.refresh_token)
           originalRequest.headers.Authorization = `Bearer ${data.access_token}`
           return api(originalRequest)

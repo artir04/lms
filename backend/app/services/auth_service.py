@@ -6,7 +6,7 @@ from sqlalchemy import select, and_
 from sqlalchemy.orm import selectinload
 
 from app.config import get_settings
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.models.tenant import District
 from app.core.security import (
     verify_password,
@@ -38,7 +38,7 @@ class AuthService:
         # Fetch user
         result = await self.db.execute(
             select(User)
-            .options(selectinload(User.user_roles).selectinload(User.user_roles.property.mapper.class_.role))
+            .options(selectinload(User.user_roles).selectinload(UserRole.role))
             .where(
                 and_(
                     User.email == data.email.lower(),
@@ -75,7 +75,7 @@ class AuthService:
         user_id = uuid.UUID(payload["sub"])
         result = await self.db.execute(
             select(User)
-            .options(selectinload(User.user_roles).selectinload(User.user_roles.property.mapper.class_.role))
+            .options(selectinload(User.user_roles).selectinload(UserRole.role))
             .where(User.id == user_id, User.is_active == True)
         )
         user = result.scalar_one_or_none()

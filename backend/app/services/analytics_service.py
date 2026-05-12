@@ -62,14 +62,14 @@ class AnalyticsService:
             active_q = active_q.where(ActivityLog.user_id.in_(teacher_student_ids))
         active_today = (await self.db.execute(active_q)).scalar_one()
 
-        # Average grade (1-5 scale)
-        avg_grade_q = select(func.avg(GradeEntry.grade.cast(Numeric)))
+        # Average grade (1-5 scale), scoped to tenant
+        avg_grade_q = (
+            select(func.avg(GradeEntry.grade.cast(Numeric)))
+            .join(Course, Course.id == GradeEntry.course_id)
+            .where(Course.tenant_id == tenant_id)
+        )
         if teacher_id:
-            avg_grade_q = (
-                avg_grade_q
-                .join(Course, Course.id == GradeEntry.course_id)
-                .where(Course.teacher_id == teacher_id)
-            )
+            avg_grade_q = avg_grade_q.where(Course.teacher_id == teacher_id)
         avg_grade = (await self.db.execute(avg_grade_q)).scalar_one() or Decimal("0")
 
         return DashboardSummary(

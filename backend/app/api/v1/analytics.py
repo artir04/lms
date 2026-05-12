@@ -103,9 +103,11 @@ async def admin_report(payload: CurrentUserPayload, db=Depends(get_db)):
     )
     active_30d = active_r.scalar_one()
 
-    # Platform average grade (1-5 scale)
+    # Platform average grade (1-5 scale), scoped to tenant
     avg_grade_r = await db.execute(
         select(func.avg(GradeEntry.grade.cast(Numeric)))
+        .join(Course, Course.id == GradeEntry.course_id)
+        .where(Course.tenant_id == tenant_id)
     )
     avg_grade_val = avg_grade_r.scalar_one()
     avg_platform_grade = Decimal(str(round(avg_grade_val, 2))) if avg_grade_val else None

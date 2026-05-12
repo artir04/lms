@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -o '\"/\\\\\\(api/\\\\\\)\\\\{0,1\\\\}[a-z]*/login\"')",
+      "Bash(curl -s http://localhost:8000/openapi.json 2>&1 > /tmp/openapi.json && grep -o '\"auth/[^\"]*\"' /tmp/openapi.json | head -10)",
+      "Read(//tmp/**)",
+      "Bash(curl -s http://localhost:8000/health)",
+      "Bash(curl -s -X POST \"http://localhost:8000/api/v1/auth/login\" -H \"Content-Type: application/json\" -d '{\"email\":\"superadmin@lms.example.com\",\"password\":\"SuperAdmin123!\",\"tenant_slug\":\"test-district\"}')",
+      "Bash(docker-compose logs *)",
+      "Bash(curl -s -X POST \"http://localhost:8000/api/v1/auth/login\" -H \"Content-Type: application/json\" -d '{\"email\":\"superadmin@lms.example.com\",\"password\":\"SuperAdmin123!\",\"tenant_slug\":\"system\"}')"
+    ]
+  }
+}

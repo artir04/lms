@@ -28,6 +28,7 @@ export interface Quiz {
   created_at: string
   questions?: Question[]
   attempts_used?: number | null
+  last_submission_id?: string | null
 }
 
 export interface Answer {

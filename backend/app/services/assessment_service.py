@@ -125,7 +125,7 @@ class AssessmentService:
             )
             total_points += question.points
 
-            # Auto-grade MCQ and True/False
+            # Auto-grade MCQ and True/False. Short-answer and essay always require manual review.
             if question.question_type in ("mcq", "true_false") and ans_data.selected_option_id:
                 correct_option = next(
                     (o for o in question.options if o.is_correct), None
@@ -134,15 +134,6 @@ class AssessmentService:
                 answer.is_correct = is_correct
                 answer.points_earned = question.points if is_correct else Decimal("0")
                 earned_points += answer.points_earned
-            elif question.question_type == "short_answer" and ans_data.text_response:
-                correct_option = next((o for o in question.options if o.is_correct), None)
-                if correct_option and ans_data.text_response.strip().lower() == correct_option.text.strip().lower():
-                    answer.is_correct = True
-                    answer.points_earned = question.points
-                    earned_points += question.points
-                else:
-                    answer.is_correct = False
-                    answer.points_earned = Decimal("0")
             else:
                 has_manual = True
 

@@ -70,7 +70,18 @@ async def delete_module(course_id: uuid.UUID, module_id: uuid.UUID, payload: Cur
 async def list_lessons(course_id: uuid.UUID, module_id: uuid.UUID, payload: CurrentUserPayload, db=Depends(get_db)):
     await _assert_course_in_tenant(course_id, payload, db)
     await _assert_module_in_course(module_id, course_id, db)
-    return await ContentService(db).list_lessons(module_id)
+    svc = ContentService(db)
+    lessons = await svc.list_lessons(module_id)
+    return [
+        {
+            **lesson.__dict__,
+            "attachments": [
+                {**att.__dict__, "url": svc.get_attachment_url(att.storage_key)}
+                for att in (lesson.attachments or [])
+            ],
+        }
+        for lesson in lessons
+    ]
 
 
 @router.post("/modules/{module_id}/lessons", response_model=LessonRead, dependencies=[require_roles(Role.TEACHER, Role.ADMIN)])
@@ -97,7 +108,13 @@ async def get_lesson(
         event_type="lesson_view",
         resource_id=lesson_id,
     )
-    return lesson
+    return {
+        **lesson.__dict__,
+        "attachments": [
+            {**att.__dict__, "url": svc.get_attachment_url(att.storage_key)}
+            for att in (lesson.attachments or [])
+        ],
+    }
 
 
 @router.patch("/lessons/{lesson_id}", response_model=LessonRead, dependencies=[require_roles(Role.TEACHER, Role.ADMIN)])

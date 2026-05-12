@@ -22,13 +22,15 @@ export function QuizTakePage() {
   const attemptsExhausted =
     quiz.attempts_used != null && quiz.attempts_used >= quiz.max_attempts
 
-  if (attemptsExhausted) {
+  // If we have a fresh result from this session, show the result screen even if
+  // attempts_used has now bumped to the cap (the quiz query refetches after submit).
+  if (attemptsExhausted && !result) {
     return (
       <div className="max-w-md mx-auto py-16 text-center space-y-4">
-        <ShieldX className="h-16 w-16 text-red-400 mx-auto" />
-        <h2 className="text-xl font-bold text-ink font-display">No Attempts Remaining</h2>
+        <ShieldX className="h-16 w-16 text-emerald-400 mx-auto" />
+        <h2 className="text-xl font-bold text-ink font-display">Quiz Already Submitted</h2>
         <p className="text-ink-muted">
-          You have used all {quiz.max_attempts} attempt{quiz.max_attempts !== 1 ? 's' : ''} for this quiz.
+          You've already submitted this quiz. Your grade will appear in My Grades once it's posted.
         </p>
         <button onClick={() => navigate(-1)} className="btn-primary">
           Back to Course
@@ -50,9 +52,9 @@ export function QuizTakePage() {
         <div className="card p-8 text-center">
           {isPending ? (
             <>
-              <Clock className="h-16 w-16 text-amber-400 mx-auto mb-4" />
-              <h2 className="text-2xl font-bold text-ink mb-2 font-display">Submitted for Grading</h2>
-              <p className="text-ink-muted">Your essay answers require manual grading. You'll see your score once your teacher reviews them.</p>
+              <CheckCircle className="h-16 w-16 text-emerald-400 mx-auto mb-4" />
+              <h2 className="text-2xl font-bold text-ink mb-2 font-display">Thank you for submitting!</h2>
+              <p className="text-ink-muted">Your teacher will review your answers and post your grade soon.</p>
             </>
           ) : (
             <>

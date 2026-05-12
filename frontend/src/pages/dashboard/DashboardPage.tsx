@@ -26,34 +26,45 @@ export function DashboardPage() {
   if (dashLoading) return <PageLoader />
 
   const GRADE_COLORS: Record<number, string> = {
-    5: 'text-emerald-400',
-    4: 'text-sky-400',
-    3: 'text-amber-400',
-    2: 'text-orange-400',
-    1: 'text-rose-400',
+    5: 'text-emerald-600 dark:text-emerald-400',
+    4: 'text-sky-600 dark:text-sky-400',
+    3: 'text-amber-600 dark:text-amber-400',
+    2: 'text-orange-600 dark:text-orange-400',
+    1: 'text-rose-600 dark:text-rose-400',
   }
 
   return (
     <div className="space-y-6">
-      {/* Welcome banner */}
+      {/* Welcome banner — editorial paper / dusk-navy */}
       <div
-        className="rounded-2xl p-6 sm:p-8 text-ink relative overflow-hidden"
-        style={{
-          background: 'linear-gradient(135deg, #111318 0%, #181b24 50%, #1a1208 100%)',
-        }}
+        className="rounded-3xl p-6 sm:p-9 text-ink relative overflow-hidden border border-border
+          bg-gradient-to-br from-amber-50 via-orange-50/60 to-rose-50
+          dark:bg-none dark:bg-[linear-gradient(135deg,#111318_0%,#181b24_50%,#1a1208_100%)] dark:border-transparent"
       >
-        <div className="absolute -right-20 -top-20 w-64 h-64 rounded-full bg-primary-500/[0.08] blur-[80px] pointer-events-none" />
-        <div className="absolute right-10 bottom-0 w-40 h-40 rounded-full bg-primary-500/[0.04] blur-[60px] pointer-events-none" />
+        {/* Atmospheric glows */}
+        <div className="absolute -right-24 -top-24 w-72 h-72 rounded-full bg-primary-400/25 blur-[90px] pointer-events-none dark:bg-primary-500/[0.08]" />
+        <div className="absolute right-16 bottom-0 w-44 h-44 rounded-full bg-rose-300/20 blur-[70px] pointer-events-none dark:bg-primary-500/[0.04]" />
+        <div className="absolute -left-12 -bottom-12 w-56 h-56 rounded-full bg-amber-200/30 blur-[80px] pointer-events-none dark:hidden" />
+
+        {/* Decorative monogram (light only) */}
+        <div className="absolute right-6 top-1/2 -translate-y-1/2 text-[180px] font-black leading-none text-primary-500/[0.05] select-none font-display tracking-tighter dark:hidden">
+          ✦
+        </div>
+
         <div className="relative">
-          <p className="text-primary-400 text-xs font-semibold uppercase tracking-widest font-display">
+          <p className="text-primary-700 dark:text-primary-400 text-[11px] font-bold uppercase tracking-[0.22em] font-display flex items-center gap-2">
+            <span className="inline-block w-6 h-px bg-primary-500/60" />
             {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
           </p>
-          <h2 className="text-2xl sm:text-3xl font-bold mt-2 font-display">
-            Welcome back, {user?.first_name ?? user?.full_name}
+          <h2 className="text-3xl sm:text-[2.5rem] font-bold mt-3 font-display tracking-tight leading-[1.05]">
+            Welcome back,{' '}
+            <span className="bg-gradient-to-r from-primary-600 to-rose-600 dark:from-primary-300 dark:to-primary-500 bg-clip-text text-transparent">
+              {user?.first_name ?? user?.full_name}
+            </span>
           </h2>
-          <p className="text-ink-secondary mt-1.5 text-sm">
+          <p className="text-ink-secondary mt-3 text-[15px] max-w-xl leading-relaxed">
             {isStudent
-              ? 'Keep up the great work on your courses!'
+              ? 'Keep up the great work on your courses — your next lesson is waiting.'
               : isAdmin
                 ? "Here's an overview of your platform today."
                 : "Here's an overview of your classes today."}
@@ -99,7 +110,7 @@ export function DashboardPage() {
             <h3 className="section-title mb-0">My Grades</h3>
             <Link
               to={ROUTES.MY_GRADES}
-              className="text-sm text-primary-400 hover:text-primary-300 flex items-center gap-1 font-medium transition-colors"
+              className="text-sm text-primary-700 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300 flex items-center gap-1 font-medium transition-colors group/link"
             >
               View all <ArrowRight className="w-3.5 h-3.5" />
             </Link>
@@ -136,7 +147,7 @@ export function DashboardPage() {
         <div>
           <div className="flex items-center justify-between mb-3">
             <h3 className="section-title mb-0 flex items-center gap-2">
-              <Clock className="w-4 h-4 text-primary-400" /> What's Due Next
+              <Clock className="w-4 h-4 text-primary-600 dark:text-primary-400" /> What's Due Next
             </h3>
           </div>
           <div className="card overflow-hidden">
@@ -154,16 +165,16 @@ export function DashboardPage() {
                   <div className="flex items-center gap-3 min-w-0">
                     <div
                       className={cn(
-                        'w-9 h-9 rounded-full flex items-center justify-center shrink-0',
+                        'w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ring-1',
                         item.is_overdue
-                          ? 'bg-rose-500/15'
-                          : 'bg-primary-500/15'
+                          ? 'bg-rose-100 ring-rose-200/70 dark:bg-rose-500/15 dark:ring-rose-500/20'
+                          : 'bg-primary-100 ring-primary-200/70 dark:bg-primary-500/15 dark:ring-primary-500/20'
                       )}
                     >
                       {item.is_overdue ? (
-                        <AlertTriangle className="w-4 h-4 text-rose-400" />
+                        <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400" />
                       ) : (
-                        <Clock className="w-4 h-4 text-primary-400" />
+                        <Clock className="w-4 h-4 text-primary-700 dark:text-primary-400" />
                       )}
                     </div>
                     <div className="min-w-0">
@@ -179,8 +190,10 @@ export function DashboardPage() {
                     {item.due_at && (
                       <span
                         className={cn(
-                          'text-xs',
-                          item.is_overdue ? 'text-red-400' : 'text-ink-muted'
+                          'text-xs font-medium',
+                          item.is_overdue
+                            ? 'text-rose-600 dark:text-red-400'
+                            : 'text-ink-muted'
                         )}
                       >
                         {item.is_overdue ? 'Overdue' : formatDate(item.due_at)}
@@ -240,7 +253,7 @@ export function DashboardPage() {
             </h3>
             <Link
               to={ROUTES.COURSES}
-              className="text-sm text-primary-400 hover:text-primary-300 flex items-center gap-1 font-medium transition-colors"
+              className="text-sm text-primary-700 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300 flex items-center gap-1 font-medium transition-colors group/link"
             >
               View all <ArrowRight className="w-3.5 h-3.5" />
             </Link>

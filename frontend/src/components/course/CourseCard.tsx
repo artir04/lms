@@ -58,21 +58,24 @@ export function CourseCard({ course }: CourseCardProps) {
 
       {/* Content */}
       <div className="p-4">
-        <h3 className="font-semibold text-ink text-sm leading-snug line-clamp-2 group-hover:text-primary-400 transition-colors">
+        <h3 className="font-semibold text-ink text-[15px] leading-snug line-clamp-2 group-hover:text-primary-700 dark:group-hover:text-primary-400 transition-colors font-display">
           {course.title}
         </h3>
         {course.description && (
-          <p className="mt-1 text-xs text-ink-muted line-clamp-2 leading-relaxed">
+          <p className="mt-1.5 text-xs text-ink-muted line-clamp-2 leading-relaxed">
             {course.description}
           </p>
         )}
 
         <div className="mt-3 pt-3 border-t border-border/60 flex items-center justify-between">
-          <span className="flex items-center gap-1.5 text-xs text-ink-secondary">
+          <span className="flex items-center gap-1.5 text-xs text-ink-secondary font-medium">
             <Users className="w-3 h-3" />
             {course.teacher?.full_name?.split(' ')[0] ?? 'Instructor'}
           </span>
-          <ChevronRight className="w-4 h-4 text-ink-faint group-hover:text-primary-400 transition-colors" />
+          <span className="flex items-center gap-1 text-[11px] text-ink-faint group-hover:text-primary-700 dark:group-hover:text-primary-400 transition-all group-hover:gap-2">
+            <span className="hidden sm:inline opacity-0 group-hover:opacity-100 transition-opacity font-semibold tracking-wide">Open</span>
+            <ChevronRight className="w-4 h-4" />
+          </span>
         </div>
       </div>
     </Link>

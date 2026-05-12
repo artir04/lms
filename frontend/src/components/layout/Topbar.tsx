@@ -77,7 +77,7 @@ export function Topbar({ title, onMenuClick }: TopbarProps) {
   const pageTitle = title || getPageTitle(pathname)
 
   return (
-    <header className="h-14 bg-surface border-b border-border shadow-topbar flex items-center gap-3 px-4 sm:px-6 shrink-0 z-10">
+    <header className="h-14 bg-surface/85 backdrop-blur-xl border-b border-border shadow-topbar flex items-center gap-3 px-4 sm:px-6 shrink-0 z-10">
       <button
         onClick={onMenuClick}
         className="lg:hidden p-2 rounded-xl text-ink-secondary hover:text-ink hover:bg-surface-elevated transition-colors"
@@ -127,7 +127,7 @@ export function Topbar({ title, onMenuClick }: TopbarProps) {
               {unreadCount > 0 && (
                 <button
                   onClick={handleMarkAllRead}
-                  className="text-xs text-primary-400 hover:text-primary-300 flex items-center gap-1 font-medium"
+                  className="text-xs text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 flex items-center gap-1 font-medium"
                 >
                   <Check className="w-3 h-3" /> Mark all read
                 </button>
@@ -193,7 +193,7 @@ export function Topbar({ title, onMenuClick }: TopbarProps) {
               </div>
               <button
                 onClick={handleLogout}
-                className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors mt-1"
+                className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-500/10 dark:hover:text-red-300 transition-colors mt-1"
               >
                 <LogOut className="h-4 w-4" />
                 Sign out

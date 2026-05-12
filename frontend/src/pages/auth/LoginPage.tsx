@@ -52,38 +52,56 @@ export function LoginPage() {
 
   return (
     <div className="min-h-screen flex bg-surface-base">
-      {/* Left panel — hero */}
+      {/* Left panel — editorial hero */}
       <div
-        className="hidden lg:flex lg:w-[45%] xl:w-1/2 flex-col relative overflow-hidden p-12"
-        style={{
-          background: 'linear-gradient(145deg, #0b0d12 0%, #111318 40%, #1a0f05 100%)',
-        }}
+        className="hidden lg:flex lg:w-[45%] xl:w-1/2 flex-col relative overflow-hidden p-12
+          bg-[linear-gradient(155deg,#fdf8ec_0%,#fceedd_40%,#fbd9b8_100%)]
+          dark:bg-[linear-gradient(145deg,#0b0d12_0%,#111318_40%,#1a0f05_100%)]"
       >
-        {/* Decorative elements */}
-        <div className="absolute -top-48 -right-48 w-[500px] h-[500px] rounded-full bg-primary-500/[0.07] blur-[120px] pointer-events-none" />
-        <div className="absolute -bottom-48 -left-48 w-[400px] h-[400px] rounded-full bg-violet-500/[0.05] blur-[100px] pointer-events-none" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-primary-500/[0.03] blur-[150px] pointer-events-none" />
+        {/* Atmospheric glows */}
+        <div className="absolute -top-48 -right-48 w-[500px] h-[500px] rounded-full bg-primary-300/40 blur-[120px] pointer-events-none dark:bg-primary-500/[0.07]" />
+        <div className="absolute -bottom-48 -left-48 w-[400px] h-[400px] rounded-full bg-rose-300/30 blur-[100px] pointer-events-none dark:bg-violet-500/[0.05]" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-amber-200/30 blur-[150px] pointer-events-none dark:bg-primary-500/[0.03]" />
+
+        {/* Editorial decorative grid (light only) */}
+        <div className="absolute inset-0 pointer-events-none opacity-[0.4] dark:opacity-0"
+          style={{
+            backgroundImage: 'radial-gradient(rgba(80,55,20,0.10) 1px, transparent 1px)',
+            backgroundSize: '24px 24px',
+            maskImage: 'radial-gradient(ellipse at center, black 20%, transparent 75%)',
+            WebkitMaskImage: 'radial-gradient(ellipse at center, black 20%, transparent 75%)',
+          }}
+        />
 
         {/* Logo */}
         <div className="relative flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center shadow-lg shadow-primary-900/50">
+          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center shadow-[0_8px_24px_-6px_rgba(232,125,26,0.55)] ring-1 ring-primary-700/20">
             <Sparkles className="w-5 h-5 text-white" />
           </div>
-          <span className="text-ink font-bold text-xl font-display">EduDitari</span>
+          <div className="leading-tight">
+            <span className="block text-ink dark:text-white font-bold text-xl font-display tracking-tight">
+              EduDitari
+            </span>
+            <span className="block text-[10px] uppercase tracking-[0.24em] text-ink-muted font-semibold mt-0.5">
+              Learning · Suite
+            </span>
+          </div>
         </div>
 
         {/* Hero text */}
         <div className="relative mt-auto mb-12">
-          <p className="text-primary-400 text-sm font-semibold mb-3 uppercase tracking-widest font-display">
+          <p className="text-primary-700 dark:text-primary-400 text-xs font-bold mb-4 uppercase tracking-[0.22em] font-display flex items-center gap-2.5">
+            <span className="inline-block w-8 h-px bg-primary-500/70" />
             Modern Learning Platform
           </p>
-          <h2 className="text-5xl font-bold text-ink leading-[1.1] font-display">
+          <h2 className="text-[3.4rem] font-bold text-ink dark:text-white leading-[1.02] font-display tracking-tight">
             Empower every{' '}
-            <span className="bg-gradient-to-r from-primary-300 to-primary-500 gradient-text">
-              learner's journey
-            </span>
+            <span className="italic font-medium bg-gradient-to-br from-primary-600 via-orange-600 to-rose-600 dark:from-primary-300 dark:to-primary-500 bg-clip-text text-transparent">
+              learner's
+            </span>{' '}
+            journey.
           </h2>
-          <p className="mt-5 text-ink-secondary text-base leading-relaxed max-w-md">
+          <p className="mt-6 text-ink-secondary text-[15px] leading-relaxed max-w-md">
             A complete LMS for students, teachers, and administrators to learn, grow, and succeed together.
           </p>
         </div>
@@ -93,15 +111,17 @@ export function LoginPage() {
           {FEATURES.map(({ icon: Icon, label, desc }, i) => (
             <div
               key={label}
-              className="flex items-start gap-3 p-4 rounded-2xl border border-white/[0.04] bg-white/[0.02] backdrop-blur-sm animate-fade-up"
+              className="flex items-start gap-3 p-4 rounded-2xl border border-primary-900/[0.06] bg-white/40 backdrop-blur-md animate-fade-up
+                dark:border-white/[0.04] dark:bg-white/[0.02]
+                shadow-[0_1px_2px_rgba(80,55,20,0.04)] dark:shadow-none"
               style={{ animationDelay: `${i * 0.1}s`, animationFillMode: 'backwards' }}
             >
-              <div className="w-9 h-9 rounded-xl bg-primary-500/15 flex items-center justify-center shrink-0 mt-0.5">
-                <Icon className="w-4 h-4 text-primary-400" />
+              <div className="w-9 h-9 rounded-xl bg-primary-100 ring-1 ring-primary-200/70 dark:bg-primary-500/15 dark:ring-0 flex items-center justify-center shrink-0 mt-0.5">
+                <Icon className="w-4 h-4 text-primary-700 dark:text-primary-400" />
               </div>
               <div>
-                <p className="text-ink text-sm font-medium leading-tight">{label}</p>
-                <p className="text-ink-muted text-xs mt-1 leading-relaxed">{desc}</p>
+                <p className="text-ink dark:text-white text-sm font-semibold leading-tight">{label}</p>
+                <p className="text-ink-secondary dark:text-ink-muted text-xs mt-1 leading-relaxed">{desc}</p>
               </div>
             </div>
           ))}
@@ -125,7 +145,7 @@ export function LoginPage() {
           </div>
 
           {apiError && (
-            <div className="mb-5 flex items-start gap-2.5 text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-sm">
+            <div className="mb-5 flex items-start gap-2.5 text-red-700 bg-red-50 border border-red-200 dark:text-red-400 dark:bg-red-500/10 dark:border-red-500/20 rounded-xl px-4 py-3 text-sm">
               <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
               <span>{typeof apiError === 'string' ? apiError : 'Invalid credentials. Please try again.'}</span>
             </div>
@@ -141,7 +161,7 @@ export function LoginPage() {
                 autoComplete="organization"
               />
               {errors.tenant_slug && (
-                <p className="mt-1.5 text-xs text-red-400">{errors.tenant_slug.message}</p>
+                <p className="mt-1.5 text-xs text-red-600 dark:text-red-400">{errors.tenant_slug.message}</p>
               )}
             </div>
 
@@ -155,7 +175,7 @@ export function LoginPage() {
                 autoComplete="email"
               />
               {errors.email && (
-                <p className="mt-1.5 text-xs text-red-400">{errors.email.message}</p>
+                <p className="mt-1.5 text-xs text-red-600 dark:text-red-400">{errors.email.message}</p>
               )}
             </div>
 
@@ -164,7 +184,7 @@ export function LoginPage() {
                 <label className="label">Password</label>
                 <Link
                   to={ROUTES.FORGOT_PASSWORD}
-                  className="text-xs text-primary-400 hover:text-primary-300 transition-colors"
+                  className="text-xs font-medium text-primary-700 hover:text-primary-800 dark:text-primary-400 dark:hover:text-primary-300 transition-colors"
                 >
                   Forgot password?
                 </Link>
@@ -186,7 +206,7 @@ export function LoginPage() {
                 </button>
               </div>
               {errors.password && (
-                <p className="mt-1.5 text-xs text-red-400">{errors.password.message}</p>
+                <p className="mt-1.5 text-xs text-red-600 dark:text-red-400">{errors.password.message}</p>
               )}
             </div>
 

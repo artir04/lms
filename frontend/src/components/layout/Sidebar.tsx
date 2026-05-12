@@ -106,18 +106,24 @@ export function Sidebar({ onClose }: SidebarProps) {
   return (
     <div className="flex flex-col h-full sidebar-scroll overflow-y-auto">
       {/* Brand */}
-      <div className="flex items-center justify-between px-5 h-16 border-b border-white/[0.04] shrink-0">
+      <div className="flex items-center justify-between px-5 h-16 border-b border-sidebar-border shrink-0">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center shadow-lg shadow-primary-900/40">
+          <div className="relative w-9 h-9 rounded-xl bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center shadow-[0_4px_14px_-2px_rgba(232,125,26,0.45)] ring-1 ring-primary-600/30">
             <Sparkles className="w-4 h-4 text-white" />
+            <span className="absolute inset-0 rounded-xl ring-1 ring-inset ring-white/30 pointer-events-none" />
           </div>
-          <span className="text-sidebar-text-active font-bold text-[15px] tracking-tight font-display">
-            EduDitari
-          </span>
+          <div className="leading-tight">
+            <span className="block text-sidebar-text-active font-bold text-[15px] tracking-tight font-display">
+              EduDitari
+            </span>
+            <span className="block text-[9px] uppercase tracking-[0.22em] text-sidebar-text/70 font-semibold">
+              Learning · Suite
+            </span>
+          </div>
         </div>
         <button
           onClick={onClose}
-          className="lg:hidden p-1.5 rounded-lg text-sidebar-text hover:text-sidebar-text-active hover:bg-white/[0.06] transition-colors"
+          className="lg:hidden p-1.5 rounded-lg text-sidebar-text hover:text-sidebar-text-active hover:bg-sidebar-hover transition-colors"
         >
           <X className="w-4 h-4" />
         </button>
@@ -162,8 +168,8 @@ export function Sidebar({ onClose }: SidebarProps) {
 
       {/* User profile */}
       {user && (
-        <div className="shrink-0 p-3 border-t border-white/[0.04]">
-          <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/[0.04] transition-colors group">
+        <div className="shrink-0 p-3 border-t border-sidebar-border">
+          <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-sidebar-hover transition-colors group">
             <Avatar src={user.avatar_url} name={user.full_name} size="sm" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-sidebar-text-active truncate leading-tight font-display">
@@ -176,7 +182,7 @@ export function Sidebar({ onClose }: SidebarProps) {
             <button
               onClick={handleLogout}
               title="Sign out"
-              className="p-1.5 rounded-lg text-sidebar-text hover:text-rose-400 hover:bg-white/[0.06] transition-all opacity-0 group-hover:opacity-100"
+              className="p-1.5 rounded-lg text-sidebar-text hover:text-rose-500 hover:bg-sidebar-hover transition-all opacity-0 group-hover:opacity-100"
             >
               <LogOut className="w-3.5 h-3.5" />
             </button>

@@ -45,6 +45,7 @@ class QuizCreate(BaseModel):
     shuffle_questions: bool = False
     due_at: datetime | None = None
     lesson_id: uuid.UUID | None = None
+    weight: Decimal = Decimal("0.30")
 
 
 class QuizUpdate(BaseModel):
@@ -54,6 +55,7 @@ class QuizUpdate(BaseModel):
     shuffle_questions: bool | None = None
     due_at: datetime | None = None
     is_published: bool | None = None
+    weight: Decimal | None = None
 
 
 class QuizRead(BaseModel):
@@ -67,6 +69,7 @@ class QuizRead(BaseModel):
     is_published: bool
     question_count: int = 0
     total_points: Decimal = Decimal("0")
+    weight: Decimal = Decimal("0.30")
     created_at: datetime
     attempts_used: int | None = None
     last_submission_id: uuid.UUID | None = None

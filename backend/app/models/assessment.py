@@ -25,6 +25,7 @@ class Quiz(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     shuffle_questions: Mapped[bool] = mapped_column(Boolean, default=False)
     due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     is_published: Mapped[bool] = mapped_column(Boolean, default=False)
+    weight: Mapped[Decimal] = mapped_column(Numeric(4, 3), default=Decimal("0.300"))
 
     course: Mapped["Course"] = relationship("Course", back_populates="quizzes")
     questions: Mapped[list["Question"]] = relationship(

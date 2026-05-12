@@ -1,6 +1,7 @@
-import { Bell, LogOut, Menu, Search, Check } from 'lucide-react'
+import { Bell, LogOut, Menu, Search, Check, Sun, Moon } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useNotificationStore } from '@/store/notificationStore'
+import { useThemeStore } from '@/store/themeStore'
 import { useNotifications, useMarkNotificationsRead } from '@/api/notifications'
 import { Avatar } from '@/components/ui/Avatar'
 import { useState, useRef, useEffect } from 'react'
@@ -42,6 +43,7 @@ function getPageTitle(pathname: string): string {
 export function Topbar({ title, onMenuClick }: TopbarProps) {
   const { user, logout } = useAuth()
   const { unreadCount } = useNotificationStore()
+  const { mode, toggle: toggleTheme } = useThemeStore()
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const [menuOpen, setMenuOpen] = useState(false)
@@ -96,6 +98,14 @@ export function Topbar({ title, onMenuClick }: TopbarProps) {
         <kbd className="ml-auto text-[10px] bg-surface-overlay text-ink-muted px-1.5 py-0.5 rounded font-mono hidden lg:block">
           ⌘K
         </kbd>
+      </button>
+
+      <button
+        onClick={toggleTheme}
+        className="p-2 rounded-xl text-ink-secondary hover:text-ink hover:bg-surface-elevated transition-colors"
+        aria-label={`Switch to ${mode === 'dark' ? 'light' : 'dark'} mode`}
+      >
+        {mode === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
       </button>
 
       {/* Notification bell with dropdown */}

@@ -593,8 +593,11 @@ function StudentGradesView({ courseId }: { courseId: string }) {
 function CreateQuizButton({ courseId }: { courseId: string }) {
   const navigate = useNavigate()
   const [show, setShow] = useState(false)
+  const [weightPreview, setWeightPreview] = useState('0.30')
   const { mutate: createQuiz, isPending } = useCreateQuiz(courseId)
-  const { register, handleSubmit, reset } = useForm<{ title: string }>()
+  const { register, handleSubmit, reset } = useForm<{ title: string; weight: string }>({
+    defaultValues: { weight: '0.30' },
+  })
 
   return (
     <>
@@ -604,7 +607,7 @@ function CreateQuizButton({ courseId }: { courseId: string }) {
       <Modal isOpen={show} onClose={() => setShow(false)} title="Create Quiz">
         <form
           onSubmit={handleSubmit((d) =>
-            createQuiz(d, {
+            createQuiz({ ...d, weight: Number(d.weight) }, {
               onSuccess: (quiz: any) => {
                 setShow(false)
                 reset()
@@ -617,6 +620,14 @@ function CreateQuizButton({ courseId }: { courseId: string }) {
           <div>
             <label className="label">Quiz Title *</label>
             <input {...register('title', { required: true })} className="input" placeholder="e.g. Chapter 1 Quiz" />
+          </div>
+          <div>
+            <label className="label">Weight on Final Grade</label>
+            <div className="flex items-center gap-2">
+              <input {...register('weight')} type="number" step="0.05" min="0.05" max="1" className="input" onChange={(e) => setWeightPreview(e.target.value)} />
+              <span className="text-sm text-ink-muted">= {Math.round(parseFloat(weightPreview || '0.30') * 100)}%</span>
+            </div>
+            <p className="text-[10px] text-ink-muted mt-1">e.g. 0.30 = 30%. All categories combined must not exceed 100%.</p>
           </div>
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={() => setShow(false)} className="btn-secondary flex-1">Cancel</button>

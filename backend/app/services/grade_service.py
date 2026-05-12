@@ -2,15 +2,15 @@ import uuid
 from collections import defaultdict
 from decimal import Decimal, ROUND_HALF_UP
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
+from sqlalchemy import select, func, update as sa_update
 
 from app.models.grade import GradeEntry
 from app.models.course import Course, Section, Enrollment
 from app.models.user import User
-from app.core.exceptions import NotFoundError, ValidationError, ConflictError
+from app.core.exceptions import NotFoundError, ValidationError
 from app.schemas.grade import (
     GradeBookRead, GradeBookRow, StudentGradeSummary,
-    GradeEntryUpdate, GradeEntryRead, GradeEntryCreate,
+    GradeEntryUpdate, GradeEntryRead, GradeEntryCreate, CategoryWeightUpdate,
 )
 
 
@@ -118,11 +118,24 @@ class GradeService:
         if enrollment_result.scalar_one() == 0:
             raise ValidationError("Student is not enrolled in this course")
 
-        # Validate: weight must be > 0 and <= 1.0
-        if data.weight <= 0 or data.weight > Decimal("1.0"):
+        # Auto-inherit weight from existing entries in the same column
+        weight = data.weight
+        if weight <= 0:
+            existing = await self.db.execute(
+                select(GradeEntry.weight)
+                .where(
+                    GradeEntry.course_id == course_id,
+                    GradeEntry.label == data.label,
+                )
+                .limit(1)
+            )
+            row = existing.scalar_one_or_none()
+            weight = row if row is not None else Decimal("0.30")
+
+        if weight <= 0 or weight > Decimal("1.0"):
             raise ValidationError("Weight must be between 0 and 1.0")
 
-        # Validate: total weight across all entries for this student+course does not exceed 1.0
+        # Validate total weight across all entries for this student+course does not exceed 1.0
         total_weight_result = await self.db.execute(
             select(func.coalesce(func.sum(GradeEntry.weight), Decimal("0")))
             .where(
@@ -131,23 +144,10 @@ class GradeService:
             )
         )
         current_total = total_weight_result.scalar_one()
-        if current_total + data.weight > Decimal("1.0"):
+        if current_total + weight > Decimal("1.0"):
             raise ValidationError(
-                f"Total weight would exceed 100% (current: {current_total:.3f}, adding: {data.weight:.3f})"
+                f"Total weight would exceed 100% (current: {current_total:.3f}, adding: {weight:.3f})"
             )
-
-        # Validate: no duplicate entry in same category for this student+course
-        duplicate_result = await self.db.execute(
-            select(func.count())
-            .select_from(GradeEntry)
-            .where(
-                GradeEntry.student_id == data.student_id,
-                GradeEntry.course_id == course_id,
-                GradeEntry.category == data.category,
-            )
-        )
-        if duplicate_result.scalar_one() > 0:
-            raise ConflictError(f"Grade entry already exists for category '{data.category}'")
 
         entry = GradeEntry(
             student_id=data.student_id,
@@ -155,7 +155,7 @@ class GradeService:
             category=data.category,
             label=data.label,
             grade=data.grade,
-            weight=data.weight,
+            weight=weight,
         )
         self.db.add(entry)
         await self.db.flush()
@@ -167,28 +167,56 @@ class GradeService:
         if not entry:
             raise NotFoundError("Grade entry")
 
-        # If weight is being updated, validate total doesn't exceed 1.0
-        if data.weight is not None:
-            if data.weight <= 0 or data.weight > Decimal("1.0"):
-                raise ValidationError("Weight must be between 0 and 1.0")
-            total_result = await self.db.execute(
-                select(func.coalesce(func.sum(GradeEntry.weight), Decimal("0")))
-                .where(
-                    GradeEntry.student_id == entry.student_id,
-                    GradeEntry.course_id == entry.course_id,
-                    GradeEntry.id != entry_id,
-                )
-            )
-            other_total = total_result.scalar_one()
-            if other_total + data.weight > Decimal("1.0"):
-                raise ValidationError(
-                    f"Total weight would exceed 100% (current other: {other_total:.3f}, adding: {data.weight:.3f})"
-                )
-
         for field, value in data.model_dump(exclude_none=True).items():
             setattr(entry, field, value)
         await self.db.flush()
         return entry
+
+    async def update_category_weight(self, course_id: uuid.UUID, data: CategoryWeightUpdate) -> None:
+        """Update weight for all entries matching the given label in this course."""
+        # Get old weight for this label
+        old_r = await self.db.execute(
+            select(GradeEntry.weight)
+            .where(GradeEntry.course_id == course_id, GradeEntry.label == data.label)
+            .limit(1)
+        )
+        old_weight = old_r.scalar_one_or_none()
+        if old_weight is None:
+            raise NotFoundError("No entries found for this label")
+
+        diff = data.weight - old_weight
+
+        # Check all students with this label — would their new total exceed 100%?
+        affected = await self.db.execute(
+            select(GradeEntry.student_id, func.sum(GradeEntry.weight).label("total"))
+            .where(GradeEntry.course_id == course_id)
+            .group_by(GradeEntry.student_id)
+        )
+        for row in affected.all():
+            # Only check students who actually have an entry with this label
+            has_label = await self.db.execute(
+                select(func.count())
+                .select_from(GradeEntry)
+                .where(
+                    GradeEntry.course_id == course_id,
+                    GradeEntry.student_id == row.student_id,
+                    GradeEntry.label == data.label,
+                )
+            )
+            if has_label.scalar_one() > 0 and row.total + diff > Decimal("1.0"):
+                raise ValidationError(
+                    "This weight change would cause some students to exceed 100% total weight"
+                )
+
+        await self.db.execute(
+            sa_update(GradeEntry)
+            .where(
+                GradeEntry.course_id == course_id,
+                GradeEntry.label == data.label,
+            )
+            .values(weight=data.weight)
+        )
+        await self.db.flush()
 
     @staticmethod
     def _weighted_average(entries: list[GradeEntry]) -> Decimal:

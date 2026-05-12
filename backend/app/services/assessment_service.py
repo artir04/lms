@@ -161,10 +161,16 @@ class AssessmentService:
             select(GradeEntry).where(GradeEntry.submission_id == submission.id)
         )
         entry = result.scalar_one_or_none()
+
         course_result = await self.db.execute(
             select(Quiz.course_id).where(Quiz.id == submission.quiz_id)
         )
         course_id = course_result.scalar_one()
+
+        quiz_result = await self.db.execute(
+            select(Quiz.title, Quiz.weight).where(Quiz.id == submission.quiz_id)
+        )
+        quiz_title, weight = quiz_result.one()
 
         grade = self._score_to_grade(submission.score or Decimal("0"))
 
@@ -177,9 +183,10 @@ class AssessmentService:
                 quiz_id=submission.quiz_id,
                 submission_id=submission.id,
                 category="quiz",
-                label=None,
+                label=quiz_title,
                 grade=grade,
-                weight=Decimal("1.0"),  # default weight, teacher can adjust later
+                weight=weight,
+                posted_at=datetime.now(timezone.utc),
             ))
         await self.db.flush()
 

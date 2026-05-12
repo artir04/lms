@@ -24,14 +24,18 @@ class GradeEntryCreate(BaseModel):
     category: str = "assignment"
     label: str | None = None
     grade: int = Field(ge=1, le=5)
-    weight: Decimal = Decimal("1.0")
+    weight: Decimal = Decimal("0")  # 0 = auto-inherit from column
 
 
 class GradeEntryUpdate(BaseModel):
     grade: int | None = Field(default=None, ge=1, le=5)
-    weight: Decimal | None = None
     category: str | None = None
     label: str | None = None
+
+
+class CategoryWeightUpdate(BaseModel):
+    label: str
+    weight: Decimal = Field(gt=Decimal("0"), le=Decimal("1.0"))
 
 
 class GradeBookRow(BaseModel):

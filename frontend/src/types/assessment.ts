@@ -25,6 +25,7 @@ export interface Quiz {
   is_published: boolean
   question_count: number
   total_points: number
+  weight: number
   created_at: string
   questions?: Question[]
   attempts_used?: number | null

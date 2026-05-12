@@ -2,6 +2,7 @@ import type { Config } from 'tailwindcss'
 
 export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
@@ -19,28 +20,28 @@ export default {
           950: '#3f1808',
         },
         surface: {
-          DEFAULT:  '#111318',
-          base:     '#0b0d12',
-          elevated: '#181b24',
-          overlay:  '#1e2130',
+          DEFAULT:  'rgb(var(--color-surface) / <alpha-value>)',
+          base:     'rgb(var(--color-surface-base) / <alpha-value>)',
+          elevated: 'rgb(var(--color-surface-elevated) / <alpha-value>)',
+          overlay:  'rgb(var(--color-surface-overlay) / <alpha-value>)',
         },
         ink: {
-          DEFAULT:   '#e4e3ed',
-          secondary: '#8b8da2',
-          muted:     '#585a6e',
-          faint:     '#2e3045',
+          DEFAULT:   'rgb(var(--color-ink) / <alpha-value>)',
+          secondary: 'rgb(var(--color-ink-secondary) / <alpha-value>)',
+          muted:     'rgb(var(--color-ink-muted) / <alpha-value>)',
+          faint:     'rgb(var(--color-ink-faint) / <alpha-value>)',
         },
         border: {
-          DEFAULT: '#1c1f30',
-          strong:  '#282b40',
+          DEFAULT: 'rgb(var(--color-border) / <alpha-value>)',
+          strong:  'rgb(var(--color-border-strong) / <alpha-value>)',
         },
         sidebar: {
-          DEFAULT:      '#090b10',
-          hover:        '#12151f',
-          border:       '#161929',
-          text:         '#636780',
-          'text-active':'#e4e3ed',
-          accent:       '#ed9338',
+          DEFAULT:      'rgb(var(--color-sidebar) / <alpha-value>)',
+          hover:        'rgb(var(--color-sidebar-hover) / <alpha-value>)',
+          border:       'rgb(var(--color-sidebar-border) / <alpha-value>)',
+          text:         'rgb(var(--color-sidebar-text) / <alpha-value>)',
+          'text-active':'rgb(var(--color-sidebar-text-active) / <alpha-value>)',
+          accent:       'rgb(var(--color-sidebar-accent) / <alpha-value>)',
         },
         success:  { DEFAULT: '#34d399', muted: '#064e3b' },
         danger:   { DEFAULT: '#f87171', muted: '#450a0a' },
@@ -52,13 +53,13 @@ export default {
         display: ['Bricolage Grotesque', 'system-ui', 'sans-serif'],
       },
       boxShadow: {
-        card:        '0 1px 2px 0 rgba(0,0,0,0.3), 0 1px 6px -1px rgba(0,0,0,0.2)',
-        'card-hover':'0 8px 30px 0 rgba(0,0,0,0.4), 0 2px 10px -2px rgba(0,0,0,0.3)',
-        topbar:      '0 1px 0 0 rgba(255,255,255,0.03)',
-        sidebar:     '4px 0 24px 0 rgba(0,0,0,0.5)',
-        glow:        '0 0 20px rgba(237,147,56,0.15)',
-        'glow-lg':   '0 0 40px rgba(237,147,56,0.2)',
-        glass:       'inset 0 1px 0 0 rgba(255,255,255,0.03)',
+        card:        'var(--shadow-card)',
+        'card-hover':'var(--shadow-card-hover)',
+        topbar:      'var(--shadow-topbar)',
+        sidebar:     'var(--shadow-sidebar)',
+        glow:        'var(--shadow-glow)',
+        'glow-lg':   'var(--shadow-glow-lg)',
+        glass:       'var(--shadow-glass)',
       },
       borderRadius: {
         '2xl': '1rem',

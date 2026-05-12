@@ -1,7 +1,7 @@
 import { useParams, Link } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import { ArrowLeft, Pencil, Plus } from 'lucide-react'
+import { ArrowLeft, Pencil, Plus, AlertCircle, Check, X } from 'lucide-react'
 import { useGradebook } from '@/api/grades'
 import { Modal } from '@/components/ui/Modal'
 import { PageLoader } from '@/components/ui/Spinner'
@@ -19,6 +19,12 @@ const GRADE_BG: Record<number, string> = {
   5: 'text-emerald-400', 4: 'text-sky-400', 3: 'text-amber-400', 2: 'text-orange-400', 1: 'text-rose-400',
 }
 
+interface ColumnDef {
+  label: string
+  category: string
+  weight: number | null
+}
+
 interface CreateState {
   student_id: string
   category: string
@@ -31,82 +37,129 @@ export function GradebookPage() {
   const { data: gradebook, isLoading } = useGradebook(courseId!)
   const [editingEntry, setEditingEntry] = useState<GradeEntry | null>(null)
   const [creatingEntry, setCreatingEntry] = useState<CreateState | null>(null)
-
-  const { mutate: updateEntry, isPending: isUpdating } = useMutation({
-    mutationFn: (data: { grade: number; weight: number; category: string; label: string | null }) =>
-      api.patch(`/gradebook/entries/${editingEntry!.id}`, data).then((r) => r.data),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['gradebook', courseId] })
-      setEditingEntry(null)
-    },
-  })
+  const [editingWeightColumn, setEditingWeightColumn] = useState<string | null>(null)
+  const [weightInput, setWeightInput] = useState('')
+  const [error, setError] = useState<string | null>(null)
 
   const { mutate: createEntry, isPending: isCreating } = useMutation({
-    mutationFn: (data: { student_id: string; grade: number; weight: number; category: string; label: string | null }) =>
+    mutationFn: (data: { student_id: string; grade: number; category: string; label: string | null }) =>
       api.post(`/gradebook/courses/${courseId}/entries`, data).then((r) => r.data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['gradebook', courseId] })
       setCreatingEntry(null)
+      setError(null)
+    },
+    onError: (err: any) => {
+      setError(err?.response?.data?.detail || err?.message || 'Failed to add grade')
     },
   })
 
-  const { register, handleSubmit, reset } = useForm<{ grade: string; weight: string; category: string; label: string }>()
+  const { mutate: updateEntry, isPending: isUpdating } = useMutation({
+    mutationFn: (data: { grade: number; category: string; label: string | null }) =>
+      api.patch(`/gradebook/entries/${editingEntry!.id}`, data).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['gradebook', courseId] })
+      setEditingEntry(null)
+      setError(null)
+    },
+    onError: (err: any) => {
+      setError(err?.response?.data?.detail || err?.message || 'Failed to update grade')
+    },
+  })
+
+  const { mutate: updateCategoryWeight } = useMutation({
+    mutationFn: ({ label, weight }: { label: string; weight: number }) =>
+      api.patch(`/gradebook/courses/${courseId}/categories/weight`, { label, weight }).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['gradebook', courseId] })
+      setEditingWeightColumn(null)
+    },
+    onError: (err: any) => {
+      setError(err?.response?.data?.detail || err?.message || 'Failed to update weight')
+    },
+  })
+
+  const { register, handleSubmit, reset } = useForm<{ grade: string; category: string; label: string }>()
 
   const openEdit = (entry: GradeEntry) => {
     setCreatingEntry(null)
+    setError(null)
     setEditingEntry(entry)
     reset({
       grade: String(entry.grade),
-      weight: String(entry.weight),
       category: entry.category,
       label: entry.label || '',
     })
   }
 
-  const openCreate = (student_id: string, category: string, label: string | null) => {
+  const openCreate = (student_id: string, category: string, label: string) => {
     setEditingEntry(null)
+    setError(null)
     setCreatingEntry({ student_id, category, label })
     reset({
       grade: '4',
-      weight: '0.30',
       category,
-      label: label || '',
+      label,
     })
   }
 
   const modalOpen = !!(editingEntry || creatingEntry)
-  const isPending = isUpdating || isCreating
+  const isPending = isCreating || isUpdating
 
   const closeModal = () => {
     setEditingEntry(null)
     setCreatingEntry(null)
+    setError(null)
   }
 
   const onSubmit = handleSubmit((d) => {
+    setError(null)
     if (creatingEntry) {
       createEntry({
         student_id: creatingEntry.student_id,
         grade: Number(d.grade),
-        weight: Number(d.weight),
         category: d.category,
         label: d.label || null,
       })
     } else if (editingEntry) {
       updateEntry({
         grade: Number(d.grade),
-        weight: Number(d.weight),
         category: d.category,
         label: d.label || null,
       })
     }
   })
 
+  const startWeightEdit = (col: ColumnDef) => {
+    setEditingWeightColumn(col.label)
+    setWeightInput(String(col.weight ?? 0.3))
+  }
+
+  const saveWeight = () => {
+    const label = editingWeightColumn
+    if (!label) return
+    const w = parseFloat(weightInput)
+    if (isNaN(w) || w <= 0 || w > 1) {
+      setError('Weight must be between 0.01 and 1.0')
+      return
+    }
+    setError(null)
+    updateCategoryWeight({ label, weight: w })
+  }
+
   if (isLoading) return <PageLoader />
   if (!gradebook) return <div className="text-center text-ink-muted py-16">Gradebook not found</div>
 
-  // Collect all categories across all students
-  const allCategories = Array.from(
-    new Set(gradebook.rows.flatMap((r) => r.grades.map((g) => g.label || g.category)))
+  // Build column definitions: each column knows its display label, underlying category, and weight
+  const allColumns: ColumnDef[] = Array.from(
+    new Map(
+      gradebook.rows.flatMap((r) =>
+        r.grades.map((g) => [
+          g.label || g.category,
+          { label: g.label || g.category, category: g.category, weight: Number(g.weight) },
+        ])
+      )
+    ).values()
   )
 
   return (
@@ -122,7 +175,7 @@ export function GradebookPage() {
       </div>
 
       <div className="card p-4 text-sm text-ink-secondary">
-        Grades use the Kosovo 1-5 system. The final grade is a <strong className="text-ink">weighted average</strong> of all entries, rounded to the nearest integer.
+        Grades use the Kosovo 1-5 system. The final grade is a <strong className="text-ink">weighted average</strong> of all entries, rounded to the nearest integer. Click a weight in the header to edit it for the whole column.
       </div>
 
       {!gradebook.rows.length ? (
@@ -135,9 +188,39 @@ export function GradebookPage() {
                 <th className="px-4 py-3 text-left text-xs font-medium text-ink-muted uppercase sticky left-0 bg-surface-elevated/50 min-w-[180px]">
                   Student
                 </th>
-                {allCategories.map((cat) => (
-                  <th key={cat} className="px-4 py-3 text-center text-xs font-medium text-ink-muted uppercase capitalize min-w-[100px]">
-                    {cat}
+                {allColumns.map((col) => (
+                  <th key={col.label} className="px-4 py-3 text-center min-w-[100px]">
+                    <div className="text-xs font-medium text-ink-muted uppercase capitalize">{col.label}</div>
+                    {editingWeightColumn === col.label ? (
+                      <div className="flex items-center justify-center gap-1 mt-1">
+                        <input
+                          type="number"
+                          step="0.05"
+                          min="0.05"
+                          max="1"
+                          value={weightInput}
+                          onChange={(e) => setWeightInput(e.target.value)}
+                          className="w-16 text-xs text-center bg-surface-overlay border border-border rounded px-1 py-0.5"
+                          autoFocus
+                        />
+                        <button onClick={saveWeight} className="text-emerald-400 hover:text-emerald-300">
+                          <Check className="h-3 w-3" />
+                        </button>
+                        <button onClick={() => setEditingWeightColumn(null)} className="text-ink-muted hover:text-ink-secondary">
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ) : (
+                      col.weight != null && (
+                        <button
+                          onClick={() => startWeightEdit(col)}
+                          className="text-[10px] text-ink-faint hover:text-primary-400 mt-0.5 transition-colors cursor-pointer"
+                          title="Click to edit weight"
+                        >
+                          {Math.round(col.weight * 100)}%
+                        </button>
+                      )
+                    )}
                   </th>
                 ))}
                 <th className="px-4 py-3 text-center text-xs font-medium text-ink-muted uppercase min-w-[100px]">
@@ -157,10 +240,10 @@ export function GradebookPage() {
                       <p className="text-xs text-ink-muted">{row.email}</p>
                     </div>
                   </td>
-                  {allCategories.map((cat) => {
-                    const entry = row.grades.find((g) => (g.label || g.category) === cat)
+                  {allColumns.map((col) => {
+                    const entry = row.grades.find((g) => (g.label || g.category) === col.label)
                     return (
-                      <td key={cat} className="px-4 py-3 text-center">
+                      <td key={col.label} className="px-4 py-3 text-center">
                         {entry ? (
                           <button
                             onClick={() => openEdit(entry)}
@@ -169,12 +252,11 @@ export function GradebookPage() {
                             <span className={cn('text-lg font-bold', GRADE_BG[entry.grade] || 'text-ink-muted')}>
                               {entry.grade}
                             </span>
-                            <span className="text-[10px] text-ink-faint">×{entry.weight}</span>
                             <Pencil className="h-3 w-3 text-ink-faint opacity-0 group-hover:opacity-100 transition-opacity" />
                           </button>
                         ) : (
                           <button
-                            onClick={() => openCreate(row.student_id, cat, cat)}
+                            onClick={() => openCreate(row.student_id, col.category, col.label)}
                             className="inline-flex items-center gap-1 text-ink-faint hover:text-ink-secondary transition-colors group"
                             title="Add grade"
                           >
@@ -205,6 +287,13 @@ export function GradebookPage() {
       {/* Add / Edit Modal */}
       <Modal isOpen={modalOpen} onClose={closeModal} title={creatingEntry ? 'Add Grade' : 'Edit Grade'}>
         <form onSubmit={onSubmit} className="space-y-4">
+          {error && (
+            <div className="flex items-start gap-2.5 p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-sm text-rose-400">
+              <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+
           <div>
             <label className="label">Label</label>
             <input {...register('label')} className="input" placeholder="e.g. Test 1, Midterm" />
@@ -218,22 +307,15 @@ export function GradebookPage() {
               <option value="participation">Participation</option>
             </select>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="label">Grade (1-5)</label>
-              <select {...register('grade', { required: true })} className="input">
-                <option value="5">5 (Excellent)</option>
-                <option value="4">4 (Good)</option>
-                <option value="3">3 (Satisfactory)</option>
-                <option value="2">2 (Sufficient)</option>
-                <option value="1">1 (Insufficient)</option>
-              </select>
-            </div>
-            <div>
-              <label className="label">Weight</label>
-              <input {...register('weight', { required: true })} type="number" step="0.05" min="0.05" max="1" className="input" />
-              <p className="text-[10px] text-ink-muted mt-1">e.g. 0.30 = 30%</p>
-            </div>
+          <div>
+            <label className="label">Grade (1-5)</label>
+            <select {...register('grade', { required: true })} className="input">
+              <option value="5">5 (Excellent)</option>
+              <option value="4">4 (Good)</option>
+              <option value="3">3 (Satisfactory)</option>
+              <option value="2">2 (Sufficient)</option>
+              <option value="1">1 (Insufficient)</option>
+            </select>
           </div>
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={closeModal} className="btn-secondary flex-1">Cancel</button>

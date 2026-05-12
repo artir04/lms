@@ -225,6 +225,7 @@ async def seed():
                     time_limit_min=30,
                     max_attempts=1,
                     is_published=True,
+                    weight=Decimal("0.300"),
                     due_at=now_utc() + timedelta(days=14),
                 )
                 db.add(quiz)

@@ -1,8 +1,8 @@
 import uuid
 from datetime import datetime, timezone
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, and_
+from sqlalchemy import select, func, and_, update as sa_update
 from sqlalchemy.orm import selectinload
 
 from app.models.assessment import Quiz, Question, QuestionOption, Submission, Answer
@@ -156,26 +156,57 @@ class AssessmentService:
         return r.scalar_one()
 
     async def _upsert_grade_entry(self, submission: Submission) -> None:
-        """Convert quiz score percentage to a Kosovo 1-5 grade and upsert."""
-        result = await self.db.execute(
-            select(GradeEntry).where(GradeEntry.submission_id == submission.id)
-        )
-        entry = result.scalar_one_or_none()
-
-        course_result = await self.db.execute(
-            select(Quiz.course_id).where(Quiz.id == submission.quiz_id)
-        )
-        course_id = course_result.scalar_one()
-
+        """Convert quiz score percentage to a Kosovo 1-5 grade and upsert.
+        All quizzes share the same 'quiz' category. Each gets an equal share of
+        the total quiz weight, so adding a quiz dilutes existing ones.
+        """
         quiz_result = await self.db.execute(
-            select(Quiz.title, Quiz.weight).where(Quiz.id == submission.quiz_id)
+            select(Quiz.weight, Quiz.course_id).where(Quiz.id == submission.quiz_id)
         )
-        quiz_title, weight = quiz_result.one()
+        category_weight, course_id = quiz_result.one()
 
         grade = self._score_to_grade(submission.score or Decimal("0"))
 
+        # Count existing quiz entries for this student in this course
+        count_r = await self.db.execute(
+            select(func.count())
+            .select_from(GradeEntry)
+            .where(
+                GradeEntry.student_id == submission.student_id,
+                GradeEntry.course_id == course_id,
+                GradeEntry.category == "quiz",
+            )
+        )
+        existing_count = count_r.scalar_one()
+        new_count = existing_count + 1  # including this one
+
+        if category_weight <= 0:
+            per_entry_weight = Decimal("0.30")
+        else:
+            per_entry_weight = (
+                category_weight / Decimal(str(new_count))
+            ).quantize(Decimal("0.001"), rounding=ROUND_HALF_UP)
+
+        # Rebalance: update all existing quiz entries for this student
+        if existing_count > 0:
+            await self.db.execute(
+                sa_update(GradeEntry)
+                .where(
+                    GradeEntry.student_id == submission.student_id,
+                    GradeEntry.course_id == course_id,
+                    GradeEntry.category == "quiz",
+                )
+                .values(weight=per_entry_weight)
+            )
+
+        existing = await self.db.execute(
+            select(GradeEntry).where(GradeEntry.submission_id == submission.id)
+        )
+        entry = existing.scalar_one_or_none()
+
         if entry:
             entry.grade = grade
+            entry.weight = per_entry_weight
         else:
             self.db.add(GradeEntry(
                 student_id=submission.student_id,
@@ -183,9 +214,9 @@ class AssessmentService:
                 quiz_id=submission.quiz_id,
                 submission_id=submission.id,
                 category="quiz",
-                label=quiz_title,
+                label=None,  # groups all quizzes under the "quiz" category
                 grade=grade,
-                weight=weight,
+                weight=per_entry_weight,
                 posted_at=datetime.now(timezone.utc),
             ))
         await self.db.flush()

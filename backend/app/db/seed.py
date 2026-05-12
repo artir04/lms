@@ -322,7 +322,7 @@ async def seed():
             db.add(GradeEntry(
                 student_id=students[0].id, course_id=algebra.id,
                 quiz_id=algebra_quiz.id, submission_id=sub1.id,
-                category="quiz", label=algebra_quiz.title,
+                category="quiz", label=None,
                 grade=4, weight=Decimal("0.300"),
                 posted_at=now_utc() - timedelta(days=1)))
             db.add(GradeEntry(

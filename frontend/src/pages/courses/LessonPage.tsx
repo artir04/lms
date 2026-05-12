@@ -5,15 +5,22 @@ import api from '@/config/axios'
 import { PageLoader } from '@/components/ui/Spinner'
 import { ROUTES } from '@/config/routes'
 
+interface Attachment {
+  id: string
+  filename: string
+  mime_type: string
+  size_bytes: number
+  url: string
+}
+
 interface Lesson {
   id: string
   title: string
   content_type: 'text' | 'video' | 'embed' | 'file'
   body: string | null
   video_url: string | null
-  embed_url: string | null
   duration_min: number | null
-  attachments: { id: string; filename: string; storage_key: string; url?: string }[]
+  attachments: Attachment[]
 }
 
 export function LessonPage() {
@@ -67,11 +74,11 @@ export function LessonPage() {
       )}
 
       {/* Embed */}
-      {lesson.content_type === 'embed' && lesson.embed_url && (
+      {lesson.content_type === 'embed' && lesson.video_url && (
         <div className="card overflow-hidden">
           <div className="aspect-video">
             <iframe
-              src={lesson.embed_url}
+              src={lesson.video_url}
               className="w-full h-full"
               allowFullScreen
               title={lesson.title}
@@ -97,7 +104,7 @@ export function LessonPage() {
             {lesson.attachments.map((att) => (
               <li key={att.id}>
                 <a
-                  href={att.url || `/media/${att.storage_key}`}
+                  href={att.url}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 text-sm text-primary-400 hover:underline"

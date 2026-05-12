@@ -55,12 +55,19 @@ class ContentService:
 
     async def list_lessons(self, module_id: uuid.UUID) -> list[Lesson]:
         result = await self.db.execute(
-            select(Lesson).where(Lesson.module_id == module_id).order_by(Lesson.position)
+            select(Lesson)
+            .options(selectinload(Lesson.attachments))
+            .where(Lesson.module_id == module_id)
+            .order_by(Lesson.position)
         )
         return result.scalars().all()
 
     async def get_lesson(self, lesson_id: uuid.UUID) -> Lesson:
-        result = await self.db.execute(select(Lesson).where(Lesson.id == lesson_id))
+        result = await self.db.execute(
+            select(Lesson)
+            .options(selectinload(Lesson.attachments))
+            .where(Lesson.id == lesson_id)
+        )
         lesson = result.scalar_one_or_none()
         if not lesson:
             raise NotFoundError("Lesson")

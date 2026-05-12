@@ -1,7 +1,7 @@
 import { useParams, useNavigate } from 'react-router-dom'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Plus, Pencil, Trash2, GripVertical, ChevronDown, ChevronRight } from 'lucide-react'
+import { ArrowLeft, Plus, Pencil, Trash2, GripVertical, ChevronDown, ChevronRight, Upload, Paperclip } from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { useCourse, useUpdateCourse } from '@/api/courses'
 import { Modal } from '@/components/ui/Modal'
@@ -24,6 +24,7 @@ interface Lesson {
   content_type: string
   position: number
   duration_min: number | null
+  attachments?: { id: string; filename: string; url: string }[]
 }
 
 export function CourseEditorPage() {
@@ -332,6 +333,20 @@ function LessonList({
 
   const [dragLessonId, setDragLessonId] = useState<string | null>(null)
   const [dragOverLessonId, setDragOverLessonId] = useState<string | null>(null)
+  const [uploadingLessonId, setUploadingLessonId] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const qc = useQueryClient()
+
+  const { mutate: uploadAttachment } = useMutation({
+    mutationFn: ({ lessonId, file }: { lessonId: string; file: File }) => {
+      const fd = new FormData()
+      fd.append('file', file)
+      return api.post(`/courses/${courseId}/lessons/${lessonId}/attachments`, fd, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      }).then((r) => r.data)
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['modules', courseId] }),
+  })
 
   const handleLessonDragStart = (e: React.DragEvent, lessonId: string) => {
     e.stopPropagation()
@@ -370,6 +385,18 @@ function LessonList({
 
   return (
     <div className="divide-y divide-border/60">
+      <input
+        ref={fileInputRef}
+        type="file"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0]
+          if (file && uploadingLessonId) {
+            uploadAttachment({ lessonId: uploadingLessonId, file })
+          }
+          e.target.value = ''
+        }}
+      />
       {!lessons?.length && (
         <p className="px-4 py-3 text-sm text-ink-muted">No lessons yet.</p>
       )}
@@ -391,9 +418,24 @@ function LessonList({
           )}
         >
           <GripVertical className="h-4 w-4 text-ink-muted cursor-grab active:cursor-grabbing shrink-0" />
-          <span className="flex-1 text-sm text-ink-secondary">{lesson.title}</span>
+          <span className="flex-1 text-sm text-ink-secondary truncate">{lesson.title}</span>
           {lesson.duration_min && <span className="text-xs text-ink-muted">{lesson.duration_min} min</span>}
           <span className="text-xs text-ink-muted capitalize">{lesson.content_type}</span>
+          <button
+            onClick={() => {
+              setUploadingLessonId(lesson.id)
+              fileInputRef.current?.click()
+            }}
+            className="text-ink-muted hover:text-primary-400 transition-colors"
+            title="Upload attachment"
+          >
+            <Upload className="h-3.5 w-3.5" />
+          </button>
+          {lesson.attachments && lesson.attachments.length > 0 && (
+            <span className="text-xs text-ink-muted flex items-center gap-0.5" title={`${lesson.attachments.length} attachment(s)`}>
+              <Paperclip className="h-3 w-3" />
+            </span>
+          )}
           <button onClick={() => { if (confirm('Delete this lesson?')) onDelete(lesson.id) }} className="text-red-400 hover:text-red-300">
             <Trash2 className="h-3.5 w-3.5" />
           </button>

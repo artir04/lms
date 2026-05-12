@@ -56,6 +56,8 @@ async def websocket_notifications(ws: WebSocket, token: str):
     from app.core.security import decode_token
     try:
         payload = decode_token(token)
+        if payload.get("type") != "access":
+            raise ValueError("Invalid token type")
         user_id = payload["sub"]
     except Exception:
         await ws.close(code=4001)

@@ -1,7 +1,6 @@
 from app.models.tenant import District, School
 from app.models.user import User, Role, UserRole
 from app.models.parent import ParentStudent
-from app.models.parent_child import ParentChildRelationship, ParentChildLink
 from app.models.course import Course, Section, Enrollment
 from app.models.content import Module, Lesson, Attachment
 from app.models.assessment import Quiz, Question, QuestionOption, Submission, Answer
@@ -16,7 +15,6 @@ __all__ = [
     "District", "School",
     "User", "Role", "UserRole",
     "ParentStudent",
-    "ParentChildRelationship", "ParentChildLink",
     "Course", "Section", "Enrollment",
     "Module", "Lesson", "Attachment",
     "Quiz", "Question", "QuestionOption", "Submission", "Answer",

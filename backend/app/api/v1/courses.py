@@ -6,6 +6,7 @@ from app.services.course_service import CourseService
 from app.services.audit_service import AuditService
 from app.core.pagination import PaginationParams
 from app.core.permissions import Role
+from app.core.exceptions import ForbiddenError, NotFoundError
 from app.schemas.course import (
     CourseCreate,
     CourseUpdate,
@@ -16,6 +17,10 @@ from app.schemas.course import (
     TeacherReassign,
 )
 from app.schemas.common import MessageResponse, PaginatedResponse
+
+
+def _is_staff(roles: list[str]) -> bool:
+    return any(r in roles for r in ("teacher", "admin", "superadmin"))
 
 router = APIRouter(prefix="/courses", tags=["courses"])
 
@@ -84,7 +89,10 @@ async def create_course(data: CourseCreate, payload: CurrentUserPayload, request
 @router.get("/{course_id}", response_model=CourseRead)
 async def get_course(course_id: uuid.UUID, payload: CurrentUserPayload, db=Depends(get_db)):
     service = CourseService(db)
-    return await service.get_by_id(course_id, uuid.UUID(payload["tenant_id"]))
+    course = await service.get_by_id(course_id, uuid.UUID(payload["tenant_id"]))
+    if not _is_staff(payload.get("roles", [])) and not course.is_published:
+        raise NotFoundError("Course")
+    return course
 
 
 @router.patch("/{course_id}", response_model=CourseRead, dependencies=[require_roles(Role.TEACHER, Role.ADMIN, Role.SUPERADMIN)])
@@ -196,7 +204,11 @@ async def reassign_teacher(
 @router.get("/{course_id}/sections", response_model=list[SectionRead])
 async def list_sections(course_id: uuid.UUID, payload: CurrentUserPayload, db=Depends(get_db)):
     service = CourseService(db)
-    return await service.list_sections(course_id, uuid.UUID(payload["tenant_id"]))
+    tenant_id = uuid.UUID(payload["tenant_id"])
+    course = await service.get_by_id(course_id, tenant_id)
+    if not _is_staff(payload.get("roles", [])) and not course.is_published:
+        raise NotFoundError("Course")
+    return await service.list_sections(course_id, tenant_id)
 
 
 @router.post("/{course_id}/sections", response_model=SectionRead, dependencies=[require_roles(Role.TEACHER, Role.ADMIN)])
@@ -225,7 +237,7 @@ async def enroll_student(course_id: uuid.UUID, section_id: uuid.UUID, data: Enro
 @router.delete("/{course_id}/sections/{section_id}/enroll/{student_id}", response_model=MessageResponse, dependencies=[require_roles(Role.ADMIN, Role.SUPERADMIN)])
 async def drop_student(course_id: uuid.UUID, section_id: uuid.UUID, student_id: uuid.UUID, payload: CurrentUserPayload, request: Request, db=Depends(get_db)):
     service = CourseService(db)
-    await service.drop_student(section_id, student_id)
+    await service.drop_student(section_id, student_id, uuid.UUID(payload["tenant_id"]))
     await AuditService(db).record_from_payload(
         payload,
         action="enrollment.drop",
@@ -238,8 +250,14 @@ async def drop_student(course_id: uuid.UUID, section_id: uuid.UUID, student_id: 
     return MessageResponse(message="Student dropped")
 
 
-@router.get("/{course_id}/enrollments")
+@router.get("/{course_id}/enrollments", dependencies=[require_roles(Role.TEACHER, Role.ADMIN, Role.SUPERADMIN)])
 async def list_enrollments(course_id: uuid.UUID, payload: CurrentUserPayload, db=Depends(get_db)):
     """Get all enrolled students for a course."""
     service = CourseService(db)
-    return await service.list_enrollments(course_id, uuid.UUID(payload["tenant_id"]))
+    tenant_id = uuid.UUID(payload["tenant_id"])
+    course = await service.get_by_id(course_id, tenant_id)
+    roles = payload.get("roles", [])
+    is_admin = any(r in roles for r in ("admin", "superadmin"))
+    if not is_admin and course.teacher_id != uuid.UUID(payload["sub"]):
+        raise ForbiddenError("You can only view enrollments for your own courses")
+    return await service.list_enrollments(course_id, tenant_id)

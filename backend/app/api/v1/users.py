@@ -9,7 +9,7 @@ from app.core.permissions import Role
 from app.schemas.user import UserCreate, UserUpdate, UserRead, PasswordChange
 from app.schemas.common import MessageResponse, PaginatedResponse
 from app.core.security import verify_password, hash_password
-from app.core.exceptions import UnauthorizedError
+from app.core.exceptions import UnauthorizedError, ForbiddenError
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -142,6 +142,10 @@ async def create_user(
 
 @router.get("/{user_id}", response_model=UserRead)
 async def get_user(user_id: uuid.UUID, payload: CurrentUserPayload, db=Depends(get_db)):
+    roles = payload.get("roles", [])
+    is_staff = any(r in roles for r in ("teacher", "admin", "superadmin"))
+    if not is_staff and str(user_id) != payload["sub"]:
+        raise ForbiddenError()
     service = UserService(db)
     return await service.get_by_id(user_id, uuid.UUID(payload["tenant_id"]))
 

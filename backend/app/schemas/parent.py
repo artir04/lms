@@ -9,31 +9,6 @@ from app.schemas.user import UserSummary
 class ParentStudentLink(BaseModel):
     parent_id: uuid.UUID
     student_id: uuid.UUID
-    relationship_id: int | None = None
-    is_primary_contact: bool = False
-
-
-class ParentChildLinkRead(BaseModel):
-    id: uuid.UUID
-    parent_id: uuid.UUID
-    parent_name: str
-    parent_email: str
-    student_id: uuid.UUID
-    student_name: str
-    student_email: str
-    relationship_name: str | None
-    is_primary_contact: bool
-    created_at: datetime
-
-    model_config = {"from_attributes": True}
-
-
-class RelationshipType(BaseModel):
-    id: int
-    name: str
-    description: str | None
-
-    model_config = {"from_attributes": True}
 
 
 class ChildSummary(BaseModel):

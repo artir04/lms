@@ -1,7 +1,7 @@
 import { useParams, Link } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import { ArrowLeft, Pencil } from 'lucide-react'
+import { ArrowLeft, Pencil, Plus } from 'lucide-react'
 import { useGradebook } from '@/api/grades'
 import { Modal } from '@/components/ui/Modal'
 import { PageLoader } from '@/components/ui/Spinner'
@@ -19,13 +19,20 @@ const GRADE_BG: Record<number, string> = {
   5: 'text-emerald-400', 4: 'text-sky-400', 3: 'text-amber-400', 2: 'text-orange-400', 1: 'text-rose-400',
 }
 
+interface CreateState {
+  student_id: string
+  category: string
+  label: string | null
+}
+
 export function GradebookPage() {
   const { courseId } = useParams<{ courseId: string }>()!
   const qc = useQueryClient()
   const { data: gradebook, isLoading } = useGradebook(courseId!)
   const [editingEntry, setEditingEntry] = useState<GradeEntry | null>(null)
+  const [creatingEntry, setCreatingEntry] = useState<CreateState | null>(null)
 
-  const { mutate: updateEntry, isPending } = useMutation({
+  const { mutate: updateEntry, isPending: isUpdating } = useMutation({
     mutationFn: (data: { grade: number; weight: number; category: string; label: string | null }) =>
       api.patch(`/gradebook/entries/${editingEntry!.id}`, data).then((r) => r.data),
     onSuccess: () => {
@@ -34,9 +41,19 @@ export function GradebookPage() {
     },
   })
 
+  const { mutate: createEntry, isPending: isCreating } = useMutation({
+    mutationFn: (data: { student_id: string; grade: number; weight: number; category: string; label: string | null }) =>
+      api.post(`/gradebook/courses/${courseId}/entries`, data).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['gradebook', courseId] })
+      setCreatingEntry(null)
+    },
+  })
+
   const { register, handleSubmit, reset } = useForm<{ grade: string; weight: string; category: string; label: string }>()
 
   const openEdit = (entry: GradeEntry) => {
+    setCreatingEntry(null)
     setEditingEntry(entry)
     reset({
       grade: String(entry.grade),
@@ -45,6 +62,44 @@ export function GradebookPage() {
       label: entry.label || '',
     })
   }
+
+  const openCreate = (student_id: string, category: string, label: string | null) => {
+    setEditingEntry(null)
+    setCreatingEntry({ student_id, category, label })
+    reset({
+      grade: '4',
+      weight: '0.30',
+      category,
+      label: label || '',
+    })
+  }
+
+  const modalOpen = !!(editingEntry || creatingEntry)
+  const isPending = isUpdating || isCreating
+
+  const closeModal = () => {
+    setEditingEntry(null)
+    setCreatingEntry(null)
+  }
+
+  const onSubmit = handleSubmit((d) => {
+    if (creatingEntry) {
+      createEntry({
+        student_id: creatingEntry.student_id,
+        grade: Number(d.grade),
+        weight: Number(d.weight),
+        category: d.category,
+        label: d.label || null,
+      })
+    } else if (editingEntry) {
+      updateEntry({
+        grade: Number(d.grade),
+        weight: Number(d.weight),
+        category: d.category,
+        label: d.label || null,
+      })
+    }
+  })
 
   if (isLoading) return <PageLoader />
   if (!gradebook) return <div className="text-center text-ink-muted py-16">Gradebook not found</div>
@@ -118,7 +173,14 @@ export function GradebookPage() {
                             <Pencil className="h-3 w-3 text-ink-faint opacity-0 group-hover:opacity-100 transition-opacity" />
                           </button>
                         ) : (
-                          <span className="text-ink-faint">—</span>
+                          <button
+                            onClick={() => openCreate(row.student_id, cat, cat)}
+                            className="inline-flex items-center gap-1 text-ink-faint hover:text-ink-secondary transition-colors group"
+                            title="Add grade"
+                          >
+                            <span className="text-lg">—</span>
+                            <Plus className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </button>
                         )}
                       </td>
                     )
@@ -140,14 +202,9 @@ export function GradebookPage() {
         </div>
       )}
 
-      {/* Edit Entry Modal */}
-      <Modal isOpen={!!editingEntry} onClose={() => setEditingEntry(null)} title="Edit Grade">
-        <form onSubmit={handleSubmit((d) => updateEntry({
-          grade: Number(d.grade),
-          weight: Number(d.weight),
-          category: d.category,
-          label: d.label || null,
-        }))} className="space-y-4">
+      {/* Add / Edit Modal */}
+      <Modal isOpen={modalOpen} onClose={closeModal} title={creatingEntry ? 'Add Grade' : 'Edit Grade'}>
+        <form onSubmit={onSubmit} className="space-y-4">
           <div>
             <label className="label">Label</label>
             <input {...register('label')} className="input" placeholder="e.g. Test 1, Midterm" />
@@ -179,9 +236,9 @@ export function GradebookPage() {
             </div>
           </div>
           <div className="flex gap-3 pt-2">
-            <button type="button" onClick={() => setEditingEntry(null)} className="btn-secondary flex-1">Cancel</button>
+            <button type="button" onClick={closeModal} className="btn-secondary flex-1">Cancel</button>
             <button type="submit" disabled={isPending} className="btn-primary flex-1">
-              {isPending ? 'Saving...' : 'Save'}
+              {isPending ? 'Saving...' : creatingEntry ? 'Add Entry' : 'Save'}
             </button>
           </div>
         </form>

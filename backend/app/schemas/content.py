@@ -22,6 +22,7 @@ class ModuleRead(BaseModel):
     position: int
     is_locked: bool
     lesson_count: int = 0
+    lessons: list = []
 
     model_config = {"from_attributes": True}
 
@@ -44,6 +45,16 @@ class LessonUpdate(BaseModel):
     duration_min: int | None = None
 
 
+class AttachmentRead(BaseModel):
+    id: uuid.UUID
+    filename: str
+    mime_type: str
+    size_bytes: int
+    url: str
+
+    model_config = {"from_attributes": True}
+
+
 class LessonRead(BaseModel):
     id: uuid.UUID
     module_id: uuid.UUID
@@ -54,15 +65,6 @@ class LessonRead(BaseModel):
     position: int
     duration_min: int | None
     created_at: datetime
-
-    model_config = {"from_attributes": True}
-
-
-class AttachmentRead(BaseModel):
-    id: uuid.UUID
-    filename: str
-    mime_type: str
-    size_bytes: int
-    url: str
+    attachments: list[AttachmentRead] = []
 
     model_config = {"from_attributes": True}

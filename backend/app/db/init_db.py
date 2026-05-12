@@ -5,7 +5,6 @@ from app.db.base import Base
 from app.db.session import engine
 from app.models.user import User, Role, UserRole
 from app.models.tenant import District
-from app.models.parent_child import ParentChildRelationship
 from app.core.security import hash_password
 from app.config import get_settings
 
@@ -123,23 +122,6 @@ async def init_db():
             existing = await db.execute(select(Role).where(Role.name == role_name))
             if not existing.scalar_one_or_none():
                 db.add(Role(name=role_name))
-        await db.flush()
-
-        # Seed parent-child relationship types
-        rel_types = [
-            (1, "mother", "Biological or adoptive mother"),
-            (2, "father", "Biological or adoptive father"),
-            (3, "guardian", "Legal guardian"),
-            (4, "step_parent", "Step-parent"),
-            (5, "grandparent", "Grandparent"),
-            (6, "other", "Other family member or caregiver"),
-        ]
-        for rel_id, name, description in rel_types:
-            existing = await db.execute(
-                select(ParentChildRelationship).where(ParentChildRelationship.name == name)
-            )
-            if not existing.scalar_one_or_none():
-                db.add(ParentChildRelationship(id=rel_id, name=name, description=description))
         await db.flush()
 
         # Seed superadmin district

@@ -26,6 +26,7 @@ class Course(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     start_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     is_published: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_archived: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
 
     teacher: Mapped["User"] = relationship("User", foreign_keys=[teacher_id])
     sections: Mapped[list["Section"]] = relationship("Section", back_populates="course", cascade="all, delete-orphan")

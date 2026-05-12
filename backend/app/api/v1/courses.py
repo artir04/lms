@@ -1,11 +1,20 @@
 import uuid
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from app.db.session import get_db
 from app.dependencies import CurrentUserPayload, require_roles
 from app.services.course_service import CourseService
+from app.services.audit_service import AuditService
 from app.core.pagination import PaginationParams
 from app.core.permissions import Role
-from app.schemas.course import CourseCreate, CourseUpdate, CourseRead, SectionCreate, SectionRead, EnrollmentCreate
+from app.schemas.course import (
+    CourseCreate,
+    CourseUpdate,
+    CourseRead,
+    SectionCreate,
+    SectionRead,
+    EnrollmentCreate,
+    TeacherReassign,
+)
 from app.schemas.common import MessageResponse, PaginatedResponse
 
 router = APIRouter(prefix="/courses", tags=["courses"])
@@ -29,10 +38,47 @@ async def list_courses(
     return await service.list_courses(tenant_id, params, teacher_id=teacher_id, student_id=student_id, search=search)
 
 
-@router.post("", response_model=CourseRead, dependencies=[require_roles(Role.TEACHER, Role.ADMIN, Role.SUPERADMIN)])
-async def create_course(data: CourseCreate, payload: CurrentUserPayload, db=Depends(get_db)):
+@router.get(
+    "/admin",
+    response_model=PaginatedResponse[dict],
+    dependencies=[require_roles(Role.ADMIN, Role.SUPERADMIN)],
+)
+async def list_courses_admin(
+    payload: CurrentUserPayload,
+    db=Depends(get_db),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    search: str | None = None,
+    teacher_id: uuid.UUID | None = None,
+    school_id: uuid.UUID | None = None,
+    status: str | None = Query(None, description="active | published | draft | archived"),
+):
     service = CourseService(db)
-    return await service.create_course(data, uuid.UUID(payload["sub"]), uuid.UUID(payload["tenant_id"]))
+    tenant_id = uuid.UUID(payload["tenant_id"])
+    params = PaginationParams(page=page, page_size=page_size)
+    return await service.list_admin(
+        tenant_id,
+        params,
+        search=search,
+        teacher_id=teacher_id,
+        school_id=school_id,
+        status=status,
+    )
+
+
+@router.post("", response_model=CourseRead, dependencies=[require_roles(Role.TEACHER, Role.ADMIN, Role.SUPERADMIN)])
+async def create_course(data: CourseCreate, payload: CurrentUserPayload, request: Request, db=Depends(get_db)):
+    service = CourseService(db)
+    course = await service.create_course(data, uuid.UUID(payload["sub"]), uuid.UUID(payload["tenant_id"]))
+    await AuditService(db).record_from_payload(
+        payload,
+        action="course.create",
+        target_type="course",
+        target_id=course.id,
+        summary=f"Created course '{course.title}'",
+        request=request,
+    )
+    return course
 
 
 @router.get("/{course_id}", response_model=CourseRead)
@@ -42,21 +88,109 @@ async def get_course(course_id: uuid.UUID, payload: CurrentUserPayload, db=Depen
 
 
 @router.patch("/{course_id}", response_model=CourseRead, dependencies=[require_roles(Role.TEACHER, Role.ADMIN, Role.SUPERADMIN)])
-async def update_course(course_id: uuid.UUID, data: CourseUpdate, payload: CurrentUserPayload, db=Depends(get_db)):
+async def update_course(course_id: uuid.UUID, data: CourseUpdate, payload: CurrentUserPayload, request: Request, db=Depends(get_db)):
     service = CourseService(db)
     is_admin = any(r in payload.get("roles", []) for r in ["admin", "superadmin"])
-    return await service.update_course(course_id, data, uuid.UUID(payload["sub"]), uuid.UUID(payload["tenant_id"]), is_admin)
+    course = await service.update_course(course_id, data, uuid.UUID(payload["sub"]), uuid.UUID(payload["tenant_id"]), is_admin)
+    await AuditService(db).record_from_payload(
+        payload,
+        action="course.update",
+        target_type="course",
+        target_id=course.id,
+        summary=f"Updated course '{course.title}'",
+        request=request,
+        metadata=data.model_dump(exclude_unset=True),
+    )
+    return course
 
 
 @router.post("/{course_id}/publish", response_model=CourseRead, dependencies=[require_roles(Role.TEACHER, Role.ADMIN)])
-async def toggle_publish(course_id: uuid.UUID, payload: CurrentUserPayload, db=Depends(get_db)):
+async def toggle_publish(course_id: uuid.UUID, payload: CurrentUserPayload, request: Request, db=Depends(get_db)):
     service = CourseService(db)
     course = await service.get_by_id(course_id, uuid.UUID(payload["tenant_id"]))
     is_admin = any(r in payload.get("roles", []) for r in ["admin", "superadmin"])
-    return await service.update_course(
+    updated = await service.update_course(
         course_id, CourseUpdate(is_published=not course.is_published),
         uuid.UUID(payload["sub"]), uuid.UUID(payload["tenant_id"]), is_admin
     )
+    await AuditService(db).record_from_payload(
+        payload,
+        action="course.publish_toggle",
+        target_type="course",
+        target_id=course.id,
+        summary=f"{'Published' if updated.is_published else 'Unpublished'} '{updated.title}'",
+        request=request,
+    )
+    return updated
+
+
+@router.post(
+    "/{course_id}/archive",
+    response_model=CourseRead,
+    dependencies=[require_roles(Role.ADMIN, Role.SUPERADMIN)],
+)
+async def archive_course(course_id: uuid.UUID, payload: CurrentUserPayload, request: Request, db=Depends(get_db)):
+    service = CourseService(db)
+    tenant_id = uuid.UUID(payload["tenant_id"])
+    course = await service.archive_course(course_id, tenant_id, archive=True)
+    await AuditService(db).record_from_payload(
+        payload,
+        action="course.archive",
+        target_type="course",
+        target_id=course.id,
+        summary=f"Archived course '{course.title}'",
+        request=request,
+    )
+    return course
+
+
+@router.post(
+    "/{course_id}/unarchive",
+    response_model=CourseRead,
+    dependencies=[require_roles(Role.ADMIN, Role.SUPERADMIN)],
+)
+async def unarchive_course(course_id: uuid.UUID, payload: CurrentUserPayload, request: Request, db=Depends(get_db)):
+    service = CourseService(db)
+    tenant_id = uuid.UUID(payload["tenant_id"])
+    course = await service.archive_course(course_id, tenant_id, archive=False)
+    await AuditService(db).record_from_payload(
+        payload,
+        action="course.unarchive",
+        target_type="course",
+        target_id=course.id,
+        summary=f"Unarchived course '{course.title}'",
+        request=request,
+    )
+    return course
+
+
+@router.post(
+    "/{course_id}/reassign-teacher",
+    response_model=CourseRead,
+    dependencies=[require_roles(Role.ADMIN, Role.SUPERADMIN)],
+)
+async def reassign_teacher(
+    course_id: uuid.UUID,
+    data: TeacherReassign,
+    payload: CurrentUserPayload,
+    request: Request,
+    db=Depends(get_db),
+):
+    service = CourseService(db)
+    tenant_id = uuid.UUID(payload["tenant_id"])
+    old = await service.get_by_id(course_id, tenant_id)
+    previous_teacher_id = old.teacher_id
+    course = await service.reassign_teacher(course_id, data.teacher_id, tenant_id)
+    await AuditService(db).record_from_payload(
+        payload,
+        action="course.reassign_teacher",
+        target_type="course",
+        target_id=course.id,
+        summary=f"Reassigned teacher for '{course.title}'",
+        request=request,
+        metadata={"from_teacher_id": str(previous_teacher_id), "to_teacher_id": str(data.teacher_id)},
+    )
+    return course
 
 
 @router.get("/{course_id}/sections", response_model=list[SectionRead])
@@ -72,16 +206,35 @@ async def create_section(course_id: uuid.UUID, data: SectionCreate, payload: Cur
 
 
 @router.post("/{course_id}/sections/{section_id}/enroll", response_model=MessageResponse, dependencies=[require_roles(Role.ADMIN, Role.SUPERADMIN)])
-async def enroll_student(course_id: uuid.UUID, section_id: uuid.UUID, data: EnrollmentCreate, payload: CurrentUserPayload, db=Depends(get_db)):
+async def enroll_student(course_id: uuid.UUID, section_id: uuid.UUID, data: EnrollmentCreate, payload: CurrentUserPayload, request: Request, db=Depends(get_db)):
     service = CourseService(db)
-    await service.enroll_student(section_id, data.student_id, uuid.UUID(payload["tenant_id"]))
+    tenant_id = uuid.UUID(payload["tenant_id"])
+    await service.enroll_student(section_id, data.student_id, tenant_id)
+    await AuditService(db).record_from_payload(
+        payload,
+        action="enrollment.create",
+        target_type="enrollment",
+        target_id=section_id,
+        summary="Enrolled student in section",
+        request=request,
+        metadata={"course_id": str(course_id), "section_id": str(section_id), "student_id": str(data.student_id)},
+    )
     return MessageResponse(message="Student enrolled successfully")
 
 
 @router.delete("/{course_id}/sections/{section_id}/enroll/{student_id}", response_model=MessageResponse, dependencies=[require_roles(Role.ADMIN, Role.SUPERADMIN)])
-async def drop_student(course_id: uuid.UUID, section_id: uuid.UUID, student_id: uuid.UUID, db=Depends(get_db)):
+async def drop_student(course_id: uuid.UUID, section_id: uuid.UUID, student_id: uuid.UUID, payload: CurrentUserPayload, request: Request, db=Depends(get_db)):
     service = CourseService(db)
     await service.drop_student(section_id, student_id)
+    await AuditService(db).record_from_payload(
+        payload,
+        action="enrollment.drop",
+        target_type="enrollment",
+        target_id=section_id,
+        summary="Dropped student from section",
+        request=request,
+        metadata={"course_id": str(course_id), "section_id": str(section_id), "student_id": str(student_id)},
+    )
     return MessageResponse(message="Student dropped")
 
 

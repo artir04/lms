@@ -20,6 +20,11 @@ import { GamificationPage } from '@/pages/gamification/GamificationPage'
 import { UserManagementPage } from '@/pages/admin/UserManagementPage'
 import { ReportsPage } from '@/pages/admin/ReportsPage'
 import { SettingsPage } from '@/pages/admin/SettingsPage'
+import { SchoolsPage } from '@/pages/admin/SchoolsPage'
+import { AdminCoursesPage } from '@/pages/admin/AdminCoursesPage'
+import { EnrollmentsPage } from '@/pages/admin/EnrollmentsPage'
+import { ParentLinkingPage } from '@/pages/admin/ParentLinkingPage'
+import { AuditLogPage } from '@/pages/admin/AuditLogPage'
 import { NotFoundPage, ForbiddenPage } from '@/pages/errors/NotFoundPage'
 import { AttendanceMarkingPage } from '@/pages/attendance/AttendanceMarkingPage'
 import { AttendanceReportPage } from '@/pages/attendance/AttendanceReportPage'
@@ -90,6 +95,11 @@ export const router = createBrowserRouter([
               { path: 'admin/users', element: <UserManagementPage /> },
               { path: 'admin/reports', element: <ReportsPage /> },
               { path: 'admin/settings', element: <SettingsPage /> },
+              { path: 'admin/schools', element: <SchoolsPage /> },
+              { path: 'admin/courses', element: <AdminCoursesPage /> },
+              { path: 'admin/enrollments', element: <EnrollmentsPage /> },
+              { path: 'admin/parent-links', element: <ParentLinkingPage /> },
+              { path: 'admin/audit', element: <AuditLogPage /> },
             ],
           },
           { path: '403', element: <ForbiddenPage /> },

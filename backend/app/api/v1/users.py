@@ -1,8 +1,9 @@
 import uuid
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from app.db.session import get_db
 from app.dependencies import get_current_user, CurrentUserPayload, require_roles
 from app.services.user_service import UserService
+from app.services.audit_service import AuditService
 from app.core.pagination import PaginationParams
 from app.core.permissions import Role
 from app.schemas.user import UserCreate, UserUpdate, UserRead, PasswordChange
@@ -121,11 +122,22 @@ async def list_users(
 async def create_user(
     data: UserCreate,
     payload: CurrentUserPayload,
+    request: Request,
     db=Depends(get_db),
 ):
     service = UserService(db)
     tenant_id = uuid.UUID(payload["tenant_id"])
-    return await service.create_user(data, tenant_id)
+    user = await service.create_user(data, tenant_id)
+    await AuditService(db).record_from_payload(
+        payload,
+        action="user.create",
+        target_type="user",
+        target_id=user.id,
+        summary=f"Created user {user.email}",
+        request=request,
+        metadata={"roles": data.roles},
+    )
+    return user
 
 
 @router.get("/{user_id}", response_model=UserRead)
@@ -139,18 +151,38 @@ async def update_user(
     user_id: uuid.UUID,
     data: UserUpdate,
     payload: CurrentUserPayload,
+    request: Request,
     db=Depends(get_db),
 ):
     service = UserService(db)
-    return await service.update_user(user_id, data, uuid.UUID(payload["tenant_id"]))
+    user = await service.update_user(user_id, data, uuid.UUID(payload["tenant_id"]))
+    await AuditService(db).record_from_payload(
+        payload,
+        action="user.update",
+        target_type="user",
+        target_id=user.id,
+        summary=f"Updated user {user.email}",
+        request=request,
+        metadata=data.model_dump(exclude_unset=True),
+    )
+    return user
 
 
 @router.delete("/{user_id}", response_model=MessageResponse, dependencies=[require_roles(Role.ADMIN, Role.SUPERADMIN)])
 async def delete_user(
     user_id: uuid.UUID,
     payload: CurrentUserPayload,
+    request: Request,
     db=Depends(get_db),
 ):
     service = UserService(db)
     await service.delete_user(user_id, uuid.UUID(payload["tenant_id"]))
+    await AuditService(db).record_from_payload(
+        payload,
+        action="user.deactivate",
+        target_type="user",
+        target_id=user_id,
+        summary="Deactivated user",
+        request=request,
+    )
     return MessageResponse(message="User deactivated")

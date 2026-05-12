@@ -2,7 +2,7 @@ import uuid
 from datetime import date
 from decimal import Decimal, ROUND_HALF_UP
 
-from sqlalchemy import Numeric, and_, func, select
+from sqlalchemy import Numeric, and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -12,7 +12,7 @@ from app.models.attendance import Attendance
 from app.models.course import Course, Enrollment, Section
 from app.models.grade import GradeEntry
 from app.models.parent import ParentStudent
-from app.models.parent_child import ParentChildLink
+from app.models.parent_child import ParentChildLink, ParentChildRelationship
 from app.models.user import User
 from app.schemas.attendance import StudentAttendanceSummary
 from app.schemas.grade import StudentGradeSummary
@@ -319,3 +319,141 @@ class ParentService:
     ) -> list[StudentAttendanceSummary]:
         await self.verify_parent_child_access(parent_id, student_id, tenant_id)
         return await self.attendance_service.get_student_attendance_summary(student_id, tenant_id)
+
+    # --- Admin link management ---
+    async def list_relationships(self) -> list[ParentChildRelationship]:
+        result = await self.db.execute(select(ParentChildRelationship).order_by(ParentChildRelationship.id))
+        return list(result.scalars().all())
+
+    async def list_links_admin(
+        self,
+        tenant_id: uuid.UUID,
+        *,
+        search: str | None = None,
+        page: int = 1,
+        page_size: int = 25,
+    ) -> dict:
+        parent_user = User.__table__.alias("parent_u")
+        student_user = User.__table__.alias("student_u")
+
+        query = (
+            select(ParentChildLink)
+            .options(
+                selectinload(ParentChildLink.parent),
+                selectinload(ParentChildLink.student),
+                selectinload(ParentChildLink.relationship),
+            )
+            .join(parent_user, parent_user.c.id == ParentChildLink.parent_id)
+            .where(parent_user.c.tenant_id == tenant_id)
+        )
+
+        if search:
+            term = f"%{search}%"
+            query = (
+                query.join(student_user, student_user.c.id == ParentChildLink.student_id)
+                .where(
+                    or_(
+                        parent_user.c.email.ilike(term),
+                        parent_user.c.first_name.ilike(term),
+                        parent_user.c.last_name.ilike(term),
+                        student_user.c.email.ilike(term),
+                        student_user.c.first_name.ilike(term),
+                        student_user.c.last_name.ilike(term),
+                    )
+                )
+            )
+
+        total = (
+            await self.db.execute(select(func.count()).select_from(query.subquery()))
+        ).scalar_one()
+
+        offset = (page - 1) * page_size
+        result = await self.db.execute(
+            query.order_by(ParentChildLink.created_at.desc()).offset(offset).limit(page_size)
+        )
+        rows = result.scalars().unique().all()
+        items = [
+            {
+                "id": link.id,
+                "parent_id": link.parent_id,
+                "parent_name": link.parent.full_name if link.parent else "",
+                "parent_email": link.parent.email if link.parent else "",
+                "student_id": link.student_id,
+                "student_name": link.student.full_name if link.student else "",
+                "student_email": link.student.email if link.student else "",
+                "relationship_name": link.relationship.name if link.relationship else None,
+                "is_primary_contact": link.is_primary_contact,
+                "created_at": link.created_at,
+            }
+            for link in rows
+        ]
+        pages = max(1, -(-total // page_size))
+        return {"items": items, "total": total, "page": page, "page_size": page_size, "pages": pages}
+
+    async def create_link_admin(
+        self,
+        tenant_id: uuid.UUID,
+        parent_id: uuid.UUID,
+        student_id: uuid.UUID,
+        relationship_id: int | None,
+        is_primary_contact: bool,
+    ) -> ParentChildLink:
+        parent_r = await self.db.execute(
+            select(User).where(User.id == parent_id, User.tenant_id == tenant_id)
+        )
+        parent = parent_r.scalar_one_or_none()
+        if not parent:
+            raise NotFoundError("Parent user")
+        student_r = await self.db.execute(
+            select(User).where(User.id == student_id, User.tenant_id == tenant_id)
+        )
+        student = student_r.scalar_one_or_none()
+        if not student:
+            raise NotFoundError("Student user")
+
+        existing = await self.db.execute(
+            select(ParentChildLink).where(
+                ParentChildLink.parent_id == parent_id,
+                ParentChildLink.student_id == student_id,
+            )
+        )
+        if existing.scalar_one_or_none():
+            raise ConflictError("This parent is already linked to this student")
+
+        rel_id = relationship_id
+        if rel_id is None:
+            other = await self.db.execute(
+                select(ParentChildRelationship).where(ParentChildRelationship.name == "other")
+            )
+            other_row = other.scalar_one_or_none()
+            if not other_row:
+                first = await self.db.execute(select(ParentChildRelationship).limit(1))
+                other_row = first.scalar_one_or_none()
+            if not other_row:
+                raise NotFoundError("Relationship type")
+            rel_id = other_row.id
+
+        link = ParentChildLink(
+            parent_id=parent_id,
+            student_id=student_id,
+            relationship_id=rel_id,
+            is_primary_contact=is_primary_contact,
+        )
+        self.db.add(link)
+        await self.db.flush()
+        return link
+
+    async def delete_link_admin(self, tenant_id: uuid.UUID, link_id: uuid.UUID) -> ParentChildLink:
+        result = await self.db.execute(
+            select(ParentChildLink)
+            .options(selectinload(ParentChildLink.parent), selectinload(ParentChildLink.student))
+            .where(ParentChildLink.id == link_id)
+        )
+        link = result.scalar_one_or_none()
+        if not link:
+            raise NotFoundError("Parent-child link")
+        if link.parent and link.parent.tenant_id != tenant_id:
+            raise ForbiddenError("Link is not in your tenant")
+        await self.db.delete(link)
+        await self.db.flush()
+        return link

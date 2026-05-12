@@ -14,6 +14,10 @@ import {
   FileBarChart,
   Sparkles,
   Baby,
+  School as SchoolIcon,
+  ClipboardList,
+  Link2,
+  ShieldCheck,
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { Avatar } from '@/components/ui/Avatar'
@@ -86,7 +90,12 @@ export function Sidebar({ onClose }: SidebarProps) {
             label: 'Administration',
             items: [
               { to: ROUTES.ADMIN_USERS, icon: Users, label: 'Users' },
+              { to: ROUTES.ADMIN_SCHOOLS, icon: SchoolIcon, label: 'Schools' },
+              { to: ROUTES.ADMIN_COURSES, icon: BookOpen, label: 'Courses' },
+              { to: ROUTES.ADMIN_ENROLLMENTS, icon: ClipboardList, label: 'Enrollments' },
+              { to: ROUTES.ADMIN_PARENT_LINKS, icon: Link2, label: 'Parent Links' },
               { to: ROUTES.ADMIN_REPORTS, icon: FileBarChart, label: 'Reports' },
+              { to: ROUTES.ADMIN_AUDIT, icon: ShieldCheck, label: 'Audit Log' },
               { to: ROUTES.ADMIN_SETTINGS, icon: Settings, label: 'Settings' },
             ],
           },

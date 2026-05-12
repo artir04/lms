@@ -5,6 +5,7 @@ from app.db.base import Base
 from app.db.session import engine
 from app.models.user import User, Role, UserRole
 from app.models.tenant import District
+from app.models.parent_child import ParentChildRelationship
 from app.core.security import hash_password
 from app.config import get_settings
 
@@ -16,6 +17,31 @@ ROLES = ["superadmin", "admin", "teacher", "parent", "student"]
 def _apply_schema_migrations(connection):
     """Apply pending schema changes that create_all cannot handle on existing tables."""
     inspector = sa_inspect(connection)
+    table_names = set(inspector.get_table_names())
+
+    # Schools: academic_year and principal_id were added in admin oversight features
+    if "schools" in table_names:
+        school_cols = {c["name"] for c in inspector.get_columns("schools")}
+        if "academic_year" not in school_cols:
+            connection.execute(text("ALTER TABLE schools ADD COLUMN academic_year VARCHAR(20)"))
+        if "principal_id" not in school_cols:
+            connection.execute(text("ALTER TABLE schools ADD COLUMN principal_id UUID"))
+            try:
+                connection.execute(text(
+                    "ALTER TABLE schools ADD CONSTRAINT fk_schools_principal_id_users "
+                    "FOREIGN KEY (principal_id) REFERENCES users(id) ON DELETE SET NULL"
+                ))
+            except Exception:
+                pass
+
+    # Courses: is_archived column for course oversight
+    if "courses" in table_names:
+        course_cols = {c["name"] for c in inspector.get_columns("courses")}
+        if "is_archived" not in course_cols:
+            connection.execute(text(
+                "ALTER TABLE courses ADD COLUMN is_archived BOOLEAN NOT NULL DEFAULT FALSE"
+            ))
+
     if "grade_entries" not in inspector.get_table_names():
         return  # table will be created fresh by create_all
 
@@ -97,6 +123,23 @@ async def init_db():
             existing = await db.execute(select(Role).where(Role.name == role_name))
             if not existing.scalar_one_or_none():
                 db.add(Role(name=role_name))
+        await db.flush()
+
+        # Seed parent-child relationship types
+        rel_types = [
+            (1, "mother", "Biological or adoptive mother"),
+            (2, "father", "Biological or adoptive father"),
+            (3, "guardian", "Legal guardian"),
+            (4, "step_parent", "Step-parent"),
+            (5, "grandparent", "Grandparent"),
+            (6, "other", "Other family member or caregiver"),
+        ]
+        for rel_id, name, description in rel_types:
+            existing = await db.execute(
+                select(ParentChildRelationship).where(ParentChildRelationship.name == name)
+            )
+            if not existing.scalar_one_or_none():
+                db.add(ParentChildRelationship(id=rel_id, name=name, description=description))
         await db.flush()
 
         # Seed superadmin district

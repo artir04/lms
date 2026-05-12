@@ -43,7 +43,12 @@ export function useSubmitQuiz(quizId: string) {
   return useMutation({
     mutationFn: (answers: { question_id: string; selected_option_id?: string; text_response?: string }[]) =>
       api.post<Submission>(`/assessments/quizzes/${quizId}/submissions`, { answers }).then((r) => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: assessmentKeys.quiz(quizId) }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: assessmentKeys.quiz(quizId) })
+      qc.invalidateQueries({ queryKey: ['upcoming'] })
+      qc.invalidateQueries({ queryKey: ['quizzes'] })
+      qc.invalidateQueries({ queryKey: ['my-grades'] })
+    },
   })
 }
 

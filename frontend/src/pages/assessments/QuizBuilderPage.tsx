@@ -49,7 +49,6 @@ export function QuizBuilderPage() {
       title: quiz?.title || '',
       instructions: quiz?.instructions || '',
       time_limit_min: quiz?.time_limit_min ?? '',
-      max_attempts: quiz?.max_attempts ?? 1,
       is_published: quiz?.is_published ?? false,
     },
   })
@@ -171,15 +170,9 @@ export function QuizBuilderPage() {
             <label className="label">Instructions</label>
             <textarea {...settingsForm.register('instructions')} rows={3} className="input resize-none" />
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="label">Time Limit (min)</label>
-              <input {...settingsForm.register('time_limit_min')} type="number" min="1" className="input" placeholder="Unlimited" />
-            </div>
-            <div>
-              <label className="label">Max Attempts</label>
-              <input {...settingsForm.register('max_attempts')} type="number" min="1" className="input" />
-            </div>
+          <div>
+            <label className="label">Time Limit (min)</label>
+            <input {...settingsForm.register('time_limit_min')} type="number" min="1" className="input" placeholder="Unlimited" />
           </div>
           <div className="flex items-center gap-3">
             <input type="checkbox" id="qz_published" {...settingsForm.register('is_published')} className="rounded" />

@@ -42,7 +42,6 @@ class QuizCreate(BaseModel):
     title: str
     instructions: str | None = None
     time_limit_min: int | None = None
-    max_attempts: int = 1
     shuffle_questions: bool = False
     due_at: datetime | None = None
     lesson_id: uuid.UUID | None = None
@@ -52,7 +51,6 @@ class QuizUpdate(BaseModel):
     title: str | None = None
     instructions: str | None = None
     time_limit_min: int | None = None
-    max_attempts: int | None = None
     shuffle_questions: bool | None = None
     due_at: datetime | None = None
     is_published: bool | None = None
@@ -70,13 +68,14 @@ class QuizRead(BaseModel):
     question_count: int = 0
     total_points: Decimal = Decimal("0")
     created_at: datetime
+    attempts_used: int | None = None
+    last_submission_id: uuid.UUID | None = None
 
     model_config = {"from_attributes": True}
 
 
 class QuizDetailRead(QuizRead):
     questions: list[QuestionRead]
-    attempts_used: int | None = None
 
 
 class AnswerSubmit(BaseModel):

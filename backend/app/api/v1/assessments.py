@@ -46,10 +46,47 @@ async def _assert_quiz_access(quiz_id: uuid.UUID, payload: dict, db) -> None:
 
 
 @router.get("/courses/{course_id}/quizzes", response_model=list[QuizRead])
-async def list_quizzes(course_id: uuid.UUID, page: int = Query(1), page_size: int = Query(20), db=Depends(get_db)):
+async def list_quizzes(
+    course_id: uuid.UUID,
+    payload: CurrentUserPayload,
+    page: int = Query(1),
+    page_size: int = Query(20),
+    db=Depends(get_db),
+):
     service = AssessmentService(db)
     result = await service.list_quizzes(course_id, PaginationParams(page=page, page_size=page_size))
-    return result.items
+    items = [QuizRead.model_validate(q) for q in result.items]
+
+    roles = payload.get("roles", [])
+    is_student = "student" in roles and not any(r in roles for r in ("teacher", "admin", "superadmin"))
+    if is_student and items:
+        from sqlalchemy import select, func
+        from app.models.assessment import Submission
+
+        student_id = uuid.UUID(payload["sub"])
+        quiz_ids = [q.id for q in items]
+
+        counts_r = await db.execute(
+            select(Submission.quiz_id, func.count().label("cnt"))
+            .where(Submission.student_id == student_id, Submission.quiz_id.in_(quiz_ids))
+            .group_by(Submission.quiz_id)
+        )
+        counts = {qid: cnt for qid, cnt in counts_r.all()}
+
+        latest_r = await db.execute(
+            select(Submission.id, Submission.quiz_id, Submission.started_at)
+            .where(Submission.student_id == student_id, Submission.quiz_id.in_(quiz_ids))
+            .order_by(Submission.quiz_id, Submission.started_at.desc())
+        )
+        latest: dict[uuid.UUID, uuid.UUID] = {}
+        for sid, qid, _ in latest_r.all():
+            latest.setdefault(qid, sid)
+
+        for item in items:
+            item.attempts_used = counts.get(item.id, 0)
+            item.last_submission_id = latest.get(item.id)
+
+    return items
 
 
 @router.post("/courses/{course_id}/quizzes", response_model=QuizRead, dependencies=[require_roles(Role.TEACHER, Role.ADMIN)])

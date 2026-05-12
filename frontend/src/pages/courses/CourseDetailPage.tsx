@@ -3,7 +3,7 @@ import {
   BookOpen, ChevronDown, ChevronRight, PlayCircle, FileText, Link2,
   Plus, ClipboardList, CalendarDays, Clock, Award,
   Pencil, BookMarked, Layers, ArrowRight, Users, GraduationCap,
-  Mail,
+  Mail, CheckCircle2,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useCourse } from '@/api/courses'
@@ -324,11 +324,16 @@ export function CourseDetailPage() {
 
           {quizzes && quizzes.length > 0 ? (
             <div className="space-y-3">
-              {quizzes.map((quiz) => (
+              {quizzes.map((quiz) => {
+                const attemptsUsed = quiz.attempts_used ?? 0
+                const isCompleted = !canManage && attemptsUsed >= quiz.max_attempts
+                return (
                 <div key={quiz.id} className="card px-6 py-5 hover:shadow-card-hover transition-shadow">
                   <div className="flex items-center gap-5">
-                    <div className="flex-shrink-0 w-11 h-11 rounded-xl bg-indigo-500/15 flex items-center justify-center">
-                      <ClipboardList className="h-5 w-5 text-indigo-400" />
+                    <div className={`flex-shrink-0 w-11 h-11 rounded-xl flex items-center justify-center ${isCompleted ? 'bg-emerald-500/15' : 'bg-indigo-500/15'}`}>
+                      {isCompleted
+                        ? <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+                        : <ClipboardList className="h-5 w-5 text-indigo-400" />}
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-ink leading-snug">{quiz.title}</p>
@@ -354,6 +359,12 @@ export function CourseDetailPage() {
                             </span>
                           </>
                         )}
+                        {!canManage && !isCompleted && attemptsUsed > 0 && (
+                          <>
+                            <span className="text-ink-faint">·</span>
+                            <span>Attempt {attemptsUsed + 1} of {quiz.max_attempts}</span>
+                          </>
+                        )}
                       </div>
                     </div>
                     <div className="flex-shrink-0">
@@ -361,17 +372,22 @@ export function CourseDetailPage() {
                         <Link to={ROUTES.QUIZ_BUILDER(courseId!, quiz.id)} className="btn-secondary btn-sm">
                           <Pencil className="h-3.5 w-3.5" /> Build
                         </Link>
-                      ) : quiz.is_published ? (
-                        <Link to={ROUTES.QUIZ_TAKE(quiz.id)} className="btn-primary btn-sm">
-                          Start Quiz <ArrowRight className="h-3.5 w-3.5" />
-                        </Link>
-                      ) : (
+                      ) : !quiz.is_published ? (
                         <span className="text-xs text-ink-muted italic">Not available yet</span>
+                      ) : isCompleted ? (
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 text-emerald-400 text-xs font-semibold px-3 py-1.5">
+                          <CheckCircle2 className="h-3.5 w-3.5" /> Completed
+                        </span>
+                      ) : (
+                        <Link to={ROUTES.QUIZ_TAKE(quiz.id)} className="btn-primary btn-sm">
+                          {attemptsUsed > 0 ? 'Continue' : 'Start Quiz'} <ArrowRight className="h-3.5 w-3.5" />
+                        </Link>
                       )}
                     </div>
                   </div>
                 </div>
-              ))}
+                )
+              })}
             </div>
           ) : (
             <div className="card p-16 text-center">

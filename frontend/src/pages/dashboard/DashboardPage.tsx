@@ -186,9 +186,6 @@ export function DashboardPage() {
                         {item.is_overdue ? 'Overdue' : formatDate(item.due_at)}
                       </span>
                     )}
-                    <span className="text-[10px] text-ink-muted">
-                      {item.attempts_used}/{item.max_attempts} attempts
-                    </span>
                     <ArrowRight className="w-3.5 h-3.5 text-ink-faint" />
                   </div>
                 </Link>

@@ -1,0 +1,12 @@
+__pycache__
+*.pyc
+.env
+.git
+.gitignore
+*.md
+celerybeat-schedule
+.vscode
+.idea
+.DS_Store
+requirements.txt
+Dockerfile

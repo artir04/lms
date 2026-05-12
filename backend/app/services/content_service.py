@@ -22,7 +22,9 @@ class ContentService:
     async def list_modules(self, course_id: uuid.UUID) -> list[Module]:
         result = await self.db.execute(
             select(Module)
-            .options(selectinload(Module.lessons))
+            .options(
+                selectinload(Module.lessons).selectinload(Lesson.attachments)
+            )
             .where(Module.course_id == course_id)
             .order_by(Module.position)
         )
@@ -76,6 +78,25 @@ class ContentService:
     async def create_lesson(self, module_id: uuid.UUID, data: LessonCreate) -> Lesson:
         lesson = Lesson(module_id=module_id, **data.model_dump())
         self.db.add(lesson)
+        await self.db.flush()
+        result = await self.db.execute(
+            select(Lesson)
+            .options(selectinload(Lesson.attachments))
+            .where(Lesson.id == lesson.id)
+        )
+        return result.scalar_one()
+
+    async def update_lesson(self, lesson_id: uuid.UUID, data: LessonUpdate) -> Lesson:
+        result = await self.db.execute(
+            select(Lesson)
+            .options(selectinload(Lesson.attachments))
+            .where(Lesson.id == lesson_id)
+        )
+        lesson = result.scalar_one_or_none()
+        if not lesson:
+            raise NotFoundError("Lesson")
+        for field, value in data.model_dump(exclude_none=True).items():
+            setattr(lesson, field, value)
         await self.db.flush()
         return lesson
 

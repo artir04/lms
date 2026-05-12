@@ -7,7 +7,8 @@
       "Bash(curl -s http://localhost:8000/health)",
       "Bash(curl -s -X POST \"http://localhost:8000/api/v1/auth/login\" -H \"Content-Type: application/json\" -d '{\"email\":\"superadmin@lms.example.com\",\"password\":\"SuperAdmin123!\",\"tenant_slug\":\"test-district\"}')",
       "Bash(docker-compose logs *)",
-      "Bash(curl -s -X POST \"http://localhost:8000/api/v1/auth/login\" -H \"Content-Type: application/json\" -d '{\"email\":\"superadmin@lms.example.com\",\"password\":\"SuperAdmin123!\",\"tenant_slug\":\"system\"}')"
+      "Bash(curl -s -X POST \"http://localhost:8000/api/v1/auth/login\" -H \"Content-Type: application/json\" -d '{\"email\":\"superadmin@lms.example.com\",\"password\":\"SuperAdmin123!\",\"tenant_slug\":\"system\"}')",
+      "Bash(npx tsc *)"
     ]
   }
 }

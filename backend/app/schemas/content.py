@@ -22,6 +22,7 @@ class ModuleRead(BaseModel):
     position: int
     is_locked: bool
     lesson_count: int = 0
+    lessons: list = []
 
     model_config = {"from_attributes": True}
 

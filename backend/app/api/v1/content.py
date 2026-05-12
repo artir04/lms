@@ -15,7 +15,43 @@ router = APIRouter(prefix="/courses/{course_id}", tags=["content"])
 async def list_modules(course_id: uuid.UUID, db=Depends(get_db)):
     service = ContentService(db)
     modules = await service.list_modules(course_id)
-    return [{**m.__dict__, "lesson_count": len(m.lessons) if m.lessons else 0} for m in modules]
+    svc = ContentService(db)
+    return [
+        {
+            "id": m.id,
+            "course_id": m.course_id,
+            "title": m.title,
+            "position": m.position,
+            "is_locked": m.is_locked,
+            "lesson_count": len(m.lessons) if m.lessons else 0,
+            "lessons": [_lesson_to_dict(svc, lesson) for lesson in (m.lessons or [])],
+        }
+        for m in modules
+    ]
+
+
+def _lesson_to_dict(svc: ContentService, lesson) -> dict:
+    return {
+        "id": lesson.id,
+        "module_id": lesson.module_id,
+        "title": lesson.title,
+        "content_type": lesson.content_type,
+        "body": lesson.body,
+        "video_url": lesson.video_url,
+        "position": lesson.position,
+        "duration_min": lesson.duration_min,
+        "created_at": lesson.created_at,
+        "attachments": [
+            {
+                "id": att.id,
+                "filename": att.filename,
+                "mime_type": att.mime_type,
+                "size_bytes": att.size_bytes,
+                "url": svc.get_attachment_url(att.storage_key),
+            }
+            for att in (lesson.attachments or [])
+        ],
+    }
 
 
 @router.post("/modules", response_model=ModuleRead, dependencies=[require_roles(Role.TEACHER, Role.ADMIN)])
@@ -39,13 +75,7 @@ async def list_lessons(course_id: uuid.UUID, module_id: uuid.UUID, db=Depends(ge
     svc = ContentService(db)
     lessons = await svc.list_lessons(module_id)
     return [
-        {
-            **lesson.__dict__,
-            "attachments": [
-                {**att.__dict__, "url": svc.get_attachment_url(att.storage_key)}
-                for att in (lesson.attachments or [])
-            ],
-        }
+        _lesson_to_dict(svc, lesson)
         for lesson in lessons
     ]
 
@@ -70,13 +100,7 @@ async def get_lesson(
         event_type="lesson_view",
         resource_id=lesson_id,
     )
-    return {
-        **lesson.__dict__,
-        "attachments": [
-            {**att.__dict__, "url": svc.get_attachment_url(att.storage_key)}
-            for att in (lesson.attachments or [])
-        ],
-    }
+    return _lesson_to_dict(svc, lesson)
 
 
 @router.patch("/lessons/{lesson_id}", response_model=LessonRead, dependencies=[require_roles(Role.TEACHER, Role.ADMIN)])
@@ -88,7 +112,13 @@ async def update_lesson(course_id: uuid.UUID, lesson_id: uuid.UUID, data: Lesson
 async def upload_attachment(course_id: uuid.UUID, lesson_id: uuid.UUID, file: UploadFile = File(...), db=Depends(get_db)):
     svc = ContentService(db)
     attachment = await svc.upload_attachment(lesson_id, file)
-    return {**attachment.__dict__, "url": svc.get_attachment_url(attachment.storage_key)}
+    return {
+        "id": attachment.id,
+        "filename": attachment.filename,
+        "mime_type": attachment.mime_type,
+        "size_bytes": attachment.size_bytes,
+        "url": svc.get_attachment_url(attachment.storage_key),
+    }
 
 
 @router.put("/modules/reorder", response_model=MessageResponse, dependencies=[require_roles(Role.TEACHER, Role.ADMIN)])

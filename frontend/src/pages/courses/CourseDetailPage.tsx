@@ -3,7 +3,7 @@ import {
   BookOpen, ChevronDown, ChevronRight, PlayCircle, FileText, Link2,
   Plus, ClipboardList, CalendarDays, Clock, Award,
   Pencil, BookMarked, Layers, ArrowRight, Users, GraduationCap,
-  Mail, CheckCircle2,
+  Mail, CheckCircle2, Paperclip, Download,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useCourse } from '@/api/courses'
@@ -210,25 +210,53 @@ export function CourseDetailPage() {
               {openModules.has(module.id) && (
                 <div className="border-t border-border">
                   {module.lessons?.map((lesson: any) => (
-                    <Link
+                    <div
                       key={lesson.id}
-                      to={ROUTES.LESSON(courseId!, lesson.id)}
-                      className="flex items-center gap-4 px-6 py-4 hover:bg-surface-elevated transition-colors group border-b border-border/50 last:border-b-0"
+                      className="border-b border-border/50 last:border-b-0"
                     >
-                      <span className="flex-shrink-0 w-9 h-9 rounded-lg bg-surface-overlay flex items-center justify-center group-hover:bg-primary-500/10 transition-colors">
-                        {contentTypeIcon(lesson.content_type)}
-                      </span>
-                      <span className="flex-1 text-sm text-ink-secondary group-hover:text-ink transition-colors">
-                        {lesson.title}
-                      </span>
-                      {lesson.duration_min && (
-                        <span className="flex items-center gap-1 text-xs text-ink-muted">
-                          <Clock className="h-3 w-3" />
-                          {lesson.duration_min} min
+                      <Link
+                        to={ROUTES.LESSON(courseId!, lesson.id)}
+                        className="flex items-center gap-4 px-6 py-4 hover:bg-surface-elevated transition-colors group"
+                      >
+                        <span className="flex-shrink-0 w-9 h-9 rounded-lg bg-surface-overlay flex items-center justify-center group-hover:bg-primary-500/10 transition-colors">
+                          {contentTypeIcon(lesson.content_type)}
                         </span>
+                        <span className="flex-1 text-sm text-ink-secondary group-hover:text-ink transition-colors">
+                          {lesson.title}
+                        </span>
+                        {lesson.attachments?.length > 0 && (
+                          <span className="flex items-center gap-1 text-xs text-ink-muted" title={`${lesson.attachments.length} attachment(s)`}>
+                            <Paperclip className="h-3 w-3" />
+                            {lesson.attachments.length}
+                          </span>
+                        )}
+                        {lesson.duration_min && (
+                          <span className="flex items-center gap-1 text-xs text-ink-muted">
+                            <Clock className="h-3 w-3" />
+                            {lesson.duration_min} min
+                          </span>
+                        )}
+                        <ArrowRight className="h-4 w-4 text-ink-faint group-hover:text-primary-400 transition-colors flex-shrink-0" />
+                      </Link>
+                      {/* Attachments visible inline */}
+                      {lesson.attachments?.length > 0 && (
+                        <div className="flex flex-wrap items-center gap-2 px-6 pb-3 pl-[4.25rem]">
+                          {lesson.attachments.map((att: any) => (
+                            <a
+                              key={att.id}
+                              href={att.download_url || att.url}
+                              download
+                              onClick={(e) => e.stopPropagation()}
+                              className="inline-flex items-center gap-1.5 text-xs bg-surface-overlay hover:bg-primary-500/10 text-ink-muted hover:text-primary-400 rounded-md px-2.5 py-1 transition-colors"
+                              title="Download"
+                            >
+                              <Download className="h-3 w-3" />
+                              {att.filename}
+                            </a>
+                          ))}
+                        </div>
                       )}
-                      <ArrowRight className="h-4 w-4 text-ink-faint group-hover:text-primary-400 transition-colors flex-shrink-0" />
-                    </Link>
+                    </div>
                   ))}
                   {!module.lessons?.length && (
                     <p className="px-6 py-5 text-sm text-ink-muted italic">No lessons in this module yet.</p>

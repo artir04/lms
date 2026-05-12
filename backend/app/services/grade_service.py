@@ -166,6 +166,25 @@ class GradeService:
         entry = result.scalar_one_or_none()
         if not entry:
             raise NotFoundError("Grade entry")
+
+        # If weight is being updated, validate total doesn't exceed 1.0
+        if data.weight is not None:
+            if data.weight <= 0 or data.weight > Decimal("1.0"):
+                raise ValidationError("Weight must be between 0 and 1.0")
+            total_result = await self.db.execute(
+                select(func.coalesce(func.sum(GradeEntry.weight), Decimal("0")))
+                .where(
+                    GradeEntry.student_id == entry.student_id,
+                    GradeEntry.course_id == entry.course_id,
+                    GradeEntry.id != entry_id,
+                )
+            )
+            other_total = total_result.scalar_one()
+            if other_total + data.weight > Decimal("1.0"):
+                raise ValidationError(
+                    f"Total weight would exceed 100% (current other: {other_total:.3f}, adding: {data.weight:.3f})"
+                )
+
         for field, value in data.model_dump(exclude_none=True).items():
             setattr(entry, field, value)
         await self.db.flush()

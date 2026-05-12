@@ -1,6 +1,7 @@
+import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, PlayCircle, FileText, Paperclip, Download } from 'lucide-react'
+import { ArrowLeft, PlayCircle, FileText, File, Image, FileArchive, FileSpreadsheet, Paperclip, Download, Eye, EyeOff, Maximize2 } from 'lucide-react'
 import api from '@/config/axios'
 import { PageLoader } from '@/components/ui/Spinner'
 import { ROUTES } from '@/config/routes'
@@ -23,9 +24,28 @@ interface Lesson {
   attachments: Attachment[]
 }
 
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function fileIcon(mime: string) {
+  if (mime.startsWith('image/')) return <Image className="h-4 w-4" />
+  if (mime.includes('pdf')) return <FileText className="h-4 w-4 text-red-400" />
+  if (mime.includes('spreadsheet') || mime.includes('excel') || mime.includes('csv')) return <FileSpreadsheet className="h-4 w-4 text-green-400" />
+  if (mime.includes('zip') || mime.includes('rar') || mime.includes('tar')) return <FileArchive className="h-4 w-4 text-yellow-400" />
+  return <File className="h-4 w-4 text-ink-muted" />
+}
+
+function isPreviewable(att: Attachment): boolean {
+  return att.mime_type.startsWith('image/') || att.mime_type.includes('pdf')
+}
+
 export function LessonPage() {
   const { courseId, lessonId } = useParams<{ courseId: string; lessonId: string }>()!
   const navigate = useNavigate()
+  const [previewId, setPreviewId] = useState<string | null>(null)
 
   const { data: lesson, isLoading } = useQuery<Lesson>({
     queryKey: ['lesson', lessonId],
@@ -96,25 +116,69 @@ export function LessonPage() {
 
       {/* Attachments */}
       {lesson.attachments && lesson.attachments.length > 0 && (
-        <div className="card p-5">
-          <h3 className="text-sm font-semibold text-ink mb-3 flex items-center gap-2">
+        <div className="card p-5 space-y-3">
+          <h3 className="text-sm font-semibold text-ink flex items-center gap-2">
             <Paperclip className="h-4 w-4" /> Attachments
           </h3>
-          <ul className="space-y-2">
-            {lesson.attachments.map((att) => (
-              <li key={att.id}>
-                <a
-                  href={att.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-sm text-primary-400 hover:underline"
-                >
-                  <Download className="h-4 w-4" />
-                  {att.filename}
-                </a>
-              </li>
-            ))}
-          </ul>
+          {lesson.attachments.map((att) => (
+            <div key={att.id}>
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-surface-elevated/40 border border-border/60">
+                {fileIcon(att.mime_type)}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-ink truncate">{att.filename}</p>
+                  <p className="text-xs text-ink-muted">{formatBytes(att.size_bytes)}</p>
+                </div>
+                <div className="flex items-center gap-1">
+                  {isPreviewable(att) && (
+                    <button
+                      onClick={() => setPreviewId(previewId === att.id ? null : att.id)}
+                      className="btn-ghost p-1.5 rounded-md"
+                      title={previewId === att.id ? 'Hide preview' : 'Preview'}
+                    >
+                      {previewId === att.id ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  )}
+                  <a
+                    href={att.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn-ghost p-1.5 rounded-md"
+                    title="Open in new tab"
+                  >
+                    <Maximize2 className="h-4 w-4" />
+                  </a>
+                  <a
+                    href={att.url}
+                    download
+                    className="btn-ghost p-1.5 rounded-md text-primary-400"
+                    title="Download"
+                  >
+                    <Download className="h-4 w-4" />
+                  </a>
+                </div>
+              </div>
+              {/* Inline preview for PDFs and images */}
+              {previewId === att.id && (
+                <div className="mt-2 rounded-lg overflow-hidden border border-border/60 bg-black/5">
+                  {att.mime_type.includes('pdf') ? (
+                    <iframe
+                      src={att.url}
+                      className="w-full h-[500px]"
+                      title={att.filename}
+                    />
+                  ) : att.mime_type.startsWith('image/') ? (
+                    <div className="flex justify-center p-4">
+                      <img
+                        src={att.url}
+                        alt={att.filename}
+                        className="max-w-full max-h-[500px] object-contain rounded"
+                      />
+                    </div>
+                  ) : null}
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       )}
     </div>

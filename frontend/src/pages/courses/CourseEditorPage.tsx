@@ -341,7 +341,9 @@ function LessonList({
     mutationFn: ({ lessonId, file }: { lessonId: string; file: File }) => {
       const fd = new FormData()
       fd.append('file', file)
-      return api.post(`/courses/${courseId}/lessons/${lessonId}/attachments`, fd).then((r) => r.data)
+      return api.post(`/courses/${courseId}/lessons/${lessonId}/attachments`, fd, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      }).then((r) => r.data)
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['modules', courseId] }),
   })

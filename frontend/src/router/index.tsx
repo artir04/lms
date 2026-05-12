@@ -1,6 +1,9 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom'
 import { AppShell } from '@/components/layout/AppShell'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
+import { PageLoader } from '@/components/ui/Spinner'
+import { useAuth } from '@/hooks/useAuth'
+import { ROUTES } from '@/config/routes'
 import { LoginPage } from '@/pages/auth/LoginPage'
 import { ForgotPasswordPage } from '@/pages/auth/ForgotPasswordPage'
 import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage'
@@ -28,6 +31,12 @@ import { ParentDashboardPage, ParentChildGradesPage, ParentChildAttendancePage }
 import { TeacherAttendanceOverviewPage } from '@/pages/attendance/TeacherAttendanceOverviewPage'
 import { MyStudentsPage } from '@/pages/users/MyStudentsPage'
 
+function DefaultRedirect() {
+  const { user, isParent } = useAuth()
+  if (!user) return <PageLoader />
+  return <Navigate to={isParent ? ROUTES.PARENT : ROUTES.DASHBOARD} replace />
+}
+
 export const router = createBrowserRouter([
   {
     path: '/login',
@@ -48,21 +57,32 @@ export const router = createBrowserRouter([
       {
         element: <AppShell />,
         children: [
-          { index: true, element: <Navigate to="/dashboard" replace /> },
-          // Routes accessible by all authenticated users
-          { path: 'dashboard', element: <DashboardPage /> },
-          { path: 'courses', element: <CourseListPage /> },
-          { path: 'courses/:courseId', element: <CourseDetailPage /> },
-          { path: 'courses/:courseId/lessons/:lessonId', element: <LessonPage /> },
-          { path: 'quizzes/:quizId/take', element: <QuizTakePage /> },
-          { path: 'grades', element: <MyGradesPage /> },
-          { path: 'attendance', element: <StudentAttendancePage /> },
-          { path: 'gamification', element: <GamificationPage /> },
+          { index: true, element: <DefaultRedirect /> },
+          // Non-parent roles: dashboard + course browsing
+          {
+            element: <ProtectedRoute roles={['student', 'teacher', 'admin', 'superadmin']} />,
+            children: [
+              { path: 'dashboard', element: <DashboardPage /> },
+              { path: 'courses', element: <CourseListPage /> },
+              { path: 'courses/:courseId', element: <CourseDetailPage /> },
+              { path: 'courses/:courseId/lessons/:lessonId', element: <LessonPage /> },
+            ],
+          },
+          // Student-only routes (own grades / attendance / achievements / quiz taking)
+          {
+            element: <ProtectedRoute roles={['student']} />,
+            children: [
+              { path: 'quizzes/:quizId/take', element: <QuizTakePage /> },
+              { path: 'grades', element: <MyGradesPage /> },
+              { path: 'attendance', element: <StudentAttendancePage /> },
+              { path: 'gamification', element: <GamificationPage /> },
+            ],
+          },
           // Parent routes
           {
             element: <ProtectedRoute roles={['parent']} />,
             children: [
-              { path: 'parent/dashboard', element: <ParentDashboardPage /> },
+              { path: 'parent', element: <ParentDashboardPage /> },
               { path: 'parent/children/:studentId/grades', element: <ParentChildGradesPage /> },
               { path: 'parent/children/:studentId/attendance', element: <ParentChildAttendancePage /> },
             ],

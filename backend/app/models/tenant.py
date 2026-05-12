@@ -33,7 +33,14 @@ class School(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     code: Mapped[str] = mapped_column(String(20), nullable=False)
+    academic_year: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    principal_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 
     district: Mapped["District"] = relationship("District", back_populates="schools")
-    users: Mapped[list["User"]] = relationship("User", back_populates="school")
+    users: Mapped[list["User"]] = relationship(
+        "User", back_populates="school", foreign_keys="User.school_id"
+    )
+    principal: Mapped["User | None"] = relationship("User", foreign_keys=[principal_id])

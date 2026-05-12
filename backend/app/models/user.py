@@ -52,7 +52,9 @@ class User(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     last_login_at: Mapped[DateTime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     district: Mapped["District"] = relationship("District", back_populates="users")
-    school: Mapped["School | None"] = relationship("School", back_populates="users")
+    school: Mapped["School | None"] = relationship(
+        "School", back_populates="users", foreign_keys=[school_id]
+    )
     user_roles: Mapped[list["UserRole"]] = relationship(
         "UserRole", back_populates="user", cascade="all, delete-orphan"
     )

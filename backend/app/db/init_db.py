@@ -16,6 +16,31 @@ ROLES = ["superadmin", "admin", "teacher", "parent", "student"]
 def _apply_schema_migrations(connection):
     """Apply pending schema changes that create_all cannot handle on existing tables."""
     inspector = sa_inspect(connection)
+    table_names = set(inspector.get_table_names())
+
+    # Schools: academic_year and principal_id were added in admin oversight features
+    if "schools" in table_names:
+        school_cols = {c["name"] for c in inspector.get_columns("schools")}
+        if "academic_year" not in school_cols:
+            connection.execute(text("ALTER TABLE schools ADD COLUMN academic_year VARCHAR(20)"))
+        if "principal_id" not in school_cols:
+            connection.execute(text("ALTER TABLE schools ADD COLUMN principal_id UUID"))
+            try:
+                connection.execute(text(
+                    "ALTER TABLE schools ADD CONSTRAINT fk_schools_principal_id_users "
+                    "FOREIGN KEY (principal_id) REFERENCES users(id) ON DELETE SET NULL"
+                ))
+            except Exception:
+                pass
+
+    # Courses: is_archived column for course oversight
+    if "courses" in table_names:
+        course_cols = {c["name"] for c in inspector.get_columns("courses")}
+        if "is_archived" not in course_cols:
+            connection.execute(text(
+                "ALTER TABLE courses ADD COLUMN is_archived BOOLEAN NOT NULL DEFAULT FALSE"
+            ))
+
     if "grade_entries" not in inspector.get_table_names():
         return  # table will be created fresh by create_all
 

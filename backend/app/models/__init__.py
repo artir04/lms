@@ -8,6 +8,7 @@ from app.models.grade import GradeEntry
 from app.models.attendance import Attendance, AttendanceStatus
 from app.models.notification import Notification
 from app.models.analytics import ActivityLog, ReportSnapshot
+from app.models.audit import AuditLog
 from app.models.gamification import Badge, UserBadge, PointEntry
 
 __all__ = [
@@ -21,5 +22,6 @@ __all__ = [
     "Attendance", "AttendanceStatus",
     "Notification",
     "ActivityLog", "ReportSnapshot",
+    "AuditLog",
     "Badge", "UserBadge", "PointEntry",
 ]

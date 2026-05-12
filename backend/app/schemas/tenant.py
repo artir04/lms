@@ -31,9 +31,18 @@ class DistrictRead(BaseModel):
 
 
 class SchoolCreate(BaseModel):
-    district_id: uuid.UUID
     name: str
     code: str
+    academic_year: str | None = None
+    principal_id: uuid.UUID | None = None
+
+
+class SchoolUpdate(BaseModel):
+    name: str | None = None
+    code: str | None = None
+    academic_year: str | None = None
+    principal_id: uuid.UUID | None = None
+    is_active: bool | None = None
 
 
 class SchoolRead(BaseModel):
@@ -41,6 +50,15 @@ class SchoolRead(BaseModel):
     district_id: uuid.UUID
     name: str
     code: str
+    academic_year: str | None = None
+    principal_id: uuid.UUID | None = None
     is_active: bool
 
     model_config = {"from_attributes": True}
+
+
+class SchoolDetail(SchoolRead):
+    principal_name: str | None = None
+    principal_email: str | None = None
+    user_count: int = 0
+    course_count: int = 0

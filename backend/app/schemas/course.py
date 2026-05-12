@@ -22,6 +22,7 @@ class CourseUpdate(BaseModel):
     start_date: date | None = None
     end_date: date | None = None
     is_published: bool | None = None
+    is_archived: bool | None = None
 
 
 class CourseRead(BaseModel):
@@ -34,10 +35,31 @@ class CourseRead(BaseModel):
     start_date: date | None
     end_date: date | None
     is_published: bool
+    is_archived: bool = False
     teacher: UserSummary
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class CourseAdminRow(BaseModel):
+    id: uuid.UUID
+    title: str
+    subject: str | None
+    grade_level: str | None
+    teacher_id: uuid.UUID
+    teacher_name: str
+    teacher_email: str
+    is_published: bool
+    is_archived: bool
+    section_count: int
+    enrollment_count: int
+    school_id: uuid.UUID | None
+    created_at: datetime
+
+
+class TeacherReassign(BaseModel):
+    teacher_id: uuid.UUID
 
 
 class SectionCreate(BaseModel):

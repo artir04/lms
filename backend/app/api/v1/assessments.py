@@ -1,13 +1,13 @@
 import uuid
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import select
+from sqlalchemy import select, func
 from app.db.session import get_db
 from app.dependencies import CurrentUserPayload, require_roles
 from app.services.assessment_service import AssessmentService
 from app.core.pagination import PaginationParams
 from app.core.permissions import Role
 from app.core.exceptions import ForbiddenError, NotFoundError
-from app.models.course import Course
+from app.models.course import Course, Section, Enrollment
 from app.models.assessment import Quiz
 from app.schemas.assessment import (
     QuizCreate, QuizUpdate, QuizRead, QuizDetailRead,
@@ -45,8 +45,58 @@ async def _assert_quiz_access(quiz_id: uuid.UUID, payload: dict, db) -> None:
     await _assert_course_access(quiz.course_id, payload, db)
 
 
+async def _assert_course_view_access(course_id: uuid.UUID, payload: dict, db) -> Course:
+    """View-level access: tenant-scoped, allows admin/superadmin, owning teacher,
+    or a student actively enrolled in the course. Returns the course on success."""
+    course_r = await db.execute(
+        select(Course).where(
+            Course.id == course_id,
+            Course.tenant_id == uuid.UUID(payload["tenant_id"]),
+        )
+    )
+    course = course_r.scalar_one_or_none()
+    if not course:
+        raise NotFoundError("Course")
+    roles = payload.get("roles", [])
+    if any(r in roles for r in ("admin", "superadmin")):
+        return course
+    user_id = uuid.UUID(payload["sub"])
+    if course.teacher_id == user_id:
+        return course
+    if "student" in roles:
+        en_r = await db.execute(
+            select(func.count())
+            .select_from(Enrollment)
+            .join(Section, Section.id == Enrollment.section_id)
+            .where(
+                Section.course_id == course_id,
+                Enrollment.student_id == user_id,
+                Enrollment.status == "active",
+            )
+        )
+        if en_r.scalar_one() > 0:
+            return course
+    raise ForbiddenError()
+
+
+async def _assert_quiz_view_access(quiz_id: uuid.UUID, payload: dict, db) -> Quiz:
+    quiz_r = await db.execute(select(Quiz).where(Quiz.id == quiz_id))
+    quiz = quiz_r.scalar_one_or_none()
+    if not quiz:
+        raise NotFoundError("Quiz")
+    await _assert_course_view_access(quiz.course_id, payload, db)
+    return quiz
+
+
 @router.get("/courses/{course_id}/quizzes", response_model=list[QuizRead])
-async def list_quizzes(course_id: uuid.UUID, page: int = Query(1), page_size: int = Query(20), db=Depends(get_db)):
+async def list_quizzes(
+    course_id: uuid.UUID,
+    payload: CurrentUserPayload,
+    page: int = Query(1),
+    page_size: int = Query(20),
+    db=Depends(get_db),
+):
+    await _assert_course_view_access(course_id, payload, db)
     service = AssessmentService(db)
     result = await service.list_quizzes(course_id, PaginationParams(page=page, page_size=page_size))
     return result.items
@@ -61,9 +111,9 @@ async def create_quiz(course_id: uuid.UUID, data: QuizCreate, payload: CurrentUs
 
 @router.get("/quizzes/{quiz_id}", response_model=QuizDetailRead)
 async def get_quiz(quiz_id: uuid.UUID, payload: CurrentUserPayload, db=Depends(get_db)):
-    from sqlalchemy import select, func
     from app.models.assessment import Submission
 
+    await _assert_quiz_view_access(quiz_id, payload, db)
     service = AssessmentService(db)
     quiz = await service.get_quiz(quiz_id)
     is_student = "student" in payload.get("roles", []) and "teacher" not in payload.get("roles", [])
@@ -102,15 +152,28 @@ async def add_question(quiz_id: uuid.UUID, data: QuestionCreate, payload: Curren
     return await service.add_question(quiz_id, data)
 
 
-@router.post("/quizzes/{quiz_id}/submissions", response_model=SubmissionRead)
+@router.post("/quizzes/{quiz_id}/submissions", response_model=SubmissionRead, dependencies=[require_roles(Role.STUDENT)])
 async def submit_quiz(
     quiz_id: uuid.UUID,
     data: SubmissionCreate,
     payload: CurrentUserPayload,
     db=Depends(get_db),
 ):
-    service = AssessmentService(db)
+    quiz = await _assert_quiz_view_access(quiz_id, payload, db)
     student_id = uuid.UUID(payload["sub"])
+    en_r = await db.execute(
+        select(func.count())
+        .select_from(Enrollment)
+        .join(Section, Section.id == Enrollment.section_id)
+        .where(
+            Section.course_id == quiz.course_id,
+            Enrollment.student_id == student_id,
+            Enrollment.status == "active",
+        )
+    )
+    if en_r.scalar_one() == 0:
+        raise ForbiddenError("You are not enrolled in this course")
+    service = AssessmentService(db)
     submission = await service.start_submission(quiz_id, student_id)
     return await service.submit_answers(submission.id, student_id, data)
 
@@ -168,18 +231,21 @@ async def get_submission(
     payload: CurrentUserPayload,
     db=Depends(get_db),
 ):
-    from sqlalchemy import select
     from app.models.assessment import Submission
     from sqlalchemy.orm import selectinload
-    from app.core.exceptions import NotFoundError, ForbiddenError
     result = await db.execute(
         select(Submission).options(selectinload(Submission.answers)).where(Submission.id == submission_id)
     )
     sub = result.scalar_one_or_none()
     if not sub:
         raise NotFoundError("Submission")
-    if "student" in payload.get("roles", []) and str(sub.student_id) != payload["sub"]:
-        raise ForbiddenError()
+    roles = payload.get("roles", [])
+    if "student" in roles and "teacher" not in roles and "admin" not in roles and "superadmin" not in roles:
+        if str(sub.student_id) != payload["sub"]:
+            raise ForbiddenError()
+        await _assert_quiz_view_access(sub.quiz_id, payload, db)
+    else:
+        await _assert_quiz_access(sub.quiz_id, payload, db)
     return sub
 
 

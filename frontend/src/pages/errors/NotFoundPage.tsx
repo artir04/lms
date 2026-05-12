@@ -1,8 +1,13 @@
 import { Link } from 'react-router-dom'
 import { ROUTES } from '@/config/routes'
+import { useAuth } from '@/hooks/useAuth'
 import { BookMarked, ArrowLeft, ShieldOff } from 'lucide-react'
 
 export function NotFoundPage() {
+  const { isParent } = useAuth()
+  const homeRoute = isParent ? ROUTES.PARENT : ROUTES.DASHBOARD
+  const homeLabel = isParent ? 'Back to Parent Dashboard' : 'Back to Dashboard'
+
   return (
     <div className="min-h-screen bg-surface-base flex items-center justify-center p-6">
       <div className="text-center max-w-md">
@@ -14,9 +19,9 @@ export function NotFoundPage() {
         <p className="text-ink-muted mt-2 text-sm">
           The page you're looking for doesn't exist or has been moved.
         </p>
-        <Link to={ROUTES.DASHBOARD} className="btn-primary mt-6 inline-flex">
+        <Link to={homeRoute} className="btn-primary mt-6 inline-flex">
           <ArrowLeft className="w-4 h-4" />
-          Back to Dashboard
+          {homeLabel}
         </Link>
       </div>
     </div>
@@ -24,6 +29,10 @@ export function NotFoundPage() {
 }
 
 export function ForbiddenPage() {
+  const { isParent } = useAuth()
+  const homeRoute = isParent ? ROUTES.PARENT : ROUTES.DASHBOARD
+  const homeLabel = isParent ? 'Back to Parent Dashboard' : 'Back to Dashboard'
+
   return (
     <div className="min-h-screen bg-surface-base flex items-center justify-center p-6">
       <div className="text-center max-w-md">
@@ -35,9 +44,9 @@ export function ForbiddenPage() {
         <p className="text-ink-muted mt-2 text-sm">
           You don't have permission to view this page.
         </p>
-        <Link to={ROUTES.DASHBOARD} className="btn-primary mt-6 inline-flex">
+        <Link to={homeRoute} className="btn-primary mt-6 inline-flex">
           <ArrowLeft className="w-4 h-4" />
-          Back to Dashboard
+          {homeLabel}
         </Link>
       </div>
     </div>

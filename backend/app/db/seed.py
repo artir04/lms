@@ -752,14 +752,13 @@ async def seed():
                 "Parent123!", "parent")
             parents.append(p)
 
-        # Link parents to students
         for i, parent in enumerate(parents):
             child = students[i]  # parent i → student i
-            existing = await db.execute(
+            existing_ps = await db.execute(
                 select(ParentStudent).where(
                     ParentStudent.parent_id == parent.id,
                     ParentStudent.student_id == child.id))
-            if not existing.scalar_one_or_none():
+            if not existing_ps.scalar_one_or_none():
                 db.add(ParentStudent(parent_id=parent.id, student_id=child.id))
 
         await db.commit()

@@ -123,7 +123,25 @@ class CourseService:
         ]
 
     # --- Enrollments ---
+    async def _assert_section_in_tenant(self, section_id: uuid.UUID, tenant_id: uuid.UUID) -> None:
+        section_r = await self.db.execute(
+            select(Section.id)
+            .join(Course, Course.id == Section.course_id)
+            .where(Section.id == section_id, Course.tenant_id == tenant_id)
+        )
+        if section_r.scalar_one_or_none() is None:
+            raise NotFoundError("Section")
+
+    async def _assert_student_in_tenant(self, student_id: uuid.UUID, tenant_id: uuid.UUID) -> None:
+        student_r = await self.db.execute(
+            select(User.id).where(User.id == student_id, User.tenant_id == tenant_id)
+        )
+        if student_r.scalar_one_or_none() is None:
+            raise NotFoundError("Student")
+
     async def enroll_student(self, section_id: uuid.UUID, student_id: uuid.UUID, tenant_id: uuid.UUID) -> Enrollment:
+        await self._assert_section_in_tenant(section_id, tenant_id)
+        await self._assert_student_in_tenant(student_id, tenant_id)
         existing = await self.db.execute(
             select(Enrollment).where(
                 Enrollment.section_id == section_id, Enrollment.student_id == student_id
@@ -136,7 +154,8 @@ class CourseService:
         await self.db.flush()
         return enrollment
 
-    async def drop_student(self, section_id: uuid.UUID, student_id: uuid.UUID) -> None:
+    async def drop_student(self, section_id: uuid.UUID, student_id: uuid.UUID, tenant_id: uuid.UUID) -> None:
+        await self._assert_section_in_tenant(section_id, tenant_id)
         result = await self.db.execute(
             select(Enrollment).where(
                 Enrollment.section_id == section_id, Enrollment.student_id == student_id

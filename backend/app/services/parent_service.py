@@ -4,15 +4,12 @@ from decimal import Decimal, ROUND_HALF_UP
 
 from sqlalchemy import Numeric, and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
-
 from app.core.exceptions import ConflictError, ForbiddenError, NotFoundError
 from app.models.assessment import Quiz, Submission
 from app.models.attendance import Attendance
 from app.models.course import Course, Enrollment, Section
 from app.models.grade import GradeEntry
 from app.models.parent import ParentStudent
-from app.models.parent_child import ParentChildLink
 from app.models.user import User
 from app.schemas.attendance import StudentAttendanceSummary
 from app.schemas.grade import StudentGradeSummary
@@ -218,60 +215,56 @@ class ParentService:
             ),
         )
 
-    async def verify_parent_child_access(self, parent_id: uuid.UUID, student_id: uuid.UUID, tenant_id: uuid.UUID) -> ParentChildLink:
-        """Verify that a parent has access to a specific student's data."""
+    async def verify_parent_child_access(self, parent_id: uuid.UUID, student_id: uuid.UUID, tenant_id: uuid.UUID) -> User:
+        """Verify that a parent has access to a specific student's data.
+
+        Returns the student User (both parent and student validated to be in tenant)."""
         result = await self.db.execute(
-            select(ParentChildLink)
-            .options(
-                selectinload(ParentChildLink.parent),
-                selectinload(ParentChildLink.student),
-                selectinload(ParentChildLink.relationship),
-            )
+            select(User)
+            .join(ParentStudent, ParentStudent.student_id == User.id)
             .where(
                 and_(
-                    ParentChildLink.parent_id == parent_id,
-                    ParentChildLink.student_id == student_id,
-                    ParentChildLink.parent.has(tenant_id=tenant_id),
-                    ParentChildLink.student.has(tenant_id=tenant_id),
+                    ParentStudent.parent_id == parent_id,
+                    ParentStudent.student_id == student_id,
+                    User.tenant_id == tenant_id,
                 )
             )
         )
-        link = result.scalar_one_or_none()
-        if not link:
+        student = result.scalar_one_or_none()
+        if not student:
             raise ForbiddenError("You do not have permission to access this student's data")
-        return link
+        # Confirm parent is also in tenant.
+        parent_r = await self.db.execute(
+            select(User.id).where(User.id == parent_id, User.tenant_id == tenant_id)
+        )
+        if parent_r.scalar_one_or_none() is None:
+            raise ForbiddenError("You do not have permission to access this student's data")
+        return student
 
     async def get_parent_children(self, parent_id: uuid.UUID, tenant_id: uuid.UUID) -> list[dict]:
         result = await self.db.execute(
-            select(ParentChildLink)
-            .options(
-                selectinload(ParentChildLink.student),
-                selectinload(ParentChildLink.relationship),
-            )
+            select(User)
+            .join(ParentStudent, ParentStudent.student_id == User.id)
             .where(
-                and_(
-                    ParentChildLink.parent_id == parent_id,
-                    ParentChildLink.parent.has(tenant_id=tenant_id),
-                    ParentChildLink.student.has(is_active=True),
-                )
+                ParentStudent.parent_id == parent_id,
+                User.tenant_id == tenant_id,
+                User.is_active == True,
             )
         )
-        links = result.scalars().all()
+        students = result.scalars().all()
 
-        children = []
-        for link in links:
-            if link.student:
-                children.append({
-                    "student_id": link.student.id,
-                    "student_name": link.student.full_name,
-                    "email": link.student.email,
-                    "relationship": link.relationship.name if link.relationship else "unknown",
-                    "is_primary_contact": link.is_primary_contact,
-                    "school_id": link.student.school_id,
-                    "last_login": link.student.last_login_at,
-                })
-
-        return children
+        return [
+            {
+                "student_id": s.id,
+                "student_name": s.full_name,
+                "email": s.email,
+                "relationship": "guardian",
+                "is_primary_contact": True,
+                "school_id": s.school_id,
+                "last_login": s.last_login_at,
+            }
+            for s in students
+        ]
 
     async def get_child_overview(
         self,
@@ -279,14 +272,7 @@ class ParentService:
         student_id: uuid.UUID,
         tenant_id: uuid.UUID,
     ) -> dict:
-        link = await self.verify_parent_child_access(parent_id, student_id, tenant_id)
-
-        student_result = await self.db.execute(
-            select(User).where(User.id == student_id, User.tenant_id == tenant_id)
-        )
-        student = student_result.scalar_one_or_none()
-        if not student:
-            raise NotFoundError("Student")
+        student = await self.verify_parent_child_access(parent_id, student_id, tenant_id)
 
         return {
             "student_id": student.id,
@@ -296,8 +282,8 @@ class ParentService:
             "is_active": student.is_active,
             "last_login": student.last_login_at,
             "created_at": student.created_at,
-            "relationship": link.relationship.name if link.relationship else "unknown",
-            "is_primary_contact": link.is_primary_contact,
+            "relationship": "guardian",
+            "is_primary_contact": True,
         }
 
     async def get_child_grades(

@@ -45,7 +45,7 @@ export function LoginPage() {
   } = useForm<FormData>({ resolver: zodResolver(schema) })
 
   const onSubmit = (data: FormData) => {
-    login(data, { onSuccess: () => navigate(ROUTES.DASHBOARD) })
+    login(data, { onSuccess: () => navigate('/') })
   }
 
   const apiError = (error as any)?.response?.data?.detail

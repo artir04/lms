@@ -8,5 +8,4 @@ celerybeat-schedule
 .vscode
 .idea
 .DS_Store
-requirements.txt
 Dockerfile

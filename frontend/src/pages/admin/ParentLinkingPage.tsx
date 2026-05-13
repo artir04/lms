@@ -19,7 +19,6 @@ import {
   useCreateParentLink,
   useDeleteParentLink,
   useParentLinks,
-  useRelationshipTypes,
 } from '@/api/parentLinks'
 import type { PaginatedResponse } from '@/types/common'
 import type { User } from '@/types/user'
@@ -78,8 +77,6 @@ export function ParentLinkingPage() {
               <tr className="bg-surface-elevated/50 border-b border-border">
                 <th className="px-5 py-3 text-left text-xs font-medium text-ink-muted uppercase">Parent</th>
                 <th className="px-5 py-3 text-left text-xs font-medium text-ink-muted uppercase">Student</th>
-                <th className="px-5 py-3 text-left text-xs font-medium text-ink-muted uppercase">Relationship</th>
-                <th className="px-5 py-3 text-left text-xs font-medium text-ink-muted uppercase">Primary</th>
                 <th className="px-5 py-3 text-left text-xs font-medium text-ink-muted uppercase">Linked</th>
                 <th className="px-5 py-3 text-right text-xs font-medium text-ink-muted uppercase">Actions</th>
               </tr>
@@ -98,18 +95,6 @@ export function ParentLinkingPage() {
                       <p className="font-medium text-ink">{link.student_name}</p>
                       <p className="text-xs text-ink-muted">{link.student_email}</p>
                     </div>
-                  </td>
-                  <td className="px-5 py-3">
-                    <span className="badge badge-blue text-[10px] capitalize">
-                      {link.relationship_name ?? 'other'}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3 text-xs">
-                    {link.is_primary_contact ? (
-                      <span className="text-emerald-400">Yes</span>
-                    ) : (
-                      <span className="text-ink-muted">No</span>
-                    )}
                   </td>
                   <td className="px-5 py-3 text-xs text-ink-muted">{formatDate(link.created_at)}</td>
                   <td className="px-5 py-3 text-right">
@@ -180,22 +165,16 @@ function useStudents() {
 function CreateLinkForm({ onSuccess, onCancel }: { onSuccess: () => void; onCancel: () => void }) {
   const { data: parents } = useParents()
   const { data: students } = useStudents()
-  const { data: relationships } = useRelationshipTypes()
   const { mutate, isPending, error } = useCreateParentLink()
   const form = useForm<ParentLinkCreate>({
-    defaultValues: { parent_id: '', student_id: '', is_primary_contact: false },
+    defaultValues: { parent_id: '', student_id: '' },
   })
 
   const apiDetail = (error as { response?: { data?: { detail?: unknown } } } | null)?.response?.data?.detail
 
   const onSubmit = form.handleSubmit((values) => {
     mutate(
-      {
-        parent_id: values.parent_id,
-        student_id: values.student_id,
-        relationship_id: values.relationship_id ? Number(values.relationship_id) : undefined,
-        is_primary_contact: values.is_primary_contact,
-      },
+      { parent_id: values.parent_id, student_id: values.student_id },
       { onSuccess }
     )
   })
@@ -233,26 +212,6 @@ function CreateLinkForm({ onSuccess, onCancel }: { onSuccess: () => void; onCanc
             </option>
           ))}
         </select>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="label">Relationship</label>
-          <select {...form.register('relationship_id')} className="input">
-            <option value="">other (default)</option>
-            {relationships?.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="flex items-end pb-2">
-          <label className="flex items-center gap-2 text-sm text-ink-secondary">
-            <input type="checkbox" {...form.register('is_primary_contact')} className="rounded" />
-            Primary contact
-          </label>
-        </div>
       </div>
 
       {!!apiDetail && (

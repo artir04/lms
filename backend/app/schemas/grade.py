@@ -16,6 +16,10 @@ class GradeEntryRead(BaseModel):
     feedback: str | None = None
     posted_at: datetime | None
     created_at: datetime
+    # Optional raw points from the underlying submission (quiz or assignment).
+    # Populated by GradeService.get_student_grades; absent for manual entries.
+    points_earned: Decimal | None = None
+    points_possible: Decimal | None = None
 
     model_config = {"from_attributes": True}
 

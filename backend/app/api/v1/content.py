@@ -148,6 +148,14 @@ async def update_lesson(course_id: uuid.UUID, lesson_id: uuid.UUID, data: Lesson
     return await ContentService(db).update_lesson(lesson_id, data)
 
 
+@router.delete("/lessons/{lesson_id}", response_model=MessageResponse, dependencies=[require_roles(Role.TEACHER, Role.ADMIN)])
+async def delete_lesson(course_id: uuid.UUID, lesson_id: uuid.UUID, payload: CurrentUserPayload, db=Depends(get_db)):
+    await _assert_course_in_tenant(course_id, payload, db)
+    await _assert_lesson_in_course(lesson_id, course_id, db)
+    await ContentService(db).delete_lesson(lesson_id)
+    return MessageResponse(message="Lesson deleted")
+
+
 @router.post("/lessons/{lesson_id}/attachments", response_model=AttachmentRead, dependencies=[require_roles(Role.TEACHER, Role.ADMIN)])
 async def upload_attachment(course_id: uuid.UUID, lesson_id: uuid.UUID, payload: CurrentUserPayload, file: UploadFile = File(...), db=Depends(get_db)):
     await _assert_course_in_tenant(course_id, payload, db)

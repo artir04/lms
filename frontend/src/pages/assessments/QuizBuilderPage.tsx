@@ -1,11 +1,23 @@
 import { useParams, Link } from 'react-router-dom'
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Plus, Trash2, Settings, ClipboardCheck } from 'lucide-react'
+import {
+  ArrowLeft,
+  Plus,
+  Trash2,
+  Settings,
+  ClipboardCheck,
+  ClipboardList,
+  Target,
+  Eye,
+  EyeOff,
+  AlertCircle,
+} from 'lucide-react'
 import { useForm } from 'react-hook-form'
 import { Modal } from '@/components/ui/Modal'
 import { PageLoader } from '@/components/ui/Spinner'
 import { ROUTES } from '@/config/routes'
+import { toast } from '@/store/toastStore'
 import api from '@/config/axios'
 import type { Quiz, Question } from '@/types/assessment'
 
@@ -28,12 +40,24 @@ export function QuizBuilderPage() {
 
   const { mutate: updateQuiz, isPending: savingQuiz } = useMutation({
     mutationFn: (data: Partial<Quiz>) => api.patch(`/assessments/quizzes/${quizId}`, data).then((r) => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['quiz', quizId] }),
+    onSuccess: (data: any) => {
+      qc.invalidateQueries({ queryKey: ['quiz', quizId] })
+      qc.invalidateQueries({ queryKey: ['quizzes'] })
+      if (data && typeof data.is_published === 'boolean' && quiz && data.is_published !== quiz.is_published) {
+        toast.success(data.is_published ? 'Quiz published — students can now see it' : 'Quiz unpublished')
+      }
+    },
+    onError: () => toast.error('Failed to save quiz'),
   })
 
   const { mutate: addQuestion, isPending: addingQuestion } = useMutation({
     mutationFn: (data: any) => api.post(`/assessments/quizzes/${quizId}/questions`, data).then((r) => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['quiz', quizId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['quiz', quizId] })
+      qc.invalidateQueries({ queryKey: ['quizzes'] })
+      toast.success('Question added')
+    },
+    onError: () => toast.error('Failed to add question'),
   })
 
   const [showSettings, setShowSettings] = useState(false)
@@ -99,19 +123,50 @@ export function QuizBuilderPage() {
   if (isLoading) return <PageLoader />
   if (!quiz) return <div className="text-center text-ink-muted py-16">Quiz not found</div>
 
+  const isPublished = !!quiz.is_published
+  const canPublish = (quiz.question_count ?? 0) > 0
+  const togglePublish = () => {
+    if (!canPublish && !isPublished) {
+      toast.warning('Add at least one question before publishing')
+      return
+    }
+    updateQuiz({ is_published: !isPublished } as Partial<Quiz>)
+  }
+
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <Link to={ROUTES.COURSE_DETAIL(courseId!)} className="text-ink-muted hover:text-ink-secondary transition-colors">
+      <div className="flex items-start gap-3">
+        <Link to={ROUTES.COURSE_DETAIL(courseId!)} className="text-ink-muted hover:text-ink-secondary transition-colors mt-1.5">
           <ArrowLeft className="h-5 w-5" />
         </Link>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold text-ink font-display">{quiz.title}</h1>
-          <p className="text-sm text-ink-muted">
-            {quiz.question_count} questions · {quiz.total_points} pts
-            {quiz.is_published ? ' · Published' : ' · Draft'}
-          </p>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-2xl font-bold text-ink font-display">{quiz.title}</h1>
+            <span
+              className={[
+                'inline-flex items-center gap-1.5 rounded-full text-xs font-semibold px-2.5 py-1',
+                isPublished
+                  ? 'bg-emerald-500/15 text-emerald-400 ring-1 ring-emerald-500/30'
+                  : 'bg-amber-500/15 text-amber-400 ring-1 ring-amber-500/30',
+              ].join(' ')}
+            >
+              {isPublished ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+              {isPublished ? 'Published' : 'Draft'}
+            </span>
+          </div>
+          <div className="flex flex-wrap items-center gap-3 mt-2 text-sm">
+            <span className="inline-flex items-center gap-1.5 rounded-lg bg-surface-elevated/60 border border-border text-ink-secondary px-2.5 py-1">
+              <ClipboardList className="h-3.5 w-3.5 text-indigo-400" />
+              <span className="font-semibold text-ink">{quiz.question_count ?? 0}</span>
+              question{(quiz.question_count ?? 0) === 1 ? '' : 's'}
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-lg bg-surface-elevated/60 border border-border text-ink-secondary px-2.5 py-1">
+              <Target className="h-3.5 w-3.5 text-emerald-400" />
+              <span className="font-semibold text-ink">{Number(quiz.total_points ?? 0)}</span>
+              point{Number(quiz.total_points ?? 0) === 1 ? '' : 's'}
+            </span>
+          </div>
         </div>
         <Link
           to={ROUTES.QUIZ_SUBMISSIONS(courseId!, quizId!)}
@@ -122,7 +177,35 @@ export function QuizBuilderPage() {
         <button onClick={() => setShowSettings(true)} className="btn-secondary text-sm">
           <Settings className="h-4 w-4" /> Settings
         </button>
+        <button
+          onClick={togglePublish}
+          disabled={savingQuiz}
+          className={[
+            'inline-flex items-center gap-1.5 rounded-xl text-sm font-medium px-4 py-2 transition-all disabled:opacity-60 disabled:cursor-not-allowed',
+            isPublished
+              ? 'bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 ring-1 ring-amber-500/30'
+              : 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-[0_0_20px_-6px_rgba(16,185,129,0.55)]',
+          ].join(' ')}
+        >
+          {isPublished ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          {savingQuiz ? '…' : isPublished ? 'Unpublish' : 'Publish'}
+        </button>
       </div>
+
+      {/* Draft banner */}
+      {!isPublished && (
+        <div className="rounded-2xl border border-amber-500/30 bg-amber-500/[0.06] px-5 py-4 flex items-start gap-3">
+          <AlertCircle className="h-5 w-5 text-amber-400 mt-0.5 shrink-0" />
+          <div className="flex-1 text-sm text-ink-secondary">
+            <p className="font-semibold text-ink">This quiz is a draft</p>
+            <p className="mt-0.5">
+              Students cannot see it yet. {canPublish ? 'Click ' : 'Add at least one question, then click '}
+              <span className="font-semibold text-emerald-300">Publish</span>
+              {canPublish ? ' when you\'re ready.' : ' above.'} Every question is saved automatically when you add it.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Questions */}
       <div className="space-y-3">

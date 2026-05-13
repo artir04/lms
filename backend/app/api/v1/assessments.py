@@ -157,14 +157,20 @@ async def get_quiz(quiz_id: uuid.UUID, payload: CurrentUserPayload, db=Depends(g
             for opt in q.options:
                 opt.is_correct = None
 
-        # Include how many attempts the student has used
         student_id = uuid.UUID(payload["sub"])
-        result = await db.execute(
+        attempts_r = await db.execute(
             select(func.count()).select_from(Submission).where(
                 Submission.quiz_id == quiz_id, Submission.student_id == student_id
             )
         )
-        quiz_read.attempts_used = result.scalar_one()
+        quiz_read.attempts_used = attempts_r.scalar_one()
+        latest_r = await db.execute(
+            select(Submission.id)
+            .where(Submission.quiz_id == quiz_id, Submission.student_id == student_id)
+            .order_by(Submission.started_at.desc())
+            .limit(1)
+        )
+        quiz_read.last_submission_id = latest_r.scalar_one_or_none()
         return quiz_read
     return quiz
 

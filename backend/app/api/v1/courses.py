@@ -250,14 +250,32 @@ async def drop_student(course_id: uuid.UUID, section_id: uuid.UUID, student_id: 
     return MessageResponse(message="Student dropped")
 
 
-@router.get("/{course_id}/enrollments", dependencies=[require_roles(Role.TEACHER, Role.ADMIN, Role.SUPERADMIN)])
+@router.get("/{course_id}/enrollments")
 async def list_enrollments(course_id: uuid.UUID, payload: CurrentUserPayload, db=Depends(get_db)):
-    """Get all enrolled students for a course."""
+    """Class list for a course. Visible to staff and to actively-enrolled students."""
+    from sqlalchemy import func, select
+    from app.models.course import Enrollment, Section
+
     service = CourseService(db)
     tenant_id = uuid.UUID(payload["tenant_id"])
     course = await service.get_by_id(course_id, tenant_id)
     roles = payload.get("roles", [])
+    user_id = uuid.UUID(payload["sub"])
     is_admin = any(r in roles for r in ("admin", "superadmin"))
-    if not is_admin and course.teacher_id != uuid.UUID(payload["sub"]):
-        raise ForbiddenError("You can only view enrollments for your own courses")
+    is_owning_teacher = course.teacher_id == user_id
+
+    if not (is_admin or is_owning_teacher):
+        enrolled = (await db.execute(
+            select(func.count())
+            .select_from(Enrollment)
+            .join(Section, Section.id == Enrollment.section_id)
+            .where(
+                Section.course_id == course_id,
+                Enrollment.student_id == user_id,
+                Enrollment.status == "active",
+            )
+        )).scalar_one()
+        if not enrolled:
+            raise ForbiddenError("You don't have access to this class list")
+
     return await service.list_enrollments(course_id, tenant_id)

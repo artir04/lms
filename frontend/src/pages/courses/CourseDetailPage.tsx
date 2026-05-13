@@ -1,9 +1,9 @@
-import { useParams, Link, useNavigate } from 'react-router-dom'
+import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   BookOpen, ChevronDown, ChevronRight, PlayCircle, FileText, Link2,
   Plus, ClipboardList, CalendarDays, Clock, Award,
   Pencil, BookMarked, Layers, ArrowRight, Users, GraduationCap,
-  Mail, CheckCircle2, Paperclip, Download, Upload,
+  Mail, CheckCircle2, Paperclip, Download, Upload, ClipboardCheck,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useCourse } from '@/api/courses'
@@ -20,6 +20,7 @@ import { useForm } from 'react-hook-form'
 import { useGradebook, useMyGrades } from '@/api/grades'
 
 type Tab = 'content' | 'classlist' | 'quizzes' | 'assignments' | 'grades'
+const TAB_VALUES: Tab[] = ['content', 'classlist', 'quizzes', 'assignments', 'grades']
 
 export function CourseDetailPage() {
   const { courseId } = useParams<{ courseId: string }>()!
@@ -27,7 +28,20 @@ export function CourseDetailPage() {
   const { data: course, isLoading } = useCourse(courseId!)
   const { data: quizzes } = useQuizzes(courseId!)
   const { data: assignments } = useAssignments(courseId!)
-  const [tab, setTab] = useState<Tab>('content')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const paramTab = searchParams.get('tab') as Tab | null
+  const tab: Tab = paramTab && TAB_VALUES.includes(paramTab) ? paramTab : 'content'
+  const setTab = (next: Tab) => {
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev)
+        if (next === 'content') params.delete('tab')
+        else params.set('tab', next)
+        return params
+      },
+      { replace: true },
+    )
+  }
   const [openModules, setOpenModules] = useState<Set<string>>(new Set())
 
   const { data: modules } = useQuery({
@@ -398,17 +412,25 @@ export function CourseDetailPage() {
                         )}
                       </div>
                     </div>
-                    <div className="flex-shrink-0">
+                    <div className="flex-shrink-0 flex items-center gap-2">
                       {canManage ? (
-                        <Link to={ROUTES.QUIZ_BUILDER(courseId!, quiz.id)} className="btn-secondary btn-sm">
-                          <Pencil className="h-3.5 w-3.5" /> Build
-                        </Link>
+                        <>
+                          <Link to={ROUTES.QUIZ_BUILDER(courseId!, quiz.id)} className="btn-secondary btn-sm">
+                            <Pencil className="h-3.5 w-3.5" /> Build
+                          </Link>
+                          <Link to={ROUTES.QUIZ_SUBMISSIONS(courseId!, quiz.id)} className="btn-secondary btn-sm">
+                            <ClipboardCheck className="h-3.5 w-3.5" /> Submissions
+                          </Link>
+                        </>
                       ) : !quiz.is_published ? (
                         <span className="text-xs text-ink-muted italic">Not available yet</span>
                       ) : isCompleted ? (
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 text-emerald-400 text-xs font-semibold px-3 py-1.5">
-                          <CheckCircle2 className="h-3.5 w-3.5" /> Completed
-                        </span>
+                        <Link
+                          to={ROUTES.QUIZ_TAKE(quiz.id)}
+                          className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 text-xs font-semibold px-3 py-1.5 transition-colors"
+                        >
+                          <CheckCircle2 className="h-3.5 w-3.5" /> View result
+                        </Link>
                       ) : (
                         <Link to={ROUTES.QUIZ_TAKE(quiz.id)} className="btn-primary btn-sm">
                           {attemptsUsed > 0 ? 'Continue' : 'Start Quiz'} <ArrowRight className="h-3.5 w-3.5" />
@@ -656,22 +678,44 @@ function StudentGradesView({ courseId }: { courseId: string }) {
 
       {/* Grade entries list */}
       <div className="card divide-y divide-border overflow-hidden">
-        {courseGrades.entries.map((entry) => (
-          <div key={entry.id} className="flex items-center gap-4 px-6 py-4">
-            <span className={`inline-flex items-center justify-center w-9 h-9 rounded-lg font-bold text-sm flex-shrink-0 ${gradeStyle(entry.grade)}`}>
-              {entry.grade}
-            </span>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-ink">
-                {entry.label || entry.category.charAt(0).toUpperCase() + entry.category.slice(1)}
-              </p>
-              <p className="text-xs text-ink-muted mt-0.5">
-                {entry.category} · Weight: {Math.round(Number(entry.weight) * 100)}%
-                {entry.posted_at && ` · ${formatDate(entry.posted_at)}`}
-              </p>
+        {courseGrades.entries.map((entry) => {
+          const earned = entry.points_earned != null ? Number(entry.points_earned) : null
+          const possible = entry.points_possible != null ? Number(entry.points_possible) : null
+          const hasPoints = earned !== null && possible !== null && possible > 0
+          return (
+            <div key={entry.id} className="flex items-center gap-4 px-6 py-4">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-ink">
+                  {entry.label || entry.category.charAt(0).toUpperCase() + entry.category.slice(1)}
+                </p>
+                <p className="text-xs text-ink-muted mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1">
+                  <span className="capitalize">{entry.category}</span>
+                  <span className="text-ink-faint">·</span>
+                  <span>Weight: {Math.round(Number(entry.weight) * 100)}%</span>
+                  {entry.posted_at && (
+                    <>
+                      <span className="text-ink-faint">·</span>
+                      <span>{formatDate(entry.posted_at)}</span>
+                    </>
+                  )}
+                </p>
+              </div>
+              <div className="flex items-center gap-4 flex-shrink-0">
+                {hasPoints && (
+                  <div className="text-right">
+                    <p className="text-sm font-semibold text-ink tabular-nums">
+                      {earned} <span className="text-ink-muted">/ {possible}</span>
+                    </p>
+                    <p className="text-[10px] text-ink-muted uppercase tracking-wider mt-0.5">points</p>
+                  </div>
+                )}
+                <span className={`inline-flex items-center justify-center w-10 h-10 rounded-xl font-bold text-base ${gradeStyle(entry.grade)}`}>
+                  {entry.grade}
+                </span>
+              </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )

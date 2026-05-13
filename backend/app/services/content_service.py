@@ -37,18 +37,26 @@ class ContentService:
             raise NotFoundError("Module")
         return module
 
+    async def _get_module_with_lessons(self, module_id: uuid.UUID) -> Module:
+        result = await self.db.execute(
+            select(Module)
+            .options(selectinload(Module.lessons).selectinload(Lesson.attachments))
+            .where(Module.id == module_id)
+        )
+        return result.scalar_one()
+
     async def create_module(self, course_id: uuid.UUID, data: ModuleCreate) -> Module:
         module = Module(course_id=course_id, **data.model_dump())
         self.db.add(module)
         await self.db.flush()
-        return module
+        return await self._get_module_with_lessons(module.id)
 
     async def update_module(self, module_id: uuid.UUID, data: ModuleUpdate) -> Module:
         module = await self.get_module(module_id)
         for field, value in data.model_dump(exclude_none=True).items():
             setattr(module, field, value)
         await self.db.flush()
-        return module
+        return await self._get_module_with_lessons(module_id)
 
     async def delete_module(self, module_id: uuid.UUID) -> None:
         module = await self.get_module(module_id)
@@ -85,20 +93,6 @@ class ContentService:
             .where(Lesson.id == lesson.id)
         )
         return result.scalar_one()
-
-    async def update_lesson(self, lesson_id: uuid.UUID, data: LessonUpdate) -> Lesson:
-        result = await self.db.execute(
-            select(Lesson)
-            .options(selectinload(Lesson.attachments))
-            .where(Lesson.id == lesson_id)
-        )
-        lesson = result.scalar_one_or_none()
-        if not lesson:
-            raise NotFoundError("Lesson")
-        for field, value in data.model_dump(exclude_none=True).items():
-            setattr(lesson, field, value)
-        await self.db.flush()
-        return lesson
 
     async def update_lesson(self, lesson_id: uuid.UUID, data: LessonUpdate) -> Lesson:
         lesson = await self.get_lesson(lesson_id)

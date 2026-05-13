@@ -10,6 +10,8 @@ interface CookieOptions {
   sameSite?: 'Strict' | 'Lax' | 'None'
 }
 
+const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:'
+
 export const cookieManager = {
   /**
    * Set a cookie value
@@ -18,7 +20,7 @@ export const cookieManager = {
     const {
       maxAge = 7 * 24 * 60 * 60, // 7 days default
       path = '/',
-      secure = true,
+      secure = isHttps,
       sameSite = 'Lax',
     } = options
 

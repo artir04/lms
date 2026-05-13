@@ -1,4 +1,4 @@
-import { Bell, LogOut, Menu, Search, Check, Sun, Moon } from 'lucide-react'
+import { Bell, LogOut, Menu, Check, Sun, Moon } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useNotificationStore } from '@/store/notificationStore'
 import { useThemeStore } from '@/store/themeStore'
@@ -91,14 +91,6 @@ export function Topbar({ title, onMenuClick }: TopbarProps) {
       </h1>
 
       <div className="flex-1" />
-
-      <button className="hidden md:flex items-center gap-2.5 bg-surface-elevated hover:bg-surface-overlay border border-border rounded-xl px-3.5 py-2 text-sm text-ink-muted w-52 transition-colors">
-        <Search className="w-3.5 h-3.5 shrink-0" />
-        <span>Search...</span>
-        <kbd className="ml-auto text-[10px] bg-surface-overlay text-ink-muted px-1.5 py-0.5 rounded font-mono hidden lg:block">
-          ⌘K
-        </kbd>
-      </button>
 
       <button
         onClick={toggleTheme}

@@ -12,6 +12,8 @@ export interface GradeEntry {
   feedback: string | null
   posted_at: string | null
   created_at: string
+  points_earned?: string | number | null
+  points_possible?: string | number | null
 }
 
 export interface GradeBookRow {

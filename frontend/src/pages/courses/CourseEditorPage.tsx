@@ -5,7 +5,9 @@ import { ArrowLeft, Plus, Pencil, Trash2, GripVertical, ChevronDown, ChevronRigh
 import { useForm } from 'react-hook-form'
 import { useCourse, useUpdateCourse } from '@/api/courses'
 import { Modal } from '@/components/ui/Modal'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { PageLoader } from '@/components/ui/Spinner'
+import { toast } from '@/store/toastStore'
 import { ROUTES } from '@/config/routes'
 import { cn } from '@/utils/cn'
 import api from '@/config/axios'
@@ -46,9 +48,13 @@ export function CourseEditorPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['modules', courseId] }),
   })
 
-  const { mutate: deleteModule } = useMutation({
+  const { mutate: deleteModule, isPending: deletingModule } = useMutation({
     mutationFn: (moduleId: string) => api.delete(`/courses/${courseId}/modules/${moduleId}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['modules', courseId] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['modules', courseId] })
+      toast.success('Module deleted')
+    },
+    onError: () => toast.error('Failed to delete module'),
   })
 
   const { mutate: createLesson, isPending: creatingLesson } = useMutation({
@@ -60,10 +66,15 @@ export function CourseEditorPage() {
     },
   })
 
-  const { mutate: deleteLesson } = useMutation({
+  const { mutate: deleteLesson, isPending: deletingLesson } = useMutation({
     mutationFn: ({ lessonId }: { lessonId: string; moduleId: string }) =>
       api.delete(`/courses/${courseId}/lessons/${lessonId}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['modules', courseId] }),
+    onSuccess: (_d, { moduleId }) => {
+      qc.invalidateQueries({ queryKey: ['modules', courseId] })
+      qc.invalidateQueries({ queryKey: ['lessons', moduleId] })
+      toast.success('Lesson deleted')
+    },
+    onError: () => toast.error('Failed to delete lesson'),
   })
 
   const { mutate: reorderModules } = useMutation({
@@ -117,6 +128,8 @@ export function CourseEditorPage() {
   const [showAddModule, setShowAddModule] = useState(false)
   const [addLessonModuleId, setAddLessonModuleId] = useState<string | null>(null)
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set())
+  const [moduleToDelete, setModuleToDelete] = useState<Module | null>(null)
+  const [lessonToDelete, setLessonToDelete] = useState<{ id: string; title: string; moduleId: string } | null>(null)
 
   const courseForm = useForm({ values: { title: course?.title || '', description: course?.description || '', subject: course?.subject || '', grade_level: course?.grade_level || '', is_published: course?.is_published ?? false } })
   const moduleForm = useForm<{ title: string }>()
@@ -199,7 +212,7 @@ export function CourseEditorPage() {
                   >
                     + Lesson
                   </button>
-                  <button onClick={() => { if (confirm('Delete this module?')) deleteModule(mod.id) }} className="text-red-400 hover:text-red-300 ml-1">
+                  <button onClick={() => setModuleToDelete(mod)} className="text-red-400 hover:text-red-300 ml-1">
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
@@ -209,7 +222,7 @@ export function CourseEditorPage() {
                   <LessonList
                     courseId={courseId!}
                     moduleId={mod.id}
-                    onDelete={(lessonId) => deleteLesson({ lessonId, moduleId: mod.id })}
+                    onDelete={(lesson) => setLessonToDelete({ id: lesson.id, title: lesson.title, moduleId: mod.id })}
                     onReorder={(ordered_ids) => reorderLessons({ moduleId: mod.id, ordered_ids })}
                   />
                 )}
@@ -272,6 +285,43 @@ export function CourseEditorPage() {
         </form>
       </Modal>
 
+      {/* Confirm: delete module */}
+      <ConfirmDialog
+        isOpen={!!moduleToDelete}
+        onClose={() => setModuleToDelete(null)}
+        onConfirm={() => {
+          if (!moduleToDelete) return
+          deleteModule(moduleToDelete.id, { onSettled: () => setModuleToDelete(null) })
+        }}
+        title="Delete module?"
+        description={
+          moduleToDelete
+            ? `"${moduleToDelete.title}" and its ${moduleToDelete.lesson_count} lesson${moduleToDelete.lesson_count === 1 ? '' : 's'} will be permanently deleted.`
+            : ''
+        }
+        confirmLabel="Delete module"
+        loading={deletingModule}
+      />
+
+      {/* Confirm: delete lesson */}
+      <ConfirmDialog
+        isOpen={!!lessonToDelete}
+        onClose={() => setLessonToDelete(null)}
+        onConfirm={() => {
+          if (!lessonToDelete) return
+          deleteLesson(
+            { lessonId: lessonToDelete.id, moduleId: lessonToDelete.moduleId },
+            { onSettled: () => setLessonToDelete(null) },
+          )
+        }}
+        title="Delete lesson?"
+        description={
+          lessonToDelete ? `"${lessonToDelete.title}" will be permanently deleted, including any attachments.` : ''
+        }
+        confirmLabel="Delete lesson"
+        loading={deletingLesson}
+      />
+
       {/* Add Lesson Modal */}
       <Modal isOpen={!!addLessonModuleId} onClose={() => setAddLessonModuleId(null)} title="Add Lesson">
         <form
@@ -322,7 +372,7 @@ function LessonList({
 }: {
   courseId: string
   moduleId: string
-  onDelete: (id: string) => void
+  onDelete: (lesson: Lesson) => void
   onReorder: (ordered_ids: string[]) => void
 }) {
   const { data: lessons, isLoading } = useQuery<Lesson[]>({
@@ -436,7 +486,7 @@ function LessonList({
               <Paperclip className="h-3 w-3" />
             </span>
           )}
-          <button onClick={() => { if (confirm('Delete this lesson?')) onDelete(lesson.id) }} className="text-red-400 hover:text-red-300">
+          <button onClick={() => onDelete(lesson)} className="text-red-400 hover:text-red-300">
             <Trash2 className="h-3.5 w-3.5" />
           </button>
         </div>

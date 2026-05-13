@@ -11,6 +11,19 @@ class ParentStudentLink(BaseModel):
     student_id: uuid.UUID
 
 
+class ParentLinkRead(BaseModel):
+    id: uuid.UUID
+    parent_id: uuid.UUID
+    parent_name: str
+    parent_email: str
+    student_id: uuid.UUID
+    student_name: str
+    student_email: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
 class ChildSummary(BaseModel):
     student: UserSummary
     course_count: int

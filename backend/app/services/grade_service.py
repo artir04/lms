@@ -67,6 +67,10 @@ class GradeService:
         )
 
     async def get_student_grades(self, student_id: uuid.UUID, tenant_id: uuid.UUID) -> list[StudentGradeSummary]:
+        from sqlalchemy.orm import selectinload
+        from app.models.assessment import Submission, Quiz, Question
+        from app.models.assignment import Assignment, AssignmentSubmission
+
         courses_result = await self.db.execute(
             select(Course)
             .join(Section, Section.course_id == Course.id)
@@ -78,7 +82,6 @@ class GradeService:
         if not courses:
             return []
 
-        # Fetch all grades for this student across courses in one query
         course_ids = [c.id for c in courses]
         grades_result = await self.db.execute(
             select(GradeEntry).where(
@@ -88,13 +91,61 @@ class GradeService:
         )
         all_grades = grades_result.scalars().all()
 
-        grades_by_course: dict[uuid.UUID, list[GradeEntry]] = defaultdict(list)
+        # Look up raw points for quiz- and assignment-linked entries in two batched queries.
+        quiz_sub_ids = {g.submission_id for g in all_grades if g.submission_id}
+        assign_sub_ids = {g.assignment_submission_id for g in all_grades if g.assignment_submission_id}
+
+        quiz_points: dict[uuid.UUID, tuple[Decimal, Decimal]] = {}
+        if quiz_sub_ids:
+            q_res = await self.db.execute(
+                select(Submission)
+                .options(selectinload(Submission.quiz).selectinload(Quiz.questions))
+                .where(Submission.id.in_(quiz_sub_ids))
+            )
+            for sub in q_res.scalars().all():
+                total = sum((q.points for q in sub.quiz.questions), Decimal("0")) if sub.quiz else Decimal("0")
+                if sub.score is not None and total > 0:
+                    earned = (Decimal(sub.score) / Decimal("100") * total).quantize(
+                        Decimal("0.01"), rounding=ROUND_HALF_UP
+                    )
+                else:
+                    earned = Decimal("0")
+                quiz_points[sub.id] = (earned, total)
+
+        assign_points: dict[uuid.UUID, tuple[Decimal, Decimal]] = {}
+        if assign_sub_ids:
+            a_res = await self.db.execute(
+                select(AssignmentSubmission)
+                .options(selectinload(AssignmentSubmission.assignment))
+                .where(AssignmentSubmission.id.in_(assign_sub_ids))
+            )
+            for sub in a_res.scalars().all():
+                total = Decimal(sub.assignment.max_score) if sub.assignment else Decimal("0")
+                if sub.score is not None and total > 0:
+                    earned = (Decimal(sub.score) / Decimal("100") * total).quantize(
+                        Decimal("0.01"), rounding=ROUND_HALF_UP
+                    )
+                else:
+                    earned = Decimal("0")
+                assign_points[sub.id] = (earned, total)
+
+        grades_by_course: dict[uuid.UUID, list[GradeEntryRead]] = defaultdict(list)
         for g in all_grades:
-            grades_by_course[g.course_id].append(g)
+            entry = GradeEntryRead.model_validate(g)
+            if g.submission_id and g.submission_id in quiz_points:
+                earned, total = quiz_points[g.submission_id]
+                entry.points_earned = earned
+                entry.points_possible = total
+            elif g.assignment_submission_id and g.assignment_submission_id in assign_points:
+                earned, total = assign_points[g.assignment_submission_id]
+                entry.points_earned = earned
+                entry.points_possible = total
+            grades_by_course[g.course_id].append(entry)
 
         summaries = []
         for course in courses:
             entries = grades_by_course.get(course.id, [])
+            # weighted_average expects ORM-like entries with .grade and .weight; both schemas have them.
             avg = weighted_average(entries)
             summaries.append(StudentGradeSummary(
                 course_id=course.id,

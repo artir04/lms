@@ -56,30 +56,46 @@ export function MyGradesPage() {
                   <thead>
                     <tr className="bg-surface-elevated/50 text-left">
                       <th className="px-6 py-2 text-xs font-medium text-ink-muted uppercase">Assessment</th>
-                      <th className="px-6 py-2 text-xs font-medium text-ink-muted uppercase text-center">Grade</th>
                       <th className="px-6 py-2 text-xs font-medium text-ink-muted uppercase text-center">Weight</th>
                       <th className="px-6 py-2 text-xs font-medium text-ink-muted uppercase">Feedback</th>
+                      <th className="px-6 py-2 text-xs font-medium text-ink-muted uppercase text-right">Points</th>
+                      <th className="px-6 py-2 text-xs font-medium text-ink-muted uppercase text-right">Grade</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/60">
-                    {summary.entries.map((entry) => (
-                      <tr key={entry.id} className="hover:bg-surface-elevated/50">
-                        <td className="px-6 py-3 text-ink-secondary">
-                          {entry.label || <span className="capitalize">{entry.category}</span>}
-                        </td>
-                        <td className="px-6 py-3 text-center">
-                          <span className={cn('text-lg font-bold', GRADE_TEXT[entry.grade] || 'text-ink-muted')}>
-                            {entry.grade}
-                          </span>
-                        </td>
-                        <td className="px-6 py-3 text-center text-ink-muted">
-                          {(Number(entry.weight) * 100).toFixed(0)}%
-                        </td>
-                        <td className="px-6 py-3 text-ink-muted text-xs max-w-[200px] truncate">
-                          {entry.feedback || '—'}
-                        </td>
-                      </tr>
-                    ))}
+                    {summary.entries.map((entry) => {
+                      const earned = entry.points_earned != null ? Number(entry.points_earned) : null
+                      const possible = entry.points_possible != null ? Number(entry.points_possible) : null
+                      const hasPoints = earned !== null && possible !== null && possible > 0
+                      return (
+                        <tr key={entry.id} className="hover:bg-surface-elevated/50">
+                          <td className="px-6 py-3 text-ink-secondary">
+                            {entry.label || <span className="capitalize">{entry.category}</span>}
+                          </td>
+                          <td className="px-6 py-3 text-center text-ink-muted">
+                            {(Number(entry.weight) * 100).toFixed(0)}%
+                          </td>
+                          <td className="px-6 py-3 text-ink-muted text-xs max-w-[200px] truncate">
+                            {entry.feedback || '—'}
+                          </td>
+                          <td className="px-6 py-3 text-right tabular-nums">
+                            {hasPoints ? (
+                              <span className="text-ink-secondary text-sm">
+                                <span className="font-semibold text-ink">{earned}</span>
+                                <span className="text-ink-muted"> / {possible}</span>
+                              </span>
+                            ) : (
+                              <span className="text-ink-muted">—</span>
+                            )}
+                          </td>
+                          <td className="px-6 py-3 text-right">
+                            <span className={cn('text-lg font-bold', GRADE_TEXT[entry.grade] || 'text-ink-muted')}>
+                              {entry.grade}
+                            </span>
+                          </td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               )}

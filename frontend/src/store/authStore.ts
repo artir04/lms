@@ -23,15 +23,12 @@ export const useAuthStore = create<AuthState>((set) => ({
   setUser: (user) => set({ user }),
 
   setTokens: (accessToken, refreshToken) => {
-    // Save tokens to cookies (default: 7 days, secure, httpOnly-like)
     cookieManager.set('accessToken', accessToken, {
       maxAge: 15 * 60, // 15 minutes
-      secure: true,
       sameSite: 'Lax',
     })
     cookieManager.set('refreshToken', refreshToken, {
       maxAge: 7 * 24 * 60 * 60, // 7 days
-      secure: true,
       sameSite: 'Lax',
     })
     set({ accessToken, refreshToken, isAuthenticated: true })

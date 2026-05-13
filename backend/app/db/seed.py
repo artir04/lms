@@ -1,13 +1,13 @@
 """
-Minimal seed — idempotent, safe to re-run.
+Seed — idempotent, safe to re-run.
 
-Populates every table with just enough rows to exercise the UI:
+Populates every table with enough rows to fill the gradebook:
   - 1 district, 1 school
-  - 1 admin, 2 teachers, 4 students, 1 parent (linked to student001)
+  - 1 admin, 2 teachers, 4 students, 1 parent
   - 2 courses (1 per teacher), each with 1 module / 2 lessons / 1 quiz
-  - One auto-graded submission + one pending-review submission
-  - Quiz/assignment/participation/exam grade entries for one student
-  - A handful of attendance days, badges, points, notifications, activity logs, reports
+  - Every student submits every quiz, gets full grades (quiz/assignment/participation/exam)
+  - Every student submits every assignment
+  - Attendance, badges, points, notifications, activity logs, reports
 """
 import asyncio
 import random
@@ -75,6 +75,14 @@ async def create_user(db, tenant_id, school_id, email, first, last, password, ro
     return user
 
 
+# Per-student grade profile: (quiz, assignment, participation, exam) in Kosovo 1-5
+STUDENT_GRADES = [
+    {"first": "Olivia", "last": "Smith",   "grades": {"quiz": 4, "assignment": 5, "participation": 4, "exam": 3}},
+    {"first": "Liam",   "last": "Johnson",  "grades": {"quiz": 3, "assignment": 5, "participation": 3, "exam": 4}},
+    {"first": "Emma",   "last": "Williams", "grades": {"quiz": 2, "assignment": 3, "participation": 4, "exam": 2}},
+    {"first": "Noah",   "last": "Brown",    "grades": {"quiz": 1, "assignment": 2, "participation": 2, "exam": 1}},
+]
+
 COURSES = [
     {
         "title": "Algebra I",
@@ -127,7 +135,13 @@ COURSES = [
 
 async def seed():
     async with AsyncSessionLocal() as db:
-        print("🌱 Seeding minimal demo data...")
+        print("Seeding demo data...")
+
+        # ── Roles (idempotent) ──
+        for role_name in ("admin", "teacher", "student", "parent"):
+            if not (await db.execute(select(Role).where(Role.name == role_name))).scalar_one_or_none():
+                db.add(Role(name=role_name))
+        await db.flush()
 
         # ── District & School ──
         district = await get_or_create(db, District,
@@ -148,11 +162,8 @@ async def seed():
         ]
         students = [
             await create_user(db, district.id, school.id,
-                f"student{i+1:03d}@lincoln-unified.edu", first, last, "Student123!", "student")
-            for i, (first, last) in enumerate([
-                ("Olivia", "Smith"), ("Liam", "Johnson"),
-                ("Emma", "Williams"), ("Noah", "Brown"),
-            ])
+                f"student{i+1:03d}@lincoln-unified.edu", s["first"], s["last"], "Student123!", "student")
+            for i, s in enumerate(STUDENT_GRADES)
         ]
         parent = await create_user(db, district.id, school.id,
             "parent001@lincoln-unified.edu", "Maria", "Garcia", "Parent123!", "parent")
@@ -164,11 +175,12 @@ async def seed():
             db.add(ParentStudent(parent_id=parent.id, student_id=students[0].id))
 
         await db.commit()
-        print(f"  ✓ 1 admin, {len(teachers)} teachers, {len(students)} students, 1 parent")
+        print(f"  1 admin, {len(teachers)} teachers, {len(students)} students, 1 parent")
 
         # ── Courses, modules, lessons, quizzes ──
         created_courses = []
         course_sections = {}
+        created_quizzes = {}
         for cdata in COURSES:
             teacher = teachers[cdata["teacher_idx"]]
             course = (await db.execute(select(Course).where(
@@ -240,9 +252,10 @@ async def seed():
                     await db.flush()
                     for text, is_correct in q["options"]:
                         db.add(QuestionOption(question_id=question.id, text=text, is_correct=is_correct))
+            created_quizzes[course.id] = quiz
 
         await db.commit()
-        print(f"  ✓ {len(created_courses)} courses with modules, lessons, and quizzes")
+        print(f"  {len(created_courses)} courses with modules, lessons, and quizzes")
 
         # ── Enrollments: every student in every course ──
         for student in students:
@@ -257,107 +270,118 @@ async def seed():
                         enrolled_at=now_utc() - timedelta(days=30)))
 
         await db.commit()
-        print("  ✓ Enrollments")
+        print("  Enrollments")
 
-        # ── Submissions: student001 fully graded, student002 needs review ──
-        algebra = created_courses[0]
-        algebra_quiz = (await db.execute(select(Quiz).where(Quiz.course_id == algebra.id))).scalar_one()
-        algebra_questions = (await db.execute(
-            select(Question).where(Question.quiz_id == algebra_quiz.id).order_by(Question.position)
-        )).scalars().all()
+        # ── Quiz submissions: every student submits every quiz ──
+        submissions_by_student = {}
+        for course in created_courses:
+            quiz = created_quizzes[course.id]
+            questions = (await db.execute(
+                select(Question).where(Question.quiz_id == quiz.id).order_by(Question.position)
+            )).scalars().all()
 
-        async def make_submission(student, status, score):
-            existing = (await db.execute(select(Submission).where(
-                Submission.quiz_id == algebra_quiz.id,
-                Submission.student_id == student.id))).scalar_one_or_none()
-            if existing:
-                return existing
-            started = now_utc() - timedelta(days=2)
-            sub = Submission(
-                quiz_id=algebra_quiz.id, student_id=student.id,
-                attempt_num=1, started_at=started,
-                submitted_at=started + timedelta(minutes=15),
-                status=status,
-                score=Decimal(str(score)) if score is not None else None,
-                graded_by=teachers[0].id if status == "graded" else None,
-                graded_at=started + timedelta(hours=2) if status == "graded" else None,
-            )
-            db.add(sub)
-            await db.flush()
-            return sub
-
-        # student001: graded with score 75 (MCQ + T/F correct, short_answer graded by teacher)
-        sub1 = await make_submission(students[0], "graded", 75)
-        # student002: submitted but short_answer not yet graded
-        sub2 = await make_submission(students[1], "submitted", None)
-
-        for sub, manual_pts in [(sub1, Decimal("7.5")), (sub2, None)]:
-            for q in algebra_questions:
-                if (await db.execute(select(Answer).where(
-                    Answer.submission_id == sub.id, Answer.question_id == q.id))).scalar_one_or_none():
+            for student in students:
+                existing = (await db.execute(select(Submission).where(
+                    Submission.quiz_id == quiz.id,
+                    Submission.student_id == student.id))).scalar_one_or_none()
+                if existing:
+                    submissions_by_student.setdefault(student.id, {})[course.id] = existing
                     continue
-                opts = (await db.execute(select(QuestionOption).where(
-                    QuestionOption.question_id == q.id))).scalars().all()
-                if q.question_type in ("mcq", "true_false"):
-                    correct = next((o for o in opts if o.is_correct), None)
-                    db.add(Answer(
-                        submission_id=sub.id, question_id=q.id,
-                        selected_option_id=correct.id if correct else None,
-                        is_correct=True,
-                        points_earned=q.points))
-                else:  # short_answer
-                    db.add(Answer(
-                        submission_id=sub.id, question_id=q.id,
-                        text_response="Sample student response.",
-                        is_correct=None,
-                        points_earned=manual_pts,
-                        feedback="Good explanation." if manual_pts else None))
+
+                started = now_utc() - timedelta(days=2, hours=random.randint(0, 24))
+                grade_info = STUDENT_GRADES[students.index(student)]["grades"]
+                quiz_grade = grade_info["quiz"]
+
+                # Convert Kosovo grade back to a score percentage for realism
+                score_map = {5: 92, 4: 80, 3: 68, 2: 55, 1: 40}
+                score_pct = score_map[quiz_grade]
+
+                sub = Submission(
+                    quiz_id=quiz.id, student_id=student.id,
+                    attempt_num=1, started_at=started,
+                    submitted_at=started + timedelta(minutes=random.randint(5, 25)),
+                    status="graded",
+                    score=Decimal(str(score_pct)),
+                    graded_by=course.teacher_id,
+                    graded_at=started + timedelta(hours=random.randint(1, 4)),
+                )
+                db.add(sub)
+                await db.flush()
+                submissions_by_student.setdefault(student.id, {})[course.id] = sub
+
+                for q in questions:
+                    opts = (await db.execute(select(QuestionOption).where(
+                        QuestionOption.question_id == q.id))).scalars().all()
+                    if q.question_type in ("mcq", "true_false"):
+                        correct = next((o for o in opts if o.is_correct), None)
+                        # Higher-grade students get correct answers more often
+                        got_it = random.random() < (quiz_grade / 5.0)
+                        db.add(Answer(
+                            submission_id=sub.id, question_id=q.id,
+                            selected_option_id=correct.id if got_it and correct else None,
+                            is_correct=got_it,
+                            points_earned=q.points if got_it else 0))
+                    else:
+                        db.add(Answer(
+                            submission_id=sub.id, question_id=q.id,
+                            text_response="Sample student response.",
+                            is_correct=None,
+                            points_earned=Decimal(str(round(score_pct * q.points / 100, 1))),
+                            feedback="Good effort." if quiz_grade >= 3 else "Needs improvement. Review the material."))
 
         await db.commit()
-        print("  ✓ 2 submissions (1 graded, 1 pending teacher review)")
+        print(f"  Quiz submissions ({len(created_courses) * len(students)} total)")
 
-        # ── Grade entries for student001 in Algebra ──
-        # Weights match the course category_weights config:
-        # {"quiz": 0.30, "assignment": 0.25, "exam": 0.30, "participation": 0.15}
-        # One entry per category so each gets the full category weight.
-        existing_grades = (await db.execute(select(GradeEntry).where(
-            GradeEntry.student_id == students[0].id,
-            GradeEntry.course_id == algebra.id))).scalars().all()
-        existing_categories = {g.category for g in existing_grades}
-        if "quiz" not in existing_categories:
-            db.add(GradeEntry(
-                student_id=students[0].id, course_id=algebra.id,
-                quiz_id=algebra_quiz.id, submission_id=sub1.id,
-                category="quiz", label=None,
-                grade=4, weight=Decimal("0.300"),
-                feedback="Solid work on the quiz. Review the short answer section for extra detail.",
-                posted_at=now_utc() - timedelta(days=1)))
-        if "assignment" not in existing_categories:
-            db.add(GradeEntry(
-                student_id=students[0].id, course_id=algebra.id,
-                category="assignment", label="Homework 1",
-                grade=5, weight=Decimal("0.250"),
-                feedback="Perfect score! Great job showing your work.",
-                posted_at=now_utc() - timedelta(days=5)))
-        if "participation" not in existing_categories:
-            db.add(GradeEntry(
-                student_id=students[0].id, course_id=algebra.id,
-                category="participation", label="Class Participation",
-                grade=4, weight=Decimal("0.150"),
-                feedback="Actively participates in class discussions. Keep it up!",
-                posted_at=now_utc() - timedelta(days=3)))
-        if "exam" not in existing_categories:
-            db.add(GradeEntry(
-                student_id=students[0].id, course_id=algebra.id,
-                category="exam", label="Midterm Exam",
-                grade=3, weight=Decimal("0.300"),
-                feedback="Needs improvement on word problems. Review chapters 4-6.",
-                posted_at=now_utc() - timedelta(days=10)))
+        # ── Grade entries: every student gets all 4 categories per course ──
+        grade_labels = {
+            "quiz": None,
+            "assignment": "Homework 1",
+            "participation": "Class Participation",
+            "exam": "Midterm Exam",
+        }
+        grade_feedback = {
+            "quiz": "Solid work on the quiz. Keep reviewing the material.",
+            "assignment": "Good job on the homework.",
+            "participation": "Actively participates in class discussions.",
+            "exam": "Review the chapters covered and practice more.",
+        }
+        grade_count = 0
+        for student in students:
+            grade_info = STUDENT_GRADES[students.index(student)]["grades"]
+            for course in created_courses:
+                quiz = created_quizzes[course.id]
+                sub = submissions_by_student[student.id][course.id]
+                for category in ["quiz", "assignment", "participation", "exam"]:
+                    existing = (await db.execute(select(GradeEntry).where(
+                        GradeEntry.student_id == student.id,
+                        GradeEntry.course_id == course.id,
+                        GradeEntry.category == category))).scalar_one_or_none()
+                    if existing:
+                        continue
+                    weight = Decimal({
+                        "quiz": "0.300", "assignment": "0.250",
+                        "participation": "0.150", "exam": "0.300",
+                    }[category])
+                    kwargs = {
+                        "student_id": student.id,
+                        "course_id": course.id,
+                        "category": category,
+                        "label": grade_labels[category],
+                        "grade": grade_info[category],
+                        "weight": weight,
+                        "feedback": grade_feedback[category],
+                        "posted_at": now_utc() - timedelta(days=random.randint(1, 10)),
+                    }
+                    if category == "quiz":
+                        kwargs["quiz_id"] = quiz.id
+                        kwargs["submission_id"] = sub.id
+                    db.add(GradeEntry(**kwargs))
+                    grade_count += 1
 
         await db.commit()
-        print("  ✓ Grade entries for student001 in Algebra")
+        print(f"  Grade entries ({grade_count} total)")
 
-        # ── Assignments: 1 per course, with submissions ──
+        # ── Assignments: 1 per course, submissions from every student ──
         for course in created_courses:
             assignment = (await db.execute(select(Assignment).where(
                 Assignment.course_id == course.id, Assignment.title == "Homework 2"))).scalar_one_or_none()
@@ -375,22 +399,32 @@ async def seed():
                 db.add(assignment)
                 await db.flush()
 
-            for student in students[:2]:
+            for student in students:
                 existing_assign_sub = (await db.execute(select(AssignmentSubmission).where(
                     AssignmentSubmission.assignment_id == assignment.id,
                     AssignmentSubmission.student_id == student.id))).scalar_one_or_none()
                 if existing_assign_sub:
                     continue
+                grade_info = STUDENT_GRADES[students.index(student)]["grades"]
+                assign_grade = grade_info["assignment"]
+                score_map = {5: 95, 4: 82, 3: 70, 2: 58, 1: 42}
+                score = score_map[assign_grade]
                 db.add(AssignmentSubmission(
                     assignment_id=assignment.id,
                     student_id=student.id,
                     text_response="Here is my completed homework assignment.",
                     submitted_at=now_utc() - timedelta(hours=random.randint(1, 24)),
-                    status="submitted",
+                    score=Decimal(str(score)),
+                    status="graded",
+                    graded_by=course.teacher_id,
+                    graded_at=now_utc() - timedelta(hours=random.randint(0, 6)),
+                    feedback="Well done!" if assign_grade >= 4 else "Good effort, but needs more detail." if assign_grade >= 2 else "Please redo this assignment.",
                 ))
 
         await db.commit()
-        print("  ✓ Assignments with submissions")
+        print(f"  Assignments with submissions")
+
+        # ── Attendance: 5 weekdays × every enrollment ──
         check_date = date.today()
         days_logged = 0
         statuses_cycle = [AttendanceStatus.PRESENT, AttendanceStatus.PRESENT,
@@ -418,7 +452,7 @@ async def seed():
                     attendance_rows += 1
 
         await db.commit()
-        print(f"  ✓ {attendance_rows} attendance rows (5 school days)")
+        print(f"  {attendance_rows} attendance rows (5 school days)")
 
         # ── Badges ──
         badge_defs = [
@@ -433,57 +467,66 @@ async def seed():
                  "criteria_type": ctype, "criteria_value": cval})
             badges.append(badge)
 
-        # Award "First Steps" to student001 (who has the graded submission)
-        if not (await db.execute(select(UserBadge).where(
-            UserBadge.user_id == students[0].id,
-            UserBadge.badge_id == badges[0].id))).scalar_one_or_none():
-            db.add(UserBadge(user_id=students[0].id, badge_id=badges[0].id,
-                             earned_at=now_utc() - timedelta(days=1)))
+        # Award badges to students based on performance
+        for idx, student in enumerate(students):
+            grade_info = STUDENT_GRADES[idx]["grades"]
+            # First Steps — everyone who submitted gets it
+            if not (await db.execute(select(UserBadge).where(
+                UserBadge.user_id == student.id,
+                UserBadge.badge_id == badges[0].id))).scalar_one_or_none():
+                db.add(UserBadge(user_id=student.id, badge_id=badges[0].id,
+                                 earned_at=now_utc() - timedelta(days=random.randint(1, 5))))
+            # Perfect Score — only top performers
+            if grade_info["quiz"] >= 4 and not (await db.execute(select(UserBadge).where(
+                UserBadge.user_id == student.id,
+                UserBadge.badge_id == badges[1].id))).scalar_one_or_none():
+                db.add(UserBadge(user_id=student.id, badge_id=badges[1].id,
+                                 earned_at=now_utc() - timedelta(days=random.randint(1, 3))))
 
-        # Points for student001
-        if not (await db.execute(select(PointEntry).where(
-            PointEntry.user_id == students[0].id))).scalars().first():
-            db.add(PointEntry(user_id=students[0].id, points=10, reason="quiz_completed"))
-            db.add(PointEntry(user_id=students[0].id, points=5, reason="lesson_viewed"))
-
-        await db.commit()
-        print(f"  ✓ {len(badges)} badges + points for student001")
-
-        # ── Notifications ──
-        existing_notifs = (await db.execute(select(Notification).where(
-            Notification.user_id == students[0].id))).scalars().first()
-        if not existing_notifs:
-            db.add(Notification(
-                user_id=students[0].id, tenant_id=district.id,
-                type="grade_posted",
-                payload={"course_id": str(algebra.id), "grade": 4,
-                         "category": "quiz", "label": algebra_quiz.title},
-                is_read=False))
-            db.add(Notification(
-                user_id=students[0].id, tenant_id=district.id,
-                type="announcement",
-                payload={"message": "Welcome to the new semester!"},
-                is_read=False))
+        # Points for every student
+        for student in students:
+            if not (await db.execute(select(PointEntry).where(
+                PointEntry.user_id == student.id))).scalars().first():
+                db.add(PointEntry(user_id=student.id, points=10, reason="quiz_completed"))
+                db.add(PointEntry(user_id=student.id, points=5, reason="lesson_viewed"))
 
         await db.commit()
-        print("  ✓ Notifications")
+        print(f"  {len(badges)} badges + points for all students")
 
-        # ── Activity logs ──
-        existing_logs = (await db.execute(select(ActivityLog).where(
-            ActivityLog.user_id == students[0].id))).scalars().first()
-        if not existing_logs:
-            for user in [admin, teachers[0], students[0]]:
+        # ── Notifications for every student ──
+        for student in students:
+            if not (await db.execute(select(Notification).where(
+                Notification.user_id == student.id))).scalars().first():
+                db.add(Notification(
+                    user_id=student.id, tenant_id=district.id,
+                    type="grade_posted",
+                    payload={"course_id": str(created_courses[0].id), "grade": STUDENT_GRADES[students.index(student)]["grades"]["quiz"],
+                             "category": "quiz", "label": created_quizzes[created_courses[0].id].title},
+                    is_read=False))
+                db.add(Notification(
+                    user_id=student.id, tenant_id=district.id,
+                    type="announcement",
+                    payload={"message": "Welcome to the new semester!"},
+                    is_read=False))
+
+        await db.commit()
+        print("  Notifications")
+
+        # ── Activity logs for all users ──
+        for user in [admin, *teachers, *students]:
+            if not (await db.execute(select(ActivityLog).where(
+                ActivityLog.user_id == user.id))).scalars().first():
                 for event in ["login", "course_viewed", "lesson_viewed"]:
                     db.add(ActivityLog(
                         tenant_id=district.id,
                         user_id=user.id,
                         event_type=event,
-                        resource_id=algebra.id if event != "login" else None,
+                        resource_id=created_courses[0].id if event != "login" else None,
                         event_metadata={"ip": "192.168.1.1"},
                         occurred_at=now_utc() - timedelta(hours=random.randint(1, 48))))
 
         await db.commit()
-        print("  ✓ Activity logs")
+        print("  Activity logs")
 
         # ── Report snapshots: 2 weeks × 4 types ──
         report_types = ["weekly_engagement", "course_performance",
@@ -498,15 +541,15 @@ async def seed():
                     continue
                 if rtype == "weekly_engagement":
                     data = {"active_students": 4, "active_teachers": 2,
-                            "lessons_viewed": 12, "quizzes_completed": 2, "messages_sent": 3}
+                            "lessons_viewed": 12, "quizzes_completed": 8, "messages_sent": 3}
                 elif rtype == "course_performance":
-                    data = {"courses": [{"title": c.title, "avg_grade": 3.5, "submissions": 2}
+                    data = {"courses": [{"title": c.title, "avg_grade": 3.0, "submissions": 4}
                                         for c in created_courses]}
                 elif rtype == "attendance_summary":
                     data = {"total_records": 40, "present_pct": 60.0,
                             "absent_pct": 20.0, "tardy_pct": 20.0}
                 else:
-                    data = {"grade_5": 1, "grade_4": 1, "grade_3": 1, "grade_2": 0, "grade_1": 0}
+                    data = {"grade_5": 1, "grade_4": 1, "grade_3": 1, "grade_2": 1, "grade_1": 0}
                 db.add(ReportSnapshot(
                     tenant_id=district.id,
                     report_type=rtype,
@@ -516,12 +559,12 @@ async def seed():
                     generated_at=datetime.combine(period_end, datetime.min.time()).replace(tzinfo=timezone.utc)))
 
         await db.commit()
-        print("  ✓ Report snapshots (2 weeks)")
+        print("  Report snapshots (2 weeks)")
 
         # ── Summary ──
         print()
         print("=" * 60)
-        print("✅ Minimal seed complete!")
+        print("Seed complete!")
         print("=" * 60)
         print()
         print("  District : lincoln-unified")
@@ -531,10 +574,16 @@ async def seed():
         print("    admin@lincoln-unified.edu        / Admin123!")
         print("    sarah.chen@lincoln-unified.edu   / Teacher123!  (Algebra I)")
         print("    james.rivera@lincoln-unified.edu / Teacher123!  (Biology)")
-        print("    student001@lincoln-unified.edu   / Student123!  (graded quiz + grades)")
-        print("    student002@lincoln-unified.edu   / Student123!  (pending teacher review)")
-        print("    student003@lincoln-unified.edu   / Student123!  (no quiz yet, no assignment)")
-        print("    student004@lincoln-unified.edu   / Student123!  (no quiz yet, no assignment)")
+        for i, s in enumerate(STUDENT_GRADES):
+            grades = s["grades"]
+            weighted = (
+                grades["quiz"] * 0.30 + grades["assignment"] * 0.25 +
+                grades["participation"] * 0.15 + grades["exam"] * 0.30
+            )
+            print(f"    student{i+1:03d}@lincoln-unified.edu   / Student123!  "
+                  f"(quiz={grades['quiz']} assign={grades['assignment']} "
+                  f"part={grades['participation']} exam={grades['exam']} "
+                  f"wavg={weighted:.2f})")
         print("    parent001@lincoln-unified.edu    / Parent123!   (linked to student001)")
         print()
 

@@ -4,7 +4,7 @@ import { queryClient } from '@/config/queryClient'
 import { cookieManager } from '@/utils/cookieManager'
 
 // Get backend URL from env or default to localhost:8000
-const backendUrl = (import.meta as any).env.VITE_API_BASE_URL || 'http://localhost:8000'
+const backendUrl = (import.meta as any).env.VITE_API_BASE_URL || ''
 
 const api = axios.create({
   baseURL: `${backendUrl}/api/v1`,

@@ -4,26 +4,33 @@ import { useChildOverview, useChildGrades } from '@/api/parents'
 import { PageLoader } from '@/components/ui/Spinner'
 import { ArrowLeft, GraduationCap, TrendingUp, X, AlertTriangle, BookOpen } from 'lucide-react'
 import { cn } from '@/utils/cn'
-import { formatGrade } from '@/utils/formatters'
 
-const LETTER_COLORS: Record<string, string> = {
-  A: 'text-green-600 bg-green-50',
-  B: 'text-blue-600 bg-blue-50',
-  C: 'text-yellow-600 bg-yellow-50',
-  D: 'text-orange-600 bg-orange-50',
-  F: 'text-red-600 bg-red-50',
+const GRADE_COLORS: Record<number, string> = {
+  5: 'text-emerald-400 bg-emerald-500/15',
+  4: 'text-sky-400 bg-sky-500/15',
+  3: 'text-amber-400 bg-amber-500/15',
+  2: 'text-orange-400 bg-orange-500/15',
+  1: 'text-rose-400 bg-rose-500/15',
 }
 
-const LETTER_PILL_ACTIVE: Record<string, string> = {
-  A: 'bg-green-500/20 border-green-500/40 text-green-300',
-  B: 'bg-blue-500/20 border-blue-500/40 text-blue-300',
-  C: 'bg-yellow-500/20 border-yellow-500/40 text-yellow-300',
-  D: 'bg-orange-500/20 border-orange-500/40 text-orange-300',
-  F: 'bg-red-500/20 border-red-500/40 text-red-300',
+const GRADE_PILL_ACTIVE: Record<number, string> = {
+  5: 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300',
+  4: 'bg-sky-500/20 border-sky-500/40 text-sky-300',
+  3: 'bg-amber-500/20 border-amber-500/40 text-amber-300',
+  2: 'bg-orange-500/20 border-orange-500/40 text-orange-300',
+  1: 'bg-rose-500/20 border-rose-500/40 text-rose-300',
 }
 
-const LETTER_OPTIONS = ['A', 'B', 'C', 'D', 'F'] as const
-const BELOW_THRESHOLD = 70
+const GRADE_OPTIONS = [5, 4, 3, 2, 1] as const
+const BELOW_GRADE = 3
+
+const GRADE_LABELS: Record<number, string> = {
+  5: 'Excellent',
+  4: 'Good',
+  3: 'Satisfactory',
+  2: 'Sufficient',
+  1: 'Insufficient',
+}
 
 export function ParentChildGradesPage() {
   const { studentId } = useParams<{ studentId: string }>()
@@ -34,16 +41,16 @@ export function ParentChildGradesPage() {
 
   const courseParam = searchParams.get('course') ?? ''
   const categoryParam = searchParams.get('category') ?? ''
-  const letterParam = searchParams.get('letter') ?? ''
+  const gradeParam = searchParams.get('grade') ?? ''
   const belowParam = searchParams.get('below') === '1'
 
   const selectedCategories = useMemo(
     () => (categoryParam ? categoryParam.split(',').filter(Boolean) : []),
     [categoryParam],
   )
-  const selectedLetters = useMemo(
-    () => (letterParam ? letterParam.split(',').filter(Boolean) : []),
-    [letterParam],
+  const selectedGrades = useMemo(
+    () => (gradeParam ? gradeParam.split(',').map(Number).filter((n) => !isNaN(n)) : []),
+    [gradeParam],
   )
 
   const updateParam = (key: string, value: string | null) => {
@@ -53,22 +60,28 @@ export function ParentChildGradesPage() {
     setSearchParams(next, { replace: true })
   }
 
-  const toggleInList = (key: 'category' | 'letter', value: string) => {
-    const current = key === 'category' ? selectedCategories : selectedLetters
-    const next = current.includes(value)
-      ? current.filter((v) => v !== value)
-      : [...current, value]
-    updateParam(key, next.join(','))
+  const toggleGrade = (grade: number) => {
+    const next = selectedGrades.includes(grade)
+      ? selectedGrades.filter((v) => v !== grade)
+      : [...selectedGrades, grade]
+    updateParam('grade', next.join(','))
+  }
+
+  const toggleCategory = (cat: string) => {
+    const next = selectedCategories.includes(cat)
+      ? selectedCategories.filter((v) => v !== cat)
+      : [...selectedCategories, cat]
+    updateParam('category', next.join(','))
   }
 
   const clearFilters = () => {
     const next = new URLSearchParams(searchParams)
-    ;['course', 'category', 'letter', 'below'].forEach((k) => next.delete(k))
+    ;['course', 'category', 'grade', 'below'].forEach((k) => next.delete(k))
     setSearchParams(next, { replace: true })
   }
 
   const hasActiveFilters =
-    !!courseParam || selectedCategories.length > 0 || selectedLetters.length > 0 || belowParam
+    !!courseParam || selectedCategories.length > 0 || selectedGrades.length > 0 || belowParam
 
   const courseOptions = useMemo(
     () =>
@@ -89,22 +102,12 @@ export function ParentChildGradesPage() {
     return Array.from(set).sort()
   }, [grades])
 
-  const entryPercent = (entry: any): number | null => {
-    const max = Number(entry.max_score)
-    const raw = Number(entry.raw_score)
-    if (!isFinite(max) || max <= 0 || !isFinite(raw)) return null
-    return (raw / max) * 100
-  }
-
   const entryMatchesFilters = (entry: any) => {
     if (selectedCategories.length > 0 && !selectedCategories.includes(String(entry.category))) {
       return false
     }
-    if (selectedLetters.length > 0 && !selectedLetters.includes(entry.letter_grade)) return false
-    if (belowParam) {
-      const pct = entryPercent(entry)
-      if (pct === null || pct >= BELOW_THRESHOLD) return false
-    }
+    if (selectedGrades.length > 0 && !selectedGrades.includes(entry.grade)) return false
+    if (belowParam && entry.grade >= BELOW_GRADE) return false
     return true
   }
 
@@ -114,14 +117,14 @@ export function ParentChildGradesPage() {
       .filter((s: any) => !courseParam || String(s.course_id) === courseParam)
       .map((summary: any) => {
         const entries = (summary.entries ?? []).filter(entryMatchesFilters)
-        const percents = entries
-          .map(entryPercent)
-          .filter((p: number | null): p is number => p !== null)
+        const gradesArr = entries.map((e: any) => e.grade).filter((g: number) => g != null)
         const average =
-          percents.length > 0 ? percents.reduce((a: number, b: number) => a + b, 0) / percents.length : null
+          gradesArr.length > 0
+            ? gradesArr.reduce((a: number, b: number) => a + b, 0) / gradesArr.length
+            : null
         return { ...summary, entries, filtered_average: average }
       })
-  }, [grades, courseParam, selectedCategories, selectedLetters, belowParam])
+  }, [grades, courseParam, selectedCategories, selectedGrades, belowParam])
 
   const totalRawEntries = useMemo(
     () => (grades ?? []).reduce((sum: number, s: any) => sum + (s.entries?.length ?? 0), 0),
@@ -185,23 +188,24 @@ export function ParentChildGradesPage() {
             {/* Divider */}
             <div className="h-5 w-px bg-slate-700/60 mx-1" />
 
-            {/* Letter grade pills */}
+            {/* Grade pills (1-5) */}
             <div className="flex items-center gap-1">
-              {LETTER_OPTIONS.map((letter) => {
-                const active = selectedLetters.includes(letter)
+              {GRADE_OPTIONS.map((grade) => {
+                const active = selectedGrades.includes(grade)
                 return (
                   <button
-                    key={letter}
+                    key={grade}
                     type="button"
-                    onClick={() => toggleInList('letter', letter)}
+                    onClick={() => toggleGrade(grade)}
+                    title={GRADE_LABELS[grade]}
                     className={cn(
                       'h-8 w-8 inline-flex items-center justify-center rounded-full text-xs font-bold border transition-colors',
                       active
-                        ? LETTER_PILL_ACTIVE[letter]
+                        ? GRADE_PILL_ACTIVE[grade]
                         : 'bg-transparent border-slate-700/60 text-slate-400 hover:border-slate-600 hover:text-slate-300',
                     )}
                   >
-                    {letter}
+                    {grade}
                   </button>
                 )
               })}
@@ -219,7 +223,7 @@ export function ParentChildGradesPage() {
               )}
             >
               <AlertTriangle className="h-3 w-3" />
-              Below {BELOW_THRESHOLD}%
+              Below {BELOW_GRADE}
             </button>
 
             {/* Right side: meta + clear */}
@@ -248,7 +252,7 @@ export function ParentChildGradesPage() {
                   <button
                     key={cat}
                     type="button"
-                    onClick={() => toggleInList('category', cat)}
+                    onClick={() => toggleCategory(cat)}
                     className={cn(
                       'h-7 px-2.5 rounded-full text-xs capitalize border transition-colors',
                       active
@@ -286,7 +290,7 @@ export function ParentChildGradesPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          {filteredSummaries.map((summary: any) => (
+          {filteredSummaries.map((summary: any) =>
             summary.entries.length > 0 && (
               <div key={summary.course_id} className="card overflow-hidden">
                 <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700/60">
@@ -294,12 +298,14 @@ export function ParentChildGradesPage() {
                   <div className="flex items-center gap-3">
                     <span className="text-lg font-bold text-white">
                       {summary.filtered_average !== null
-                        ? formatGrade(summary.filtered_average)
-                        : formatGrade(summary.average)}
+                        ? summary.filtered_average.toFixed(2)
+                        : Number(summary.average) > 0
+                          ? Number(summary.average).toFixed(2)
+                          : '—'}
                     </span>
-                    {summary.letter_grade && (
-                      <span className={cn('w-9 h-9 flex items-center justify-center rounded-full text-sm font-bold', LETTER_COLORS[summary.letter_grade] || 'text-slate-400 bg-slate-700/50')}>
-                        {summary.letter_grade}
+                    {summary.final_grade != null && (
+                      <span className={cn('w-9 h-9 flex items-center justify-center rounded-full text-sm font-bold', GRADE_COLORS[summary.final_grade] || 'text-slate-400 bg-slate-700/50')}>
+                        {summary.final_grade}
                       </span>
                     )}
                   </div>
@@ -309,7 +315,6 @@ export function ParentChildGradesPage() {
                   <thead>
                     <tr className="bg-slate-800/50 text-left">
                       <th className="px-6 py-2 text-xs font-medium text-slate-500 uppercase">Assignment</th>
-                      <th className="px-6 py-2 text-xs font-medium text-slate-500 uppercase">Score</th>
                       <th className="px-6 py-2 text-xs font-medium text-slate-500 uppercase">Grade</th>
                     </tr>
                   </thead>
@@ -317,15 +322,10 @@ export function ParentChildGradesPage() {
                     {summary.entries.map((entry: any) => (
                       <tr key={entry.id} className="hover:bg-slate-800/50">
                         <td className="px-6 py-3 text-slate-300 capitalize">{entry.category}</td>
-                        <td className="px-6 py-3 text-slate-300">
-                          {entry.raw_score} / {entry.max_score}
-                        </td>
                         <td className="px-6 py-3">
-                          {entry.letter_grade ? (
-                            <span className={cn('px-2.5 py-1 rounded-full text-xs font-bold', LETTER_COLORS[entry.letter_grade] || 'bg-slate-700/50 text-slate-400')}>
-                              {entry.letter_grade}
-                            </span>
-                          ) : '—'}
+                          <span className={cn('px-2.5 py-1 rounded-full text-xs font-bold', GRADE_COLORS[entry.grade] || 'bg-slate-700/50 text-slate-400')}>
+                            {entry.grade}
+                          </span>
                         </td>
                       </tr>
                     ))}
@@ -333,7 +333,7 @@ export function ParentChildGradesPage() {
                 </table>
               </div>
             )
-          ))}
+          )}
         </div>
       )}
     </div>

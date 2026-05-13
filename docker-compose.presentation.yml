@@ -1,5 +1,6 @@
-# Lightweight deployment for Orange Pi Zero 4 (RK3399, 4GB RAM)
+# Presentation deployment for Orange Pi Zero 4 (4GB RAM)
 # Dokploy: deploy as file, Traefik routes generated domain to frontend:80
+# Includes automatic seeder to populate database on startup
 
 services:
   db:
@@ -62,6 +63,22 @@ services:
       - backend
     mem_limit: 128m
     restart: unless-stopped
+
+  seeder:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.lite
+    env_file:
+      - ./backend/.env
+    depends_on:
+      backend:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+      - media_files:/app/media
+    command: python -m app.db.seed
+    restart: "no"
+    mem_limit: 256m
 
 volumes:
   postgres_data:

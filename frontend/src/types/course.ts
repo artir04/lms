@@ -10,6 +10,9 @@ export interface Course {
   start_date: string | null
   end_date: string | null
   is_published: boolean
+  is_archived: boolean
+  category_weights: Record<string, number> | null
+  grade_thresholds: Record<string, number> | null
   teacher: UserSummary
   created_at: string
 }

@@ -8,7 +8,7 @@ from app.core.permissions import Role
 from app.core.exceptions import ForbiddenError, NotFoundError
 from app.models.course import Course
 from app.models.grade import GradeEntry
-from app.schemas.grade import GradeBookRead, GradeEntryUpdate, GradeEntryRead, GradeEntryCreate, CategoryWeightUpdate, StudentGradeSummary
+from app.schemas.grade import GradeBookRead, GradeEntryUpdate, GradeEntryRead, GradeEntryCreate, StudentGradeSummary
 from app.schemas.upcoming import UpcomingAssignment
 
 router = APIRouter(prefix="/gradebook", tags=["grades"])
@@ -52,13 +52,6 @@ async def update_entry(entry_id: uuid.UUID, data: GradeEntryUpdate, payload: Cur
         raise NotFoundError("Grade entry")
     await _assert_course_access(entry.course_id, payload, db)
     return await GradeService(db).update_entry(entry_id, data)
-
-
-@router.patch("/courses/{course_id}/categories/weight", dependencies=[require_roles(Role.TEACHER, Role.ADMIN)])
-async def update_category_weight(course_id: uuid.UUID, data: CategoryWeightUpdate, payload: CurrentUserPayload, db=Depends(get_db)):
-    await _assert_course_access(course_id, payload, db)
-    await GradeService(db).update_category_weight(course_id, data)
-    return {"message": "Category weight updated"}
 
 
 @router.get("/me", response_model=list[StudentGradeSummary])

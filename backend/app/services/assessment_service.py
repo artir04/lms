@@ -8,6 +8,7 @@ from sqlalchemy.orm import selectinload
 from app.models.assessment import Quiz, Question, QuestionOption, Submission, Answer
 from app.models.grade import GradeEntry
 from app.core.exceptions import NotFoundError, ForbiddenError, BadRequestError
+from app.core.grading import score_to_grade
 from app.core.pagination import PaginationParams, PaginatedResponse
 from app.schemas.assessment import QuizCreate, QuizUpdate, QuestionCreate, SubmissionCreate, ManualGradeRequest
 
@@ -157,15 +158,29 @@ class AssessmentService:
 
     async def _upsert_grade_entry(self, submission: Submission) -> None:
         """Convert quiz score percentage to a Kosovo 1-5 grade and upsert.
-        All quizzes share the same 'quiz' category. Each gets an equal share of
-        the total quiz weight, so adding a quiz dilutes existing ones.
+        All quizzes share the 'quiz' category weight from the course config.
+        Each quiz gets an equal share, so adding a quiz dilutes existing ones.
         """
-        quiz_result = await self.db.execute(
-            select(Quiz.weight, Quiz.course_id).where(Quiz.id == submission.quiz_id)
-        )
-        category_weight, course_id = quiz_result.one()
+        from app.models.course import Course
 
-        grade = self._score_to_grade(submission.score or Decimal("0"))
+        quiz_r = await self.db.execute(select(Quiz.course_id).where(Quiz.id == submission.quiz_id))
+        course_id = quiz_r.scalar_one()
+
+        # Fetch course category_weights config
+        course_r = await self.db.execute(select(Course).where(Course.id == course_id))
+        course = course_r.scalar_one_or_none()
+        weights_config = course.category_weights if course and course.category_weights else {"quiz": 0.30}
+        category_weight = Decimal(str(weights_config.get("quiz", 0.30)))
+
+        # Fetch course grade_thresholds for score-to-grade conversion
+        thresholds = course.grade_thresholds if course else None
+        grade = score_to_grade(submission.score or Decimal("0"), thresholds)
+
+        # Check if entry already exists for this submission (update case)
+        existing = await self.db.execute(
+            select(GradeEntry).where(GradeEntry.submission_id == submission.id)
+        )
+        entry = existing.scalar_one_or_none()
 
         # Count existing quiz entries for this student in this course
         count_r = await self.db.execute(
@@ -178,7 +193,7 @@ class AssessmentService:
             )
         )
         existing_count = count_r.scalar_one()
-        new_count = existing_count + 1  # including this one
+        new_count = existing_count if entry else existing_count + 1
 
         if category_weight <= 0:
             per_entry_weight = Decimal("0.30")
@@ -199,11 +214,6 @@ class AssessmentService:
                 .values(weight=per_entry_weight)
             )
 
-        existing = await self.db.execute(
-            select(GradeEntry).where(GradeEntry.submission_id == submission.id)
-        )
-        entry = existing.scalar_one_or_none()
-
         if entry:
             entry.grade = grade
             entry.weight = per_entry_weight
@@ -214,7 +224,7 @@ class AssessmentService:
                 quiz_id=submission.quiz_id,
                 submission_id=submission.id,
                 category="quiz",
-                label=None,  # groups all quizzes under the "quiz" category
+                label=None,
                 grade=grade,
                 weight=per_entry_weight,
                 posted_at=datetime.now(timezone.utc),
@@ -247,16 +257,3 @@ class AssessmentService:
         await self.db.flush()
         await self._upsert_grade_entry(submission)
         return submission
-
-    @staticmethod
-    def _score_to_grade(score_pct: Decimal) -> int:
-        """Convert a quiz score percentage (0-100) to Kosovo 1-5 grade."""
-        if score_pct >= 90:
-            return 5
-        if score_pct >= 75:
-            return 4
-        if score_pct >= 60:
-            return 3
-        if score_pct >= 45:
-            return 2
-        return 1

@@ -3,10 +3,13 @@ export interface GradeEntry {
   student_id: string
   course_id: string
   quiz_id: string | null
+  assignment_id: string | null
+  assignment_submission_id: string | null
   category: string
   label: string | null
   grade: number // 1-5 Kosovo system
   weight: number // e.g. 0.30 = 30%
+  feedback: string | null
   posted_at: string | null
   created_at: string
 }

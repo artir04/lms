@@ -16,6 +16,10 @@ import { QuizTakePage } from '@/pages/assessments/QuizTakePage'
 import { QuizBuilderPage } from '@/pages/assessments/QuizBuilderPage'
 import { QuizSubmissionsPage } from '@/pages/assessments/QuizSubmissionsPage'
 import { SubmissionGradingPage } from '@/pages/assessments/SubmissionGradingPage'
+import { AssignmentDetailPage } from '@/pages/assessments/AssignmentDetailPage'
+import { AssignmentSubmitPage } from '@/pages/assessments/AssignmentSubmitPage'
+import { AssignmentSubmissionsPage } from '@/pages/assessments/AssignmentSubmissionsPage'
+import { AssignmentGradingPage } from '@/pages/assessments/AssignmentGradingPage'
 import { MyGradesPage } from '@/pages/grades/MyGradesPage'
 import { GradebookPage } from '@/pages/grades/GradebookPage'
 import { AnalyticsPage } from '@/pages/analytics/AnalyticsPage'
@@ -71,13 +75,15 @@ export const router = createBrowserRouter([
               { path: 'courses', element: <CourseListPage /> },
               { path: 'courses/:courseId', element: <CourseDetailPage /> },
               { path: 'courses/:courseId/lessons/:lessonId', element: <LessonPage /> },
+              { path: 'assignments/:assignmentId', element: <AssignmentDetailPage /> },
             ],
           },
-          // Student-only routes (own grades / attendance / achievements / quiz taking)
+          // Student-only routes (own grades / attendance / achievements / quiz taking / assignments)
           {
             element: <ProtectedRoute roles={['student']} />,
             children: [
               { path: 'quizzes/:quizId/take', element: <QuizTakePage /> },
+              { path: 'assignments/:assignmentId/submit', element: <AssignmentSubmitPage /> },
               { path: 'grades', element: <MyGradesPage /> },
               { path: 'attendance', element: <StudentAttendancePage /> },
               { path: 'gamification', element: <GamificationPage /> },
@@ -101,6 +107,8 @@ export const router = createBrowserRouter([
               { path: 'courses/:courseId/quizzes/:quizId/build', element: <QuizBuilderPage /> },
               { path: 'courses/:courseId/quizzes/:quizId/submissions', element: <QuizSubmissionsPage /> },
               { path: 'submissions/:submissionId', element: <SubmissionGradingPage /> },
+              { path: 'assignments/:assignmentId/submissions', element: <AssignmentSubmissionsPage /> },
+              { path: 'assignments/submissions/:submissionId', element: <AssignmentGradingPage /> },
               { path: 'courses/:courseId/attendance', element: <AttendanceMarkingPage /> },
               { path: 'courses/:courseId/attendance/report', element: <AttendanceReportPage /> },
               { path: 'teacher/attendance', element: <TeacherAttendanceOverviewPage /> },

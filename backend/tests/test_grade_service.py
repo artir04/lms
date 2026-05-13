@@ -1,7 +1,7 @@
 """
 Tests for grade_service.py covering:
-- _round_grade: null, zero, boundary 0.1-0.4, normal rounding, cap 1-5
-- _weighted_average: normal case, zero-weight validation, empty entries
+- round_grade: null, zero, boundary 0.1-0.4, normal rounding, cap 1-5
+- weighted_average: normal case, zero-weight validation, empty entries
 - create_entry: enrollment validation, weight validation, duplicate check
 - get_gradebook: N+1 query fix verification
 """
@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime, timezone
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock, call
 
 import pytest
@@ -21,6 +21,7 @@ from app.models.course import Course, Enrollment
 from app.models.user import User
 from app.schemas.grade import GradeEntryCreate
 from app.core.exceptions import ValidationError, ConflictError, NotFoundError
+from app.core.grading import round_grade, weighted_average
 
 
 pytestmark = pytest.mark.unit
@@ -63,43 +64,43 @@ def sample_entries(student_id, course_id):
 
 class TestRoundGrade:
     def test_null_returns_none(self):
-        assert GradeService._round_grade(None) is None
+        assert round_grade(None) is None
 
     def test_zero_returns_none(self):
-        assert GradeService._round_grade(Decimal("0")) is None
+        assert round_grade(Decimal("0")) is None
 
     def test_below_half_returns_none(self):
         """Values 0.1 to 0.4 are too low - return None (no grade yet)."""
-        assert GradeService._round_grade(Decimal("0.1")) is None
-        assert GradeService._round_grade(Decimal("0.3")) is None
-        assert GradeService._round_grade(Decimal("0.49")) is None
+        assert round_grade(Decimal("0.1")) is None
+        assert round_grade(Decimal("0.3")) is None
+        assert round_grade(Decimal("0.49")) is None
 
     def test_at_half_rounds_up(self):
         """0.5 rounds to 1 (ROUND_HALF_UP)."""
-        assert GradeService._round_grade(Decimal("0.5")) == 1
+        assert round_grade(Decimal("0.5")) == 1
 
     def test_normal_rounding(self):
         """Standard ROUND_HALF_UP rounding."""
-        assert GradeService._round_grade(Decimal("3.4")) == 3
-        assert GradeService._round_grade(Decimal("3.5")) == 4
-        assert GradeService._round_grade(Decimal("3.6")) == 4
-        assert GradeService._round_grade(Decimal("4.2")) == 4
-        assert GradeService._round_grade(Decimal("4.8")) == 5
+        assert round_grade(Decimal("3.4")) == 3
+        assert round_grade(Decimal("3.5")) == 4
+        assert round_grade(Decimal("3.6")) == 4
+        assert round_grade(Decimal("4.2")) == 4
+        assert round_grade(Decimal("4.8")) == 5
 
     def test_cap_at_upper_bound(self):
         """Grades above 5 are capped at 5."""
-        assert GradeService._round_grade(Decimal("5.0")) == 5
-        assert GradeService._round_grade(Decimal("5.5")) == 5
-        assert GradeService._round_grade(Decimal("10.0")) == 5
+        assert round_grade(Decimal("5.0")) == 5
+        assert round_grade(Decimal("5.5")) == 5
+        assert round_grade(Decimal("10.0")) == 5
 
     def test_cap_at_lower_bound(self):
         """Rounded values below 1 are raised to 1."""
-        assert GradeService._round_grade(Decimal("0.5")) == 1
-        assert GradeService._round_grade(Decimal("0.9")) == 1
+        assert round_grade(Decimal("0.5")) == 1
+        assert round_grade(Decimal("0.9")) == 1
 
     def test_student_with_single_grade_5(self):
         """A student with a single perfect grade gets final grade 5."""
-        assert GradeService._round_grade(Decimal("5.0")) == 5
+        assert round_grade(Decimal("5.0")) == 5
 
 
 # ─── _weighted_average tests ─────────────────────────────────────────────────
@@ -107,11 +108,11 @@ class TestRoundGrade:
 
 class TestWeightedAverage:
     def test_empty_entries_returns_zero(self):
-        assert GradeService._weighted_average([]) == Decimal("0")
+        assert weighted_average([]) == Decimal("0")
 
     def test_normal_weighted_average(self, sample_entries):
         """(5x0.30 + 3x0.30 + 4x0.40) / 1.0 = 4.00"""
-        result = GradeService._weighted_average(sample_entries)
+        result = weighted_average(sample_entries)
         assert result == Decimal("4.00")
 
     def test_uneven_weights(self, student_id, course_id):
@@ -127,7 +128,7 @@ class TestWeightedAverage:
             ),
         ]
         # (5x2.0 + 3x1.0) / 3.0 = 13.0/3.0 = 4.33
-        result = GradeService._weighted_average(entries)
+        result = weighted_average(entries)
         assert result == Decimal("4.33")
 
     def test_single_entry(self, student_id, course_id):
@@ -137,7 +138,7 @@ class TestWeightedAverage:
                 category="exam", label="Final", grade=4, weight=Decimal("1.0"),
             ),
         ]
-        assert GradeService._weighted_average(entries) == Decimal("4.00")
+        assert weighted_average(entries) == Decimal("4.00")
 
     def test_all_zero_weights_raises_validation_error(self, student_id, course_id):
         """Bug 2 fix: zero total weight must raise ValidationError."""
@@ -152,7 +153,7 @@ class TestWeightedAverage:
             ),
         ]
         with pytest.raises(ValidationError, match="Total weight"):
-            GradeService._weighted_average(entries)
+            weighted_average(entries)
 
 
 # ─── create_entry validation tests ────────────────────────────────────────────
@@ -203,25 +204,45 @@ class TestCreateEntryValidation:
             await svc.create_entry(course_id, data)
 
     @pytest.mark.asyncio
-    async def test_zero_weight_raises_error(self, course_id, student_id):
-        """Bug 3 fix: weight = 0 -> ValidationError."""
+    async def test_zero_weight_auto_computes(self, course_id, student_id):
+        """weight = 0 triggers auto-compute from course category_weights config."""
         mock_db = AsyncMock()
         svc = GradeService(mock_db)
 
-        mock_result = MagicMock()
-        mock_result.scalar_one.return_value = 1
-        mock_db.execute.return_value = mock_result
+        # Mock course with category_weights
+        mock_course = MagicMock(spec=Course)
+        mock_course.category_weights = {"quiz": 0.30, "exam": 0.40, "assignment": 0.30}
+
+        mock_enrolled = MagicMock()
+        mock_enrolled.scalar_one.return_value = 1
+
+        mock_course_result = MagicMock()
+        mock_course_result.scalar_one_or_none.return_value = mock_course
+
+        mock_count = MagicMock()
+        mock_count.scalar_one.return_value = 0  # no existing entries
+
+        mock_total = MagicMock()
+        mock_total.scalar_one.return_value = Decimal("0")
+
+        mock_db.execute = AsyncMock(side_effect=[
+            mock_enrolled,       # enrollment check
+            mock_course_result,  # course lookup for category_weights
+            mock_count,          # count existing entries in category
+            mock_total,          # total weight check
+        ])
 
         data = GradeEntryCreate(
             student_id=student_id,
             category="quiz",
             label="Test 1",
             grade=4,
-            weight=Decimal("0"),  # zero weight
+            weight=Decimal("0"),  # zero weight -> auto-compute
         )
 
-        with pytest.raises(ValidationError, match="Weight"):
-            await svc.create_entry(course_id, data)
+        entry = await svc.create_entry(course_id, data)
+        assert entry.weight == Decimal("0.300")  # 0.30 / 1 = 0.300
+        assert entry.grade == 4
 
     @pytest.mark.asyncio
     async def test_total_weight_exceeds_100_percent_raises_error(self, course_id, student_id):
@@ -308,6 +329,7 @@ class TestGetGradebookNPlusOne:
         grade.label = "Midterm"
         grade.grade = 4
         grade.weight = Decimal("1.0")
+        grade.feedback = None
         grade.posted_at = None
         grade.created_at = datetime.now(timezone.utc)
 

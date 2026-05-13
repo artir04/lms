@@ -33,7 +33,8 @@ export function useQuiz(quizId: string) {
 export function useCreateQuiz(courseId: string) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: Partial<Quiz>) => api.post<Quiz>(`/assessments/courses/${courseId}/quizzes`, data).then((r) => r.data),
+    mutationFn: (data: { title: string; instructions?: string; time_limit_min?: number; due_at?: string }) =>
+      api.post<Quiz>(`/assessments/courses/${courseId}/quizzes`, data).then((r) => r.data),
     onSuccess: () => qc.invalidateQueries({ queryKey: assessmentKeys.quizzes(courseId) }),
   })
 }

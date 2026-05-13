@@ -3,11 +3,12 @@ import {
   BookOpen, ChevronDown, ChevronRight, PlayCircle, FileText, Link2,
   Plus, ClipboardList, CalendarDays, Clock, Award,
   Pencil, BookMarked, Layers, ArrowRight, Users, GraduationCap,
-  Mail, CheckCircle2, Paperclip, Download,
+  Mail, CheckCircle2, Paperclip, Download, Upload,
 } from 'lucide-react'
 import { useState } from 'react'
 import { useCourse } from '@/api/courses'
 import { useQuizzes, useCreateQuiz } from '@/api/assessments'
+import { useAssignments, useCreateAssignment } from '@/api/assignments'
 import { Modal } from '@/components/ui/Modal'
 import { PageLoader } from '@/components/ui/Spinner'
 import { useAuth } from '@/hooks/useAuth'
@@ -18,13 +19,14 @@ import { useQuery } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { useGradebook, useMyGrades } from '@/api/grades'
 
-type Tab = 'content' | 'classlist' | 'quizzes' | 'grades'
+type Tab = 'content' | 'classlist' | 'quizzes' | 'assignments' | 'grades'
 
 export function CourseDetailPage() {
   const { courseId } = useParams<{ courseId: string }>()!
   const { isTeacher, isAdmin } = useAuth()
   const { data: course, isLoading } = useCourse(courseId!)
   const { data: quizzes } = useQuizzes(courseId!)
+  const { data: assignments } = useAssignments(courseId!)
   const [tab, setTab] = useState<Tab>('content')
   const [openModules, setOpenModules] = useState<Set<string>>(new Set())
 
@@ -67,6 +69,7 @@ export function CourseDetailPage() {
     { id: 'content', label: 'Content', icon: <Layers className="h-4 w-4" /> },
     { id: 'classlist', label: 'Class List', icon: <Users className="h-4 w-4" />, count: students?.length },
     { id: 'quizzes', label: 'Quizzes', icon: <ClipboardList className="h-4 w-4" />, count: quizzes?.length },
+    { id: 'assignments', label: 'Assignments', icon: <FileText className="h-4 w-4" />, count: assignments?.length },
     { id: 'grades', label: 'Grades', icon: <GraduationCap className="h-4 w-4" /> },
   ]
 
@@ -431,6 +434,90 @@ export function CourseDetailPage() {
         </section>
       )}
 
+      {/* ASSIGNMENTS TAB */}
+      {tab === 'assignments' && (
+        <section className="space-y-4 animate-fade-up">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-ink-muted">
+              {assignments?.length
+                ? `${assignments.length} assignment${assignments.length !== 1 ? 's' : ''}`
+                : 'No assignments yet'}
+            </p>
+            {canManage && <CreateAssignmentButton courseId={courseId!} />}
+          </div>
+
+          {assignments && assignments.length > 0 ? (
+            <div className="space-y-3">
+              {assignments.map((assignment) => {
+                const isCompleted = assignment.has_submission
+                return (
+                <div key={assignment.id} className="card px-6 py-5 hover:shadow-card-hover transition-shadow">
+                  <div className="flex items-center gap-5">
+                    <div className={`flex-shrink-0 w-11 h-11 rounded-xl flex items-center justify-center ${isCompleted ? 'bg-emerald-500/15' : 'bg-indigo-500/15'}`}>
+                      {isCompleted
+                        ? <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+                        : <FileText className="h-5 w-5 text-indigo-400" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-ink leading-snug">{assignment.title}</p>
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 text-sm text-ink-muted">
+                        <span>Max score: {assignment.max_score}</span>
+                        {assignment.due_at && (
+                          <>
+                            <span className="text-ink-faint">·</span>
+                            <span className="text-rose-400 font-medium flex items-center gap-1">
+                              <CalendarDays className="h-3.5 w-3.5" />
+                              Due {formatDate(assignment.due_at)}
+                            </span>
+                          </>
+                        )}
+                        {assignment.allows_file_upload && (
+                          <>
+                            <span className="text-ink-faint">·</span>
+                            <span className="flex items-center gap-1">
+                              <Upload className="h-3.5 w-3.5" />
+                              File upload
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex-shrink-0">
+                      {canManage ? (
+                        <Link to={ROUTES.ASSIGNMENT_SUBMISSIONS(assignment.id)} className="btn-secondary btn-sm">
+                          <Pencil className="h-3.5 w-3.5" /> Submissions
+                        </Link>
+                      ) : !assignment.is_published ? (
+                        <span className="text-xs text-ink-muted italic">Not available yet</span>
+                      ) : isCompleted ? (
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 text-emerald-400 text-xs font-semibold px-3 py-1.5">
+                          <CheckCircle2 className="h-3.5 w-3.5" /> Submitted
+                        </span>
+                      ) : (
+                        <Link to={ROUTES.ASSIGNMENT_SUBMIT(assignment.id)} className="btn-primary btn-sm">
+                          Submit <ArrowRight className="h-3.5 w-3.5" />
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                )
+              })}
+            </div>
+          ) : (
+            <div className="card p-16 text-center">
+              <FileText className="h-14 w-14 mx-auto mb-4 text-ink-faint" />
+              <p className="font-semibold text-ink mb-1">No assignments yet</p>
+              <p className="text-sm text-ink-muted">
+                {canManage
+                  ? 'Create your first assignment using the button above.'
+                  : "Your teacher hasn't added any assignments yet."}
+              </p>
+            </div>
+          )}
+        </section>
+      )}
+
       {/* GRADES TAB */}
       {tab === 'grades' && (
         <section className="animate-fade-up">
@@ -593,11 +680,8 @@ function StudentGradesView({ courseId }: { courseId: string }) {
 function CreateQuizButton({ courseId }: { courseId: string }) {
   const navigate = useNavigate()
   const [show, setShow] = useState(false)
-  const [weightPreview, setWeightPreview] = useState('0.30')
   const { mutate: createQuiz, isPending } = useCreateQuiz(courseId)
-  const { register, handleSubmit, reset } = useForm<{ title: string; weight: string }>({
-    defaultValues: { weight: '0.30' },
-  })
+  const { register, handleSubmit, reset } = useForm<{ title: string }>()
 
   return (
     <>
@@ -607,7 +691,7 @@ function CreateQuizButton({ courseId }: { courseId: string }) {
       <Modal isOpen={show} onClose={() => setShow(false)} title="Create Quiz">
         <form
           onSubmit={handleSubmit((d) =>
-            createQuiz({ ...d, weight: Number(d.weight) }, {
+            createQuiz(d, {
               onSuccess: (quiz: any) => {
                 setShow(false)
                 reset()
@@ -621,18 +705,73 @@ function CreateQuizButton({ courseId }: { courseId: string }) {
             <label className="label">Quiz Title *</label>
             <input {...register('title', { required: true })} className="input" placeholder="e.g. Chapter 1 Quiz" />
           </div>
-          <div>
-            <label className="label">Weight on Final Grade</label>
-            <div className="flex items-center gap-2">
-              <input {...register('weight')} type="number" step="0.05" min="0.05" max="1" className="input" onChange={(e) => setWeightPreview(e.target.value)} />
-              <span className="text-sm text-ink-muted">= {Math.round(parseFloat(weightPreview || '0.30') * 100)}%</span>
-            </div>
-            <p className="text-[10px] text-ink-muted mt-1">e.g. 0.30 = 30%. All categories combined must not exceed 100%.</p>
-          </div>
+          <p className="text-xs text-ink-muted">
+            Quiz weight is auto-computed from the course category weights. Configure category weights in Course Settings.
+          </p>
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={() => setShow(false)} className="btn-secondary flex-1">Cancel</button>
             <button type="submit" disabled={isPending} className="btn-primary flex-1">
               {isPending ? 'Creating...' : 'Create & Build'}
+            </button>
+          </div>
+        </form>
+      </Modal>
+    </>
+  )
+}
+
+function CreateAssignmentButton({ courseId }: { courseId: string }) {
+  const [show, setShow] = useState(false)
+  const { mutate: createAssignment, isPending } = useCreateAssignment(courseId)
+  const { register, handleSubmit, reset } = useForm<{ title: string; description: string; due_at: string; max_score: string }>({
+    defaultValues: { max_score: '100' },
+  })
+
+  return (
+    <>
+      <button onClick={() => setShow(true)} className="btn-primary btn-sm">
+        <Plus className="h-4 w-4" /> New Assignment
+      </button>
+      <Modal isOpen={show} onClose={() => setShow(false)} title="Create Assignment">
+        <form
+          onSubmit={handleSubmit((d) =>
+            createAssignment({
+              title: d.title,
+              description: d.description || undefined,
+              due_at: d.due_at || undefined,
+              max_score: Number(d.max_score),
+            } as any, {
+              onSuccess: () => {
+                setShow(false)
+                reset()
+              },
+            })
+          )}
+          className="space-y-4"
+        >
+          <div>
+            <label className="label">Title *</label>
+            <input {...register('title', { required: true })} className="input" placeholder="e.g. Chapter 1 Homework" />
+          </div>
+          <div>
+            <label className="label">Description</label>
+            <textarea {...register('description')} rows={3} className="input resize-none" placeholder="Instructions for students..." />
+          </div>
+          <div>
+            <label className="label">Due Date</label>
+            <input {...register('due_at')} type="datetime-local" className="input" />
+          </div>
+          <div>
+            <label className="label">Max Score</label>
+            <input {...register('max_score')} type="number" min="1" className="input" />
+          </div>
+          <p className="text-xs text-ink-muted">
+            Assignment weight is auto-computed from the course category weights.
+          </p>
+          <div className="flex gap-3 pt-2">
+            <button type="button" onClick={() => setShow(false)} className="btn-secondary flex-1">Cancel</button>
+            <button type="submit" disabled={isPending} className="btn-primary flex-1">
+              {isPending ? 'Creating...' : 'Create'}
             </button>
           </div>
         </form>

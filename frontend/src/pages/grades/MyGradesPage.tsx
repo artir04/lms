@@ -58,6 +58,7 @@ export function MyGradesPage() {
                       <th className="px-6 py-2 text-xs font-medium text-ink-muted uppercase">Assessment</th>
                       <th className="px-6 py-2 text-xs font-medium text-ink-muted uppercase text-center">Grade</th>
                       <th className="px-6 py-2 text-xs font-medium text-ink-muted uppercase text-center">Weight</th>
+                      <th className="px-6 py-2 text-xs font-medium text-ink-muted uppercase">Feedback</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/60">
@@ -73,6 +74,9 @@ export function MyGradesPage() {
                         </td>
                         <td className="px-6 py-3 text-center text-ink-muted">
                           {(Number(entry.weight) * 100).toFixed(0)}%
+                        </td>
+                        <td className="px-6 py-3 text-ink-muted text-xs max-w-[200px] truncate">
+                          {entry.feedback || '—'}
                         </td>
                       </tr>
                     ))}

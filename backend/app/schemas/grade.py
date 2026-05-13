@@ -13,6 +13,7 @@ class GradeEntryRead(BaseModel):
     label: str | None
     grade: int  # 1-5
     weight: Decimal
+    feedback: str | None = None
     posted_at: datetime | None
     created_at: datetime
 
@@ -24,18 +25,16 @@ class GradeEntryCreate(BaseModel):
     category: str = "assignment"
     label: str | None = None
     grade: int = Field(ge=1, le=5)
-    weight: Decimal = Decimal("0")  # 0 = auto-inherit from column
+    weight: Decimal = Decimal("0")  # 0 = auto-compute from course category config
+    feedback: str | None = None
 
 
 class GradeEntryUpdate(BaseModel):
     grade: int | None = Field(default=None, ge=1, le=5)
     category: str | None = None
     label: str | None = None
-
-
-class CategoryWeightUpdate(BaseModel):
-    label: str
-    weight: Decimal = Field(gt=Decimal("0"), le=Decimal("1.0"))
+    weight: Decimal | None = None
+    feedback: str | None = None
 
 
 class GradeBookRow(BaseModel):

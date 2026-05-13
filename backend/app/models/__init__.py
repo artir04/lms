@@ -4,6 +4,7 @@ from app.models.parent import ParentStudent
 from app.models.course import Course, Section, Enrollment
 from app.models.content import Module, Lesson, Attachment
 from app.models.assessment import Quiz, Question, QuestionOption, Submission, Answer
+from app.models.assignment import Assignment, AssignmentSubmission
 from app.models.grade import GradeEntry
 from app.models.attendance import Attendance, AttendanceStatus
 from app.models.notification import Notification
@@ -18,6 +19,7 @@ __all__ = [
     "Course", "Section", "Enrollment",
     "Module", "Lesson", "Attachment",
     "Quiz", "Question", "QuestionOption", "Submission", "Answer",
+    "Assignment", "AssignmentSubmission",
     "GradeEntry",
     "Attendance", "AttendanceStatus",
     "Notification",

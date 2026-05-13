@@ -33,6 +33,10 @@ export const ROUTES = {
   PARENT_CHILD: (id: string) => `/parent/children/${id}`,
   PARENT_CHILD_GRADES: (id: string) => `/parent/children/${id}/grades`,
   PARENT_CHILD_ATTENDANCE: (id: string) => `/parent/children/${id}/attendance`,
+  ASSIGNMENT_DETAIL: (id: string) => `/assignments/${id}`,
+  ASSIGNMENT_SUBMIT: (id: string) => `/assignments/${id}/submit`,
+  ASSIGNMENT_SUBMISSIONS: (id: string) => `/assignments/${id}/submissions`,
+  ASSIGNMENT_SUBMISSION_GRADE: (id: string) => `/assignments/submissions/${id}`,
   FORBIDDEN: '/403',
   NOT_FOUND: '/404',
 } as const

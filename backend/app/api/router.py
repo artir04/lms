@@ -5,6 +5,7 @@ from app.api.v1 import (
     courses,
     content,
     assessments,
+    assignments,
     grades,
     notifications,
     analytics,
@@ -23,6 +24,7 @@ api_router.include_router(users.router)
 api_router.include_router(courses.router)
 api_router.include_router(content.router)
 api_router.include_router(assessments.router)
+api_router.include_router(assignments.router)
 api_router.include_router(grades.router)
 api_router.include_router(notifications.router)
 api_router.include_router(analytics.router)

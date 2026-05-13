@@ -1,10 +1,11 @@
 import uuid
 from datetime import date
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal
 
 from sqlalchemy import Numeric, and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.exceptions import ConflictError, ForbiddenError, NotFoundError
+from app.core.grading import weighted_average, round_grade
 from app.models.assessment import Quiz, Submission
 from app.models.attendance import Attendance
 from app.models.course import Course, Enrollment, Section
@@ -136,13 +137,8 @@ class ParentService:
             )
             entries = entries_r.scalars().all()
             if entries:
-                total_weight = sum(e.weight for e in entries)
-                if total_weight:
-                    avg = sum(Decimal(str(e.grade)) * e.weight for e in entries) / total_weight
-                else:
-                    avg = Decimal("0")
-                rounded = int(avg.quantize(Decimal("1"), rounding=ROUND_HALF_UP))
-                grade = max(1, min(5, rounded))
+                avg = weighted_average(entries)
+                grade = round_grade(avg)
             else:
                 avg = None
                 grade = None
@@ -150,7 +146,7 @@ class ParentService:
             course_progress.append(ChildCourseProgress(
                 course_id=course.id,
                 course_title=course.title,
-                weighted_average=Decimal(str(round(avg, 2))) if avg is not None else None,
+                weighted_average=avg,
                 final_grade=grade,
                 entry_count=len(entries),
             ))

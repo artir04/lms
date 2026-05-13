@@ -5,14 +5,6 @@ import { Users, GraduationCap, CalendarCheck, Calendar } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import { ROUTES } from '@/config/routes'
 
-function gradeToLetter(grade: number): string {
-  if (grade >= 4.5) return 'A'
-  if (grade >= 3.5) return 'B'
-  if (grade >= 2.5) return 'C'
-  if (grade >= 1.5) return 'D'
-  return 'F'
-}
-
 export function ParentDashboardPage() {
   const { data: children, isLoading } = useParentChildren()
   const { data: digest } = useParentDigest()
@@ -76,10 +68,8 @@ export function ParentDashboardPage() {
                 <p className="text-lg font-bold text-white">
                   {averageGrade !== null ? (
                     <>
-                      {gradeToLetter(averageGrade)}
-                      <span className="ml-1.5 text-xs font-medium text-slate-400">
-                        {averageGrade.toFixed(1)} / 5
-                      </span>
+                      {averageGrade.toFixed(1)}
+                      <span className="ml-1.5 text-xs font-medium text-slate-400">/ 5</span>
                     </>
                   ) : (
                     '—'

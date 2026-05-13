@@ -3,7 +3,7 @@ from datetime import date, datetime
 from typing import TYPE_CHECKING
 from sqlalchemy import String, Boolean, SmallInteger, Date, DateTime, ForeignKey, UniqueConstraint, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 
 from app.db.base import Base, UUIDPrimaryKeyMixin, TimestampMixin
 
@@ -27,6 +27,8 @@ class Course(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     end_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     is_published: Mapped[bool] = mapped_column(Boolean, default=False)
     is_archived: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
+    category_weights: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    grade_thresholds: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
 
     teacher: Mapped["User"] = relationship("User", foreign_keys=[teacher_id])
     sections: Mapped[list["Section"]] = relationship("Section", back_populates="course", cascade="all, delete-orphan")

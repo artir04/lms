@@ -23,6 +23,7 @@ from app.models.course import Course, Section, Enrollment
 from app.models.content import Module, Lesson
 from app.models.assessment import Quiz, Question, QuestionOption, Submission, Answer
 from app.models.grade import GradeEntry
+from app.models.assignment import Assignment, AssignmentSubmission
 from app.models.attendance import Attendance, AttendanceStatus
 from app.models.parent import ParentStudent
 from app.models.gamification import Badge, UserBadge, PointEntry
@@ -183,6 +184,8 @@ async def seed():
                     grade_level=cdata["grade_level"],
                     description=cdata["description"],
                     is_published=True,
+                    category_weights={"quiz": 0.30, "assignment": 0.25, "exam": 0.30, "participation": 0.15},
+                    grade_thresholds={"5": 90, "4": 75, "3": 60, "2": 45},
                     start_date=date.today() - timedelta(days=30),
                     end_date=date.today() + timedelta(days=120),
                 )
@@ -225,7 +228,6 @@ async def seed():
                     time_limit_min=30,
                     max_attempts=1,
                     is_published=True,
-                    weight=Decimal("0.300"),
                     due_at=now_utc() + timedelta(days=14),
                 )
                 db.add(quiz)
@@ -315,36 +317,80 @@ async def seed():
         print("  ✓ 2 submissions (1 graded, 1 pending teacher review)")
 
         # ── Grade entries for student001 in Algebra ──
+        # Weights match the course category_weights config:
+        # {"quiz": 0.30, "assignment": 0.25, "exam": 0.30, "participation": 0.15}
+        # One entry per category so each gets the full category weight.
         existing_grades = (await db.execute(select(GradeEntry).where(
             GradeEntry.student_id == students[0].id,
             GradeEntry.course_id == algebra.id))).scalars().all()
-        if not existing_grades:
+        existing_categories = {g.category for g in existing_grades}
+        if "quiz" not in existing_categories:
             db.add(GradeEntry(
                 student_id=students[0].id, course_id=algebra.id,
                 quiz_id=algebra_quiz.id, submission_id=sub1.id,
                 category="quiz", label=None,
                 grade=4, weight=Decimal("0.300"),
+                feedback="Solid work on the quiz. Review the short answer section for extra detail.",
                 posted_at=now_utc() - timedelta(days=1)))
+        if "assignment" not in existing_categories:
             db.add(GradeEntry(
                 student_id=students[0].id, course_id=algebra.id,
                 category="assignment", label="Homework 1",
                 grade=5, weight=Decimal("0.250"),
+                feedback="Perfect score! Great job showing your work.",
                 posted_at=now_utc() - timedelta(days=5)))
+        if "participation" not in existing_categories:
             db.add(GradeEntry(
                 student_id=students[0].id, course_id=algebra.id,
                 category="participation", label="Class Participation",
                 grade=4, weight=Decimal("0.150"),
+                feedback="Actively participates in class discussions. Keep it up!",
                 posted_at=now_utc() - timedelta(days=3)))
+        if "exam" not in existing_categories:
             db.add(GradeEntry(
                 student_id=students[0].id, course_id=algebra.id,
                 category="exam", label="Midterm Exam",
                 grade=3, weight=Decimal("0.300"),
+                feedback="Needs improvement on word problems. Review chapters 4-6.",
                 posted_at=now_utc() - timedelta(days=10)))
 
         await db.commit()
         print("  ✓ Grade entries for student001 in Algebra")
 
-        # ── Attendance: 5 weekdays × every enrollment ──
+        # ── Assignments: 1 per course, with submissions ──
+        for course in created_courses:
+            assignment = (await db.execute(select(Assignment).where(
+                Assignment.course_id == course.id, Assignment.title == "Homework 2"))).scalar_one_or_none()
+            if not assignment:
+                assignment = Assignment(
+                    course_id=course.id,
+                    title="Homework 2",
+                    description="Solve the problems in the attached worksheet. Show all steps.",
+                    due_at=now_utc() + timedelta(days=7),
+                    max_score=Decimal("100"),
+                    is_published=True,
+                    allows_file_upload=True,
+                    allowed_file_types="pdf,docx",
+                )
+                db.add(assignment)
+                await db.flush()
+
+            for student in students[:2]:
+                existing_assign_sub = (await db.execute(select(AssignmentSubmission).where(
+                    AssignmentSubmission.assignment_id == assignment.id,
+                    AssignmentSubmission.student_id == student.id))).scalar_one_or_none()
+                if existing_assign_sub:
+                    continue
+                db.add(AssignmentSubmission(
+                    assignment_id=assignment.id,
+                    student_id=student.id,
+                    text_response="Here is my completed homework assignment.",
+                    submitted_at=now_utc() - timedelta(hours=random.randint(1, 24)),
+                    status="submitted",
+                ))
+
+        await db.commit()
+        print("  ✓ Assignments with submissions")
         check_date = date.today()
         days_logged = 0
         statuses_cycle = [AttendanceStatus.PRESENT, AttendanceStatus.PRESENT,
@@ -487,8 +533,8 @@ async def seed():
         print("    james.rivera@lincoln-unified.edu / Teacher123!  (Biology)")
         print("    student001@lincoln-unified.edu   / Student123!  (graded quiz + grades)")
         print("    student002@lincoln-unified.edu   / Student123!  (pending teacher review)")
-        print("    student003@lincoln-unified.edu   / Student123!  (no quiz yet)")
-        print("    student004@lincoln-unified.edu   / Student123!  (no quiz yet)")
+        print("    student003@lincoln-unified.edu   / Student123!  (no quiz yet, no assignment)")
+        print("    student004@lincoln-unified.edu   / Student123!  (no quiz yet, no assignment)")
         print("    parent001@lincoln-unified.edu    / Parent123!   (linked to student001)")
         print()
 

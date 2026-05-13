@@ -8,10 +8,13 @@ from app.models.grade import GradeEntry
 from app.models.course import Course, Section, Enrollment
 from app.models.user import User
 from app.core.exceptions import NotFoundError, ValidationError
+from app.core.grading import weighted_average, round_grade
 from app.schemas.grade import (
     GradeBookRead, GradeBookRow, StudentGradeSummary,
-    GradeEntryUpdate, GradeEntryRead, GradeEntryCreate, CategoryWeightUpdate,
+    GradeEntryUpdate, GradeEntryRead, GradeEntryCreate,
 )
+
+DEFAULT_CATEGORY_WEIGHTS = {"quiz": 0.30, "assignment": 0.25, "exam": 0.30, "participation": 0.15}
 
 
 class GradeService:
@@ -47,14 +50,14 @@ class GradeService:
         rows = []
         for student in students:
             entries = grades_by_student.get(student.id, [])
-            avg = self._weighted_average(entries)
+            avg = weighted_average(entries)
             rows.append(GradeBookRow(
                 student_id=student.id,
                 student_name=student.full_name,
                 email=student.email,
                 grades=entries,
                 weighted_average=avg,
-                final_grade=self._round_grade(avg),
+                final_grade=round_grade(avg),
             ))
 
         return GradeBookRead(
@@ -92,12 +95,12 @@ class GradeService:
         summaries = []
         for course in courses:
             entries = grades_by_course.get(course.id, [])
-            avg = self._weighted_average(entries)
+            avg = weighted_average(entries)
             summaries.append(StudentGradeSummary(
                 course_id=course.id,
                 course_title=course.title,
                 weighted_average=avg,
-                final_grade=self._round_grade(avg),
+                final_grade=round_grade(avg),
                 entries=entries,
             ))
 
@@ -118,19 +121,10 @@ class GradeService:
         if enrollment_result.scalar_one() == 0:
             raise ValidationError("Student is not enrolled in this course")
 
-        # Auto-inherit weight from existing entries in the same column
+        # Determine weight: explicit override or auto-compute from course category config
         weight = data.weight
         if weight <= 0:
-            existing = await self.db.execute(
-                select(GradeEntry.weight)
-                .where(
-                    GradeEntry.course_id == course_id,
-                    GradeEntry.label == data.label,
-                )
-                .limit(1)
-            )
-            row = existing.scalar_one_or_none()
-            weight = row if row is not None else Decimal("0.30")
+            weight = await self._compute_category_weight(course_id, data.student_id, data.category)
 
         if weight <= 0 or weight > Decimal("1.0"):
             raise ValidationError("Weight must be between 0 and 1.0")
@@ -156,6 +150,7 @@ class GradeService:
             label=data.label,
             grade=data.grade,
             weight=weight,
+            feedback=data.feedback,
         )
         self.db.add(entry)
         await self.db.flush()
@@ -172,68 +167,48 @@ class GradeService:
         await self.db.flush()
         return entry
 
-    async def update_category_weight(self, course_id: uuid.UUID, data: CategoryWeightUpdate) -> None:
-        """Update weight for all entries matching the given label in this course."""
-        # Get old weight for this label
-        old_r = await self.db.execute(
-            select(GradeEntry.weight)
-            .where(GradeEntry.course_id == course_id, GradeEntry.label == data.label)
-            .limit(1)
-        )
-        old_weight = old_r.scalar_one_or_none()
-        if old_weight is None:
-            raise NotFoundError("No entries found for this label")
+    async def _compute_category_weight(
+        self, course_id: uuid.UUID, student_id: uuid.UUID, category: str
+    ) -> Decimal:
+        """Auto-compute per-entry weight from course category_weights config.
+        Returns category_weight / num_items_in_category (equal share), rebalancing
+        existing entries so all items in the category have the same weight.
+        """
+        course_r = await self.db.execute(select(Course).where(Course.id == course_id))
+        course = course_r.scalar_one_or_none()
+        weights_config = course.category_weights if course and course.category_weights else DEFAULT_CATEGORY_WEIGHTS
+        category_weight = Decimal(str(weights_config.get(category, 0.30)))
 
-        diff = data.weight - old_weight
+        if category_weight <= 0:
+            return Decimal("0.30")
 
-        # Check all students with this label — would their new total exceed 100%?
-        affected = await self.db.execute(
-            select(GradeEntry.student_id, func.sum(GradeEntry.weight).label("total"))
-            .where(GradeEntry.course_id == course_id)
-            .group_by(GradeEntry.student_id)
-        )
-        for row in affected.all():
-            # Only check students who actually have an entry with this label
-            has_label = await self.db.execute(
-                select(func.count())
-                .select_from(GradeEntry)
-                .where(
-                    GradeEntry.course_id == course_id,
-                    GradeEntry.student_id == row.student_id,
-                    GradeEntry.label == data.label,
-                )
-            )
-            if has_label.scalar_one() > 0 and row.total + diff > Decimal("1.0"):
-                raise ValidationError(
-                    "This weight change would cause some students to exceed 100% total weight"
-                )
-
-        await self.db.execute(
-            sa_update(GradeEntry)
+        # Count existing entries in this category for this student+course
+        count_r = await self.db.execute(
+            select(func.count())
+            .select_from(GradeEntry)
             .where(
+                GradeEntry.student_id == student_id,
                 GradeEntry.course_id == course_id,
-                GradeEntry.label == data.label,
+                GradeEntry.category == category,
             )
-            .values(weight=data.weight)
         )
-        await self.db.flush()
+        existing_count = count_r.scalar_one()
+        new_count = existing_count + 1
+        per_entry_weight = (category_weight / Decimal(str(new_count))).quantize(
+            Decimal("0.001"), rounding=ROUND_HALF_UP
+        )
 
-    @staticmethod
-    def _weighted_average(entries: list[GradeEntry]) -> Decimal:
-        if not entries:
-            return Decimal("0")
-        total_weight = sum(e.weight for e in entries)
-        if not total_weight:
-            raise ValidationError("Total weight of grade entries must be greater than 0")
-        weighted_sum = sum(Decimal(str(e.grade)) * e.weight for e in entries)
-        return (weighted_sum / total_weight).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        # Rebalance existing entries in this category for this student
+        if existing_count > 0:
+            await self.db.execute(
+                sa_update(GradeEntry)
+                .where(
+                    GradeEntry.student_id == student_id,
+                    GradeEntry.course_id == course_id,
+                    GradeEntry.category == category,
+                )
+                .values(weight=per_entry_weight)
+            )
 
-    @staticmethod
-    def _round_grade(avg: Decimal | None) -> int | None:
-        if avg is None or avg == Decimal("0"):
-            return None
-        if avg < Decimal("0.5"):
-            return None
-        rounded = avg.quantize(Decimal("1"), rounding=ROUND_HALF_UP)
-        grade_int = int(rounded)
-        return max(1, min(5, grade_int))
+        return per_entry_weight
+

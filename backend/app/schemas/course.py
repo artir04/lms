@@ -23,6 +23,8 @@ class CourseUpdate(BaseModel):
     end_date: date | None = None
     is_published: bool | None = None
     is_archived: bool | None = None
+    category_weights: dict | None = None
+    grade_thresholds: dict | None = None
 
 
 class CourseRead(BaseModel):
@@ -36,6 +38,8 @@ class CourseRead(BaseModel):
     end_date: date | None
     is_published: bool
     is_archived: bool = False
+    category_weights: dict | None = None
+    grade_thresholds: dict | None = None
     teacher: UserSummary
     created_at: datetime
 

@@ -8,10 +8,10 @@ from app.core.pagination import PaginationParams
 from app.core.permissions import Role
 from app.core.exceptions import ForbiddenError, NotFoundError
 from app.models.course import Course, Section, Enrollment
-from app.models.assessment import Quiz
+from app.models.assessment import Quiz, Question
 from app.schemas.assessment import (
     QuizCreate, QuizUpdate, QuizRead, QuizDetailRead,
-    QuestionCreate, QuestionRead,
+    QuestionCreate, QuestionUpdate, QuestionRead,
     SubmissionCreate, SubmissionRead, SubmissionListItem, ManualGradeRequest,
 )
 from app.schemas.common import MessageResponse
@@ -43,6 +43,14 @@ async def _assert_quiz_access(quiz_id: uuid.UUID, payload: dict, db) -> None:
     if not quiz:
         raise NotFoundError("Quiz")
     await _assert_course_access(quiz.course_id, payload, db)
+
+
+async def _assert_question_access(question_id: uuid.UUID, payload: dict, db) -> None:
+    q_r = await db.execute(select(Question).where(Question.id == question_id))
+    question = q_r.scalar_one_or_none()
+    if not question:
+        raise NotFoundError("Question")
+    await _assert_quiz_access(question.quiz_id, payload, db)
 
 
 async def _assert_course_view_access(course_id: uuid.UUID, payload: dict, db) -> Course:
@@ -187,6 +195,21 @@ async def add_question(quiz_id: uuid.UUID, data: QuestionCreate, payload: Curren
     await _assert_quiz_access(quiz_id, payload, db)
     service = AssessmentService(db)
     return await service.add_question(quiz_id, data)
+
+
+@router.patch("/questions/{question_id}", response_model=QuestionRead, dependencies=[require_roles(Role.TEACHER, Role.ADMIN)])
+async def update_question(question_id: uuid.UUID, data: QuestionUpdate, payload: CurrentUserPayload, db=Depends(get_db)):
+    await _assert_question_access(question_id, payload, db)
+    service = AssessmentService(db)
+    return await service.update_question(question_id, data)
+
+
+@router.delete("/questions/{question_id}", response_model=MessageResponse, dependencies=[require_roles(Role.TEACHER, Role.ADMIN)])
+async def delete_question(question_id: uuid.UUID, payload: CurrentUserPayload, db=Depends(get_db)):
+    await _assert_question_access(question_id, payload, db)
+    service = AssessmentService(db)
+    await service.delete_question(question_id)
+    return MessageResponse(message="Question deleted")
 
 
 @router.post("/quizzes/{quiz_id}/submissions", response_model=SubmissionRead, dependencies=[require_roles(Role.STUDENT)])

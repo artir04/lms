@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   Plus,
   Trash2,
+  Pencil,
   Settings,
   ClipboardCheck,
   ClipboardList,
@@ -13,6 +14,7 @@ import {
   EyeOff,
   AlertCircle,
 } from 'lucide-react'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useForm } from 'react-hook-form'
 import { Modal } from '@/components/ui/Modal'
 import { PageLoader } from '@/components/ui/Spinner'
@@ -57,11 +59,34 @@ export function QuizBuilderPage() {
       qc.invalidateQueries({ queryKey: ['quizzes'] })
       toast.success('Question added')
     },
-    onError: () => toast.error('Failed to add question'),
+    onError: (err: any) => toast.error(err?.response?.data?.detail ?? 'Failed to add question'),
+  })
+
+  const { mutate: updateQuestion, isPending: updatingQuestion } = useMutation({
+    mutationFn: ({ questionId, data }: { questionId: string; data: any }) =>
+      api.patch(`/assessments/questions/${questionId}`, data).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['quiz', quizId] })
+      qc.invalidateQueries({ queryKey: ['quizzes'] })
+      toast.success('Question updated')
+    },
+    onError: (err: any) => toast.error(err?.response?.data?.detail ?? 'Failed to update question'),
+  })
+
+  const { mutate: deleteQuestion, isPending: deletingQuestionPending } = useMutation({
+    mutationFn: (questionId: string) => api.delete(`/assessments/questions/${questionId}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['quiz', quizId] })
+      qc.invalidateQueries({ queryKey: ['quizzes'] })
+      toast.success('Question deleted')
+    },
+    onError: (err: any) => toast.error(err?.response?.data?.detail ?? 'Failed to delete question'),
   })
 
   const [showSettings, setShowSettings] = useState(false)
   const [showAddQuestion, setShowAddQuestion] = useState(false)
+  const [editingQuestion, setEditingQuestion] = useState<Question | null>(null)
+  const [deletingQuestion, setDeletingQuestion] = useState<Question | null>(null)
   const [questionType, setQuestionType] = useState<string>('mcq')
   const [options, setOptions] = useState([
     { text: '', is_correct: false },
@@ -93,6 +118,14 @@ export function QuizBuilderPage() {
   const setOptionText = (i: number, text: string) =>
     setOptions((prev) => prev.map((o, idx) => idx === i ? { ...o, text } : o))
 
+  const resetQuestionForm = () => {
+    setShowAddQuestion(false)
+    setEditingQuestion(null)
+    questionForm.reset({ points: '10' })
+    setOptions([{ text: '', is_correct: false }, { text: '', is_correct: false }])
+    setQuestionType('mcq')
+  }
+
   const onAddQuestion = (data: { text: string; points: string; explanation: string }) => {
     const payload: any = {
       text: data.text,
@@ -103,17 +136,32 @@ export function QuizBuilderPage() {
     }
 
     if (questionType === 'mcq' || questionType === 'true_false') {
-      payload.options = options.filter((o) => o.text.trim()).map((o, i) => ({ text: o.text, is_correct: o.is_correct, position: i }))
+      payload.options = options.filter((o) => o.text.trim()).map((o) => ({ text: o.text, is_correct: o.is_correct }))
     }
 
-    addQuestion(payload, {
-      onSuccess: () => {
-        setShowAddQuestion(false)
-        questionForm.reset({ points: '10' })
-        setOptions([{ text: '', is_correct: false }, { text: '', is_correct: false }])
-        setQuestionType('mcq')
-      },
+    if (editingQuestion) {
+      updateQuestion({ questionId: editingQuestion.id, data: payload }, { onSuccess: resetQuestionForm })
+    } else {
+      addQuestion(payload, { onSuccess: resetQuestionForm })
+    }
+  }
+
+  const openEditQuestion = (q: Question) => {
+    setEditingQuestion(q)
+    setShowAddQuestion(false)
+    setQuestionType(q.question_type)
+    questionForm.reset({
+      text: q.text,
+      points: String(q.points ?? 10),
+      explanation: q.explanation ?? '',
     })
+    if (q.question_type === 'mcq' || q.question_type === 'true_false') {
+      setOptions(q.options.length > 0
+        ? q.options.map((o) => ({ text: o.text, is_correct: !!o.is_correct }))
+        : [{ text: '', is_correct: false }, { text: '', is_correct: false }])
+    } else {
+      setOptions([])
+    }
   }
 
   const initTrueFalse = () => {
@@ -212,8 +260,8 @@ export function QuizBuilderPage() {
         {quiz.questions?.map((q, idx) => (
           <div key={q.id} className="card p-5">
             <div className="flex items-start justify-between gap-3">
-              <div className="flex-1">
-                <p className="text-xs text-ink-muted mb-1">Q{idx + 1} · {QUESTION_TYPES.find((t) => t.value === q.question_type)?.label} · {q.points} pts</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-ink-muted mb-1">Q{idx + 1} · {QUESTION_TYPES.find((t) => t.value === q.question_type)?.label} · {Number(q.points)} pts</p>
                 <p className="font-medium text-ink">{q.text}</p>
                 {q.options.length > 0 && (
                   <ul className="mt-3 space-y-1.5">
@@ -226,6 +274,22 @@ export function QuizBuilderPage() {
                   </ul>
                 )}
                 {q.explanation && <p className="mt-2 text-xs text-ink-muted italic">Explanation: {q.explanation}</p>}
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  onClick={() => openEditQuestion(q)}
+                  className="btn-ghost p-1.5 rounded-md text-ink-muted hover:text-primary-400"
+                  title="Edit question"
+                >
+                  <Pencil className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => setDeletingQuestion(q)}
+                  className="btn-ghost p-1.5 rounded-md text-rose-400 hover:text-rose-300"
+                  title="Delete question"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
               </div>
             </div>
           </div>
@@ -270,8 +334,12 @@ export function QuizBuilderPage() {
         </form>
       </Modal>
 
-      {/* Add Question Modal */}
-      <Modal isOpen={showAddQuestion} onClose={() => setShowAddQuestion(false)} title="Add Question">
+      {/* Add / Edit Question Modal */}
+      <Modal
+        isOpen={showAddQuestion || !!editingQuestion}
+        onClose={resetQuestionForm}
+        title={editingQuestion ? 'Edit Question' : 'Add Question'}
+      >
         <form onSubmit={questionForm.handleSubmit(onAddQuestion)} className="space-y-4">
           <div>
             <label className="label">Question Type</label>
@@ -333,13 +401,32 @@ export function QuizBuilderPage() {
           </div>
 
           <div className="flex gap-3 pt-2">
-            <button type="button" onClick={() => setShowAddQuestion(false)} className="btn-secondary flex-1">Cancel</button>
-            <button type="submit" disabled={addingQuestion} className="btn-primary flex-1">
-              {addingQuestion ? 'Adding...' : 'Add Question'}
+            <button type="button" onClick={resetQuestionForm} className="btn-secondary flex-1">Cancel</button>
+            <button type="submit" disabled={addingQuestion || updatingQuestion} className="btn-primary flex-1">
+              {editingQuestion
+                ? (updatingQuestion ? 'Saving…' : 'Save changes')
+                : (addingQuestion ? 'Adding…' : 'Add Question')}
             </button>
           </div>
         </form>
       </Modal>
+
+      <ConfirmDialog
+        isOpen={!!deletingQuestion}
+        onClose={() => setDeletingQuestion(null)}
+        onConfirm={() => {
+          if (!deletingQuestion) return
+          deleteQuestion(deletingQuestion.id, { onSuccess: () => setDeletingQuestion(null) })
+        }}
+        title="Delete this question?"
+        description={
+          deletingQuestion
+            ? `"${deletingQuestion.text}" and any submitted answers to it will be removed.`
+            : ''
+        }
+        confirmLabel="Delete question"
+        loading={deletingQuestionPending}
+      />
     </div>
   )
 }

@@ -1,7 +1,7 @@
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   BookOpen, ChevronDown, ChevronRight, PlayCircle, FileText, Link2,
-  Plus, ClipboardList, CalendarDays, Clock, Award,
+  Plus, ClipboardList, CalendarDays, Clock,
   Pencil, BookMarked, Layers, ArrowRight, Users, GraduationCap,
   Mail, CheckCircle2, Paperclip, Download, Upload, ClipboardCheck,
 } from 'lucide-react'
@@ -17,7 +17,8 @@ import { formatDate } from '@/utils/formatters'
 import api from '@/config/axios'
 import { useQuery } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
-import { useGradebook, useMyGrades } from '@/api/grades'
+import { useMyGrades } from '@/api/grades'
+import { CourseGradebook } from '@/pages/grades/GradebookPage'
 
 type Tab = 'content' | 'classlist' | 'quizzes' | 'assignments' | 'grades'
 const TAB_VALUES: Tab[] = ['content', 'classlist', 'quizzes', 'assignments', 'grades']
@@ -152,9 +153,6 @@ export function CourseDetailPage() {
           <div className="relative border-t border-border px-8 py-4 sm:px-10 flex flex-wrap gap-3 bg-surface/60">
             <Link to={ROUTES.COURSE_ATTENDANCE(courseId!)} className="btn-secondary btn-sm">
               <CalendarDays className="h-3.5 w-3.5" /> Attendance
-            </Link>
-            <Link to={ROUTES.GRADEBOOK(courseId!)} className="btn-secondary btn-sm">
-              <Award className="h-3.5 w-3.5" /> Gradebook
             </Link>
             <Link to={ROUTES.COURSE_EDITOR(courseId!)} className="btn-secondary btn-sm">
               <Pencil className="h-3.5 w-3.5" /> Edit Course
@@ -571,78 +569,7 @@ function gradeStyle(grade: number) {
 }
 
 function TeacherGradesView({ courseId }: { courseId: string }) {
-  const { data: gradebook, isLoading } = useGradebook(courseId)
-
-  if (isLoading) return <PageLoader />
-
-  if (!gradebook?.rows?.length) {
-    return (
-      <div className="card p-16 text-center">
-        <GraduationCap className="h-14 w-14 mx-auto mb-4 text-ink-faint" />
-        <p className="font-semibold text-ink mb-2">No grades yet</p>
-        <p className="text-sm text-ink-muted mb-6">Start grading students from the full gradebook.</p>
-        <Link to={ROUTES.GRADEBOOK(courseId)} className="btn-primary">
-          <Award className="h-4 w-4" /> Open Gradebook
-        </Link>
-      </div>
-    )
-  }
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-ink-muted">{gradebook.rows.length} student{gradebook.rows.length !== 1 ? 's' : ''}</p>
-        <Link to={ROUTES.GRADEBOOK(courseId)} className="btn-secondary btn-sm">
-          <Pencil className="h-3.5 w-3.5" /> Edit Grades
-        </Link>
-      </div>
-
-      <div className="card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="table w-full">
-            <thead>
-              <tr>
-                <th className="text-left">Student</th>
-                <th className="text-center">Entries</th>
-                <th className="text-center">Average</th>
-                <th className="text-center">Final</th>
-              </tr>
-            </thead>
-            <tbody>
-              {gradebook.rows.map((row) => (
-                <tr key={row.student_id}>
-                  <td>
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-indigo-500/15 flex items-center justify-center text-indigo-400 font-semibold text-xs flex-shrink-0">
-                        {row.student_name?.charAt(0).toUpperCase()}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-ink truncate">{row.student_name}</p>
-                        <p className="text-xs text-ink-muted truncate">{row.email}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="text-center text-sm text-ink-secondary">{row.grades.length}</td>
-                  <td className="text-center text-sm text-ink-secondary">
-                    {row.weighted_average ? Number(row.weighted_average).toFixed(1) : '—'}
-                  </td>
-                  <td className="text-center">
-                    {row.final_grade ? (
-                      <span className={`inline-flex items-center justify-center w-8 h-8 rounded-lg font-bold text-sm ${gradeStyle(row.final_grade)}`}>
-                        {row.final_grade}
-                      </span>
-                    ) : (
-                      <span className="text-sm text-ink-muted">—</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  )
+  return <CourseGradebook courseId={courseId} />
 }
 
 function StudentGradesView({ courseId }: { courseId: string }) {

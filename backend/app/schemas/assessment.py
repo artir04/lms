@@ -26,6 +26,16 @@ class QuestionCreate(BaseModel):
     options: list[QuestionOptionCreate] = []
 
 
+class QuestionUpdate(BaseModel):
+    text: str | None = None
+    question_type: str | None = None
+    points: Decimal | None = None
+    position: int | None = None
+    explanation: str | None = None
+    # When provided, fully replaces the option set. Omit to keep options unchanged.
+    options: list[QuestionOptionCreate] | None = None
+
+
 class QuestionRead(BaseModel):
     id: uuid.UUID
     text: str

@@ -10,7 +10,7 @@ from app.models.grade import GradeEntry
 from app.core.exceptions import NotFoundError, ForbiddenError, BadRequestError
 from app.core.grading import score_to_grade
 from app.core.pagination import PaginationParams, PaginatedResponse
-from app.schemas.assessment import QuizCreate, QuizUpdate, QuestionCreate, SubmissionCreate, ManualGradeRequest
+from app.schemas.assessment import QuizCreate, QuizUpdate, QuestionCreate, QuestionUpdate, SubmissionCreate, ManualGradeRequest
 
 
 class AssessmentService:
@@ -69,6 +69,42 @@ class AssessmentService:
             select(Question).options(selectinload(Question.options)).where(Question.id == question.id)
         )
         return result.scalar_one()
+
+    async def get_question(self, question_id: uuid.UUID) -> Question:
+        result = await self.db.execute(
+            select(Question).options(selectinload(Question.options)).where(Question.id == question_id)
+        )
+        question = result.scalar_one_or_none()
+        if not question:
+            raise NotFoundError("Question")
+        return question
+
+    async def update_question(self, question_id: uuid.UUID, data: QuestionUpdate) -> Question:
+        question = await self.get_question(question_id)
+        updates = data.model_dump(exclude_unset=True)
+        new_options = updates.pop("options", None)
+
+        for field, value in updates.items():
+            setattr(question, field, value)
+
+        if new_options is not None:
+            for existing in list(question.options):
+                await self.db.delete(existing)
+            await self.db.flush()
+            for opt in new_options:
+                self.db.add(QuestionOption(
+                    question_id=question.id,
+                    text=opt["text"] if isinstance(opt, dict) else opt.text,
+                    is_correct=opt["is_correct"] if isinstance(opt, dict) else opt.is_correct,
+                ))
+
+        await self.db.flush()
+        return await self.get_question(question_id)
+
+    async def delete_question(self, question_id: uuid.UUID) -> None:
+        question = await self.get_question(question_id)
+        await self.db.delete(question)
+        await self.db.flush()
 
     async def start_submission(self, quiz_id: uuid.UUID, student_id: uuid.UUID) -> Submission:
         quiz = await self.get_quiz(quiz_id)

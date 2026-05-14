@@ -31,12 +31,31 @@ interface CreateState {
 
 export function GradebookPage() {
   const { courseId } = useParams<{ courseId: string }>()!
-  const { data: gradebook, isLoading } = useGradebook(courseId!)
+  const { data: gradebook } = useGradebook(courseId!)
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-3">
+        <Link to={ROUTES.COURSE_DETAIL(courseId!)} className="text-ink-muted hover:text-ink-secondary transition-colors">
+          <ArrowLeft className="h-5 w-5" />
+        </Link>
+        <div>
+          <h1 className="text-2xl font-bold text-ink font-display">Gradebook</h1>
+          <p className="text-sm text-ink-muted">{gradebook?.course_title ?? ''}</p>
+        </div>
+      </div>
+      <CourseGradebook courseId={courseId!} />
+    </div>
+  )
+}
+
+export function CourseGradebook({ courseId }: { courseId: string }) {
+  const { data: gradebook, isLoading } = useGradebook(courseId)
   const [editingEntry, setEditingEntry] = useState<GradeEntry | null>(null)
   const [creatingEntry, setCreatingEntry] = useState<CreateState | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const { mutate: createEntry, isPending: isCreating } = useCreateEntry(courseId!)
+  const { mutate: createEntry, isPending: isCreating } = useCreateEntry(courseId)
   const { mutate: updateEntry, isPending: isUpdating } = useUpdateEntry()
 
   // Wire up error handling for the mutations
@@ -128,20 +147,7 @@ export function GradebookPage() {
   )
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Link to={ROUTES.COURSE_DETAIL(courseId!)} className="text-ink-muted hover:text-ink-secondary transition-colors">
-          <ArrowLeft className="h-5 w-5" />
-        </Link>
-        <div>
-          <h1 className="text-2xl font-bold text-ink font-display">Gradebook</h1>
-          <p className="text-sm text-ink-muted">{gradebook.course_title}</p>
-        </div>
-      </div>
-
-      <div className="card p-4 text-sm text-ink-secondary">
-        Grades use the Kosovo 1-5 system. Weights are auto-computed from the course category configuration. Set category weights in Course Settings.
-      </div>
+    <div className="space-y-4">
 
       {!gradebook.rows.length ? (
         <div className="card p-12 text-center text-ink-muted">No students enrolled yet.</div>

@@ -46,6 +46,11 @@ def create_app() -> FastAPI:
     os.makedirs(media_root, exist_ok=True)
     app.mount("/media", StaticFiles(directory=media_root), name="media")
 
+    # In production, serve the built frontend as a SPA from the same container
+    static_dir = "/app/static"
+    if settings.is_production and os.path.isdir(static_dir):
+        app.mount("/", StaticFiles(directory=static_dir, html=True), name="frontend")
+
     @app.get("/health", response_model=HealthResponse, tags=["system"])
     async def health():
         return HealthResponse()

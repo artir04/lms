@@ -16,16 +16,6 @@ jobs:
       contents: read
       packages: write
 
-    strategy:
-      matrix:
-        service:
-          - name: backend
-            dockerfile: backend/Dockerfile.lite
-            context: backend
-          - name: frontend
-            dockerfile: frontend/Dockerfile.lite
-            context: frontend
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -41,7 +31,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ github.repository }}/${{ matrix.service.name }}
+          images: ${{ env.REGISTRY }}/${{ github.repository }}/app
           tags: |
             type=sha,prefix=
             type=ref,event=branch
@@ -54,8 +44,7 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
-          context: ${{ matrix.service.context }}
-          file: ${{ matrix.service.dockerfile }}
+          file: Dockerfile.single
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

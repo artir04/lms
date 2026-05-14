@@ -1,0 +1,68 @@
+# Deploy as a Stack in Dokploy.
+# Backend API + frontend SPA are served by a single container.
+# The seeder runs once on first deploy (idempotent — safe to rerun).
+# Route your domain to the app service on port 8000 via Dokploy's Traefik.
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: lms_db
+      POSTGRES_USER: lms_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lms_user -d lms_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    mem_limit: 512m
+    restart: unless-stopped
+
+  app:
+    image: ghcr.io/artir04/lms/app:latest
+    environment:
+      APP_ENV: production
+      APP_NAME: LMS Platform
+      SECRET_KEY: ${SECRET_KEY}
+      DATABASE_URL: postgresql+asyncpg://lms_user:${POSTGRES_PASSWORD}@db:5432/lms_db
+      STORAGE_BACKEND: local
+      MEDIA_ROOT: /app/media
+      EMAIL_BACKEND: console
+      DEFAULT_FROM_EMAIL: noreply@lms.example.com
+      FRONTEND_URL: /
+      SUPERADMIN_EMAIL: ${SUPERADMIN_EMAIL}
+      SUPERADMIN_PASSWORD: ${SUPERADMIN_PASSWORD}
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - media_files:/app/media
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    mem_limit: 512m
+    restart: unless-stopped
+
+  seeder:
+    image: ghcr.io/artir04/lms/app:latest
+    environment:
+      APP_ENV: production
+      SECRET_KEY: ${SECRET_KEY}
+      DATABASE_URL: postgresql+asyncpg://lms_user:${POSTGRES_PASSWORD}@db:5432/lms_db
+      SUPERADMIN_EMAIL: ${SUPERADMIN_EMAIL}
+      SUPERADMIN_PASSWORD: ${SUPERADMIN_PASSWORD}
+    depends_on:
+      app:
+        condition: service_healthy
+    command: python -m app.db.seed
+    restart: no
+
+volumes:
+  postgres_data:
+  media_files:

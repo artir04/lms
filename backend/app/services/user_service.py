@@ -1,4 +1,5 @@
 import uuid
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_
 from sqlalchemy.orm import selectinload
@@ -91,5 +92,11 @@ class UserService:
 
     async def delete_user(self, user_id: uuid.UUID, tenant_id: uuid.UUID) -> None:
         user = await self.get_by_id(user_id, tenant_id)
-        user.is_active = False
-        await self.db.flush()
+        await self.db.delete(user)
+        try:
+            await self.db.flush()
+        except IntegrityError as exc:
+            await self.db.rollback()
+            raise ConflictError(
+                "Cannot delete user: they own records (e.g. courses they teach, attendance, grading history) that must be reassigned or removed first"
+            ) from exc

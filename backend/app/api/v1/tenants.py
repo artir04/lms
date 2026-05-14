@@ -151,6 +151,17 @@ async def create_my_school(
         )
         if not principal.scalar_one_or_none():
             raise NotFoundError("Principal user")
+        principal_conflict = await db.execute(
+            select(School).where(
+                School.district_id == tenant_id,
+                School.principal_id == data.principal_id,
+                School.is_active == True,
+            )
+        )
+        if principal_conflict.scalar_one_or_none():
+            raise ConflictError(
+                "This user is already the principal of another active school"
+            )
 
     school = School(district_id=tenant_id, **data.model_dump())
     db.add(school)
@@ -194,6 +205,18 @@ async def update_my_school(
         )
         if not principal.scalar_one_or_none():
             raise NotFoundError("Principal user")
+        principal_conflict = await db.execute(
+            select(School).where(
+                School.district_id == tenant_id,
+                School.principal_id == updates["principal_id"],
+                School.id != school_id,
+                School.is_active == True,
+            )
+        )
+        if principal_conflict.scalar_one_or_none():
+            raise ConflictError(
+                "This user is already the principal of another active school"
+            )
     for field, value in updates.items():
         setattr(school, field, value)
     await db.flush()
@@ -204,7 +227,7 @@ async def update_my_school(
         target_id=school.id,
         summary=f"Updated school '{school.name}'",
         request=request,
-        metadata=updates,
+        metadata=data.model_dump(exclude_unset=True, mode="json"),
     )
     return school
 

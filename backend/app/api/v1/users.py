@@ -183,10 +183,10 @@ async def delete_user(
     await service.delete_user(user_id, uuid.UUID(payload["tenant_id"]))
     await AuditService(db).record_from_payload(
         payload,
-        action="user.deactivate",
+        action="user.delete",
         target_type="user",
         target_id=user_id,
-        summary="Deactivated user",
+        summary="Deleted user",
         request=request,
     )
-    return MessageResponse(message="User deactivated")
+    return MessageResponse(message="User deleted")

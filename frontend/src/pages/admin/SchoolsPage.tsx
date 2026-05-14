@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useEffect, useMemo, useState } from 'react'
+import { Controller, useForm } from 'react-hook-form'
 import { useQuery } from '@tanstack/react-query'
 import {
   Plus,
@@ -10,7 +10,6 @@ import {
   Pencil,
   Archive,
   CheckCircle2,
-  AlertCircle,
 } from 'lucide-react'
 
 import api from '@/config/axios'
@@ -25,6 +24,7 @@ import {
   useSchools,
   useUpdateSchool,
 } from '@/api/schools'
+import { toast } from '@/store/toastStore'
 import type { PaginatedResponse } from '@/types/common'
 import type { User } from '@/types/user'
 
@@ -208,10 +208,9 @@ function SchoolForm({
   onSuccess: () => void
   onCancel: () => void
 }) {
-  const { mutate: create, isPending: creating, error: createErr } = useCreateSchool()
-  const { mutate: update, isPending: updating, error: updateErr } = useUpdateSchool()
+  const { mutate: create, isPending: creating } = useCreateSchool()
+  const { mutate: update, isPending: updating } = useUpdateSchool()
   const pending = creating || updating
-  const error = (createErr ?? updateErr) as { response?: { data?: { detail?: unknown } } } | null
 
   const defaultValues = useMemo<FormValues>(
     () => ({
@@ -226,6 +225,31 @@ function SchoolForm({
 
   const form = useForm<FormValues>({ defaultValues })
 
+  useEffect(() => {
+    form.reset(defaultValues)
+  }, [defaultValues, form])
+
+  const principalOptions = useMemo<UserOption[]>(() => {
+    if (!initial?.principal_id) return principals
+    const alreadyIncluded = principals.some((p) => p.id === initial.principal_id)
+    if (alreadyIncluded) return principals
+    return [
+      {
+        id: initial.principal_id,
+        full_name: initial.principal_name ?? 'Current principal',
+        email: initial.principal_email ?? '',
+      },
+      ...principals,
+    ]
+  }, [principals, initial?.principal_id, initial?.principal_name, initial?.principal_email])
+
+  const extractError = (err: unknown): string => {
+    const detail = (err as { response?: { data?: { detail?: unknown } } } | null)?.response?.data
+      ?.detail
+    if (typeof detail === 'string') return detail
+    return 'Save failed'
+  }
+
   const onSubmit = form.handleSubmit((values) => {
     const payload: SchoolPayload & SchoolUpdatePayload = {
       name: values.name.trim(),
@@ -235,14 +259,31 @@ function SchoolForm({
       is_active: values.is_active,
     }
     if (initial) {
-      update({ id: initial.id, data: payload }, { onSuccess })
+      update(
+        { id: initial.id, data: payload },
+        {
+          onSuccess: (school: School) => {
+            toast.success(`${school.name} was updated`, { title: 'School saved' })
+            onSuccess()
+          },
+          onError: (err) => {
+            toast.error(extractError(err), { title: 'School save failed' })
+          },
+        }
+      )
     } else {
       const { is_active: _ignore, ...createPayload } = payload
-      create(createPayload as SchoolPayload, { onSuccess })
+      create(createPayload as SchoolPayload, {
+        onSuccess: (school: School) => {
+          toast.success(`${school.name} was created`, { title: 'School created' })
+          onSuccess()
+        },
+        onError: (err) => {
+          toast.error(extractError(err), { title: 'School creation failed' })
+        },
+      })
     }
   })
-
-  const apiDetail = error?.response?.data?.detail
 
   return (
     <form onSubmit={onSubmit} className="space-y-5">
@@ -261,14 +302,28 @@ function SchoolForm({
         </div>
         <div>
           <label className="label">Principal</label>
-          <select {...form.register('principal_id')} className="input">
-            <option value="">Unassigned</option>
-            {principals.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.full_name} — {p.email}
-              </option>
-            ))}
-          </select>
+          <Controller
+            control={form.control}
+            name="principal_id"
+            render={({ field }) => (
+              <select
+                className="input"
+                value={field.value ?? ''}
+                onChange={(e) => field.onChange(e.target.value)}
+                onBlur={field.onBlur}
+                ref={field.ref}
+                name={field.name}
+              >
+                <option value="">Unassigned</option>
+                {principalOptions.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.full_name}
+                    {p.email ? ` — ${p.email}` : ''}
+                  </option>
+                ))}
+              </select>
+            )}
+          />
         </div>
       </div>
 
@@ -278,13 +333,6 @@ function SchoolForm({
           <label htmlFor="school_active" className="text-sm text-ink-secondary">
             Active (uncheck to hide from new operations)
           </label>
-        </div>
-      )}
-
-      {!!apiDetail && (
-        <div className="flex items-center gap-2 text-sm text-rose-400">
-          <AlertCircle className="h-4 w-4" />
-          {typeof apiDetail === 'string' ? apiDetail : 'Save failed'}
         </div>
       )}
 

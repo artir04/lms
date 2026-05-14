@@ -40,11 +40,40 @@ def _apply_schema_migrations(connection):
             connection.execute(text(
                 "ALTER TABLE courses ADD COLUMN is_archived BOOLEAN NOT NULL DEFAULT FALSE"
             ))
+        # Per-course grading config added with course grading config migration
+        if "category_weights" not in course_cols:
+            connection.execute(text("ALTER TABLE courses ADD COLUMN category_weights JSONB"))
+        if "grade_thresholds" not in course_cols:
+            connection.execute(text("ALTER TABLE courses ADD COLUMN grade_thresholds JSONB"))
 
     if "grade_entries" not in inspector.get_table_names():
         return  # table will be created fresh by create_all
 
     columns = {c["name"] for c in inspector.get_columns("grade_entries")}
+
+    # Per-entry feedback added with course grading config migration
+    if "feedback" not in columns:
+        connection.execute(text("ALTER TABLE grade_entries ADD COLUMN feedback TEXT"))
+
+    # Assignment linkage added with the assignments migration
+    if "assignments" in table_names and "assignment_id" not in columns:
+        connection.execute(text("ALTER TABLE grade_entries ADD COLUMN assignment_id UUID"))
+        try:
+            connection.execute(text(
+                "ALTER TABLE grade_entries ADD CONSTRAINT grade_entries_assignment_id_fkey "
+                "FOREIGN KEY (assignment_id) REFERENCES assignments(id) ON DELETE SET NULL"
+            ))
+        except Exception:
+            pass
+    if "assignment_submissions" in table_names and "assignment_submission_id" not in columns:
+        connection.execute(text("ALTER TABLE grade_entries ADD COLUMN assignment_submission_id UUID"))
+        try:
+            connection.execute(text(
+                "ALTER TABLE grade_entries ADD CONSTRAINT grade_entries_assignment_submission_id_fkey "
+                "FOREIGN KEY (assignment_submission_id) REFERENCES assignment_submissions(id) ON DELETE SET NULL"
+            ))
+        except Exception:
+            pass
 
     # Migration: old raw_score/max_score/numeric_grade system → new grade (1-5) system
     needs_migration = "raw_score" in columns or "numeric_grade" in columns

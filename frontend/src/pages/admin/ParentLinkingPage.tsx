@@ -1,13 +1,13 @@
-import { useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useEffect, useState } from 'react'
+import { Controller, useForm } from 'react-hook-form'
 import { useQuery } from '@tanstack/react-query'
 import {
-  AlertCircle,
   Link2,
   Plus,
   Search,
   Trash2,
   Users as UsersIcon,
+  X,
 } from 'lucide-react'
 
 import api from '@/config/axios'
@@ -15,11 +15,13 @@ import { Modal } from '@/components/ui/Modal'
 import { PageLoader } from '@/components/ui/Spinner'
 import { useDebounce } from '@/hooks/useDebounce'
 import {
+  ParentLink,
   ParentLinkCreate,
   useCreateParentLink,
   useDeleteParentLink,
   useParentLinks,
 } from '@/api/parentLinks'
+import { toast } from '@/store/toastStore'
 import type { PaginatedResponse } from '@/types/common'
 import type { User } from '@/types/user'
 import { formatDate } from '@/utils/formatters'
@@ -105,7 +107,21 @@ export function ParentLinkingPage() {
                             `Remove the link between ${link.parent_name} and ${link.student_name}? The parent will lose access to this student.`
                           )
                         ) {
-                          deleteLink(link.id)
+                          deleteLink(link.id, {
+                            onSuccess: () => {
+                              toast.success(
+                                `Removed link between ${link.parent_name} and ${link.student_name}`,
+                                { title: 'Link removed' }
+                              )
+                            },
+                            onError: (err) => {
+                              const detail = (err as { response?: { data?: { detail?: unknown } } } | null)
+                                ?.response?.data?.detail
+                              const message =
+                                typeof detail === 'string' ? detail : 'Failed to remove link'
+                              toast.error(message, { title: 'Link removal failed' })
+                            },
+                          })
                         }
                       }}
                       disabled={deleting}
@@ -154,28 +170,134 @@ function useParents() {
   })
 }
 
-function useStudents() {
-  return useQuery<PaginatedResponse<User>>({
-    queryKey: ['users', 'student-options'],
+function StudentPicker({
+  value,
+  onChange,
+  onBlur,
+}: {
+  value: string
+  onChange: (id: string) => void
+  onBlur?: () => void
+}) {
+  const [query, setQuery] = useState('')
+  const [open, setOpen] = useState(false)
+  const [label, setLabel] = useState('')
+  const debounced = useDebounce(query, 250)
+
+  const { data, isFetching } = useQuery<PaginatedResponse<User>>({
+    queryKey: ['users', 'student-search', debounced],
     queryFn: () =>
-      api.get('/users', { params: { role: 'student', page_size: 200 } }).then((r) => r.data),
+      api
+        .get('/users', {
+          params: { role: 'student', search: debounced || undefined, page_size: 20 },
+        })
+        .then((r) => r.data),
+    enabled: open,
   })
+
+  useEffect(() => {
+    if (!value) setLabel('')
+  }, [value])
+
+  const select = (s: User) => {
+    onChange(s.id)
+    setLabel(`${s.full_name} — ${s.email}`)
+    setQuery('')
+    setOpen(false)
+  }
+
+  const clear = () => {
+    onChange('')
+    setLabel('')
+    setQuery('')
+  }
+
+  return (
+    <div className="relative">
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-muted pointer-events-none" />
+        <input
+          type="text"
+          value={open ? query : label}
+          onChange={(e) => {
+            setQuery(e.target.value)
+            setOpen(true)
+          }}
+          onFocus={() => setOpen(true)}
+          onBlur={onBlur}
+          placeholder="Type to search students…"
+          className="input pl-10 pr-10"
+        />
+        {value && !open && (
+          <button
+            type="button"
+            onClick={clear}
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-ink-muted hover:text-ink"
+            aria-label="Clear selection"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute left-0 right-0 mt-2 max-h-72 overflow-auto bg-surface-elevated rounded-2xl shadow-card-hover border border-border-strong z-20 py-1">
+            {isFetching && (
+              <p className="px-4 py-2 text-xs text-ink-muted">Searching…</p>
+            )}
+            {!isFetching && data && data.items.length === 0 && (
+              <p className="px-4 py-2 text-xs text-ink-muted">No students match.</p>
+            )}
+            {data?.items.map((s) => (
+              <button
+                type="button"
+                key={s.id}
+                onClick={() => select(s)}
+                className="w-full text-left px-4 py-2 text-sm hover:bg-surface-overlay"
+              >
+                <p className="text-ink">{s.full_name}</p>
+                <p className="text-xs text-ink-muted">{s.email}</p>
+              </button>
+            ))}
+            {data && data.total > data.items.length && (
+              <p className="px-4 py-2 text-[11px] text-ink-muted border-t border-border">
+                Showing {data.items.length} of {data.total}. Refine your search to narrow.
+              </p>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  )
 }
 
 function CreateLinkForm({ onSuccess, onCancel }: { onSuccess: () => void; onCancel: () => void }) {
   const { data: parents } = useParents()
-  const { data: students } = useStudents()
-  const { mutate, isPending, error } = useCreateParentLink()
+  const { mutate, isPending } = useCreateParentLink()
   const form = useForm<ParentLinkCreate>({
     defaultValues: { parent_id: '', student_id: '' },
   })
 
-  const apiDetail = (error as { response?: { data?: { detail?: unknown } } } | null)?.response?.data?.detail
-
   const onSubmit = form.handleSubmit((values) => {
     mutate(
       { parent_id: values.parent_id, student_id: values.student_id },
-      { onSuccess }
+      {
+        onSuccess: (link: ParentLink) => {
+          toast.success(
+            `${link.parent_name} is now linked to ${link.student_name}`,
+            { title: 'Link created' }
+          )
+          onSuccess()
+        },
+        onError: (err) => {
+          const detail = (err as { response?: { data?: { detail?: unknown } } } | null)?.response
+            ?.data?.detail
+          const message = typeof detail === 'string' ? detail : 'Failed to create link'
+          toast.error(message, { title: 'Link creation failed' })
+        },
+      }
     )
   })
 
@@ -204,21 +326,15 @@ function CreateLinkForm({ onSuccess, onCancel }: { onSuccess: () => void; onCanc
         <label className="label flex items-center gap-2">
           <UsersIcon className="h-3.5 w-3.5" /> Student
         </label>
-        <select {...form.register('student_id', { required: true })} className="input">
-          <option value="">— Select student —</option>
-          {students?.items.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.full_name} — {s.email}
-            </option>
-          ))}
-        </select>
+        <Controller
+          control={form.control}
+          name="student_id"
+          rules={{ required: true }}
+          render={({ field }) => (
+            <StudentPicker value={field.value} onChange={field.onChange} onBlur={field.onBlur} />
+          )}
+        />
       </div>
-
-      {!!apiDetail && (
-        <p className="text-sm text-rose-400 flex items-center gap-1">
-          <AlertCircle className="h-4 w-4" /> {typeof apiDetail === 'string' ? apiDetail : 'Link failed'}
-        </p>
-      )}
 
       <div className="flex gap-3 pt-2">
         <button type="button" onClick={onCancel} className="btn-secondary flex-1">

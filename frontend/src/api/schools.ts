@@ -6,7 +6,6 @@ export interface School {
   district_id: string
   name: string
   code: string
-  academic_year: string | null
   principal_id: string | null
   is_active: boolean
   principal_name: string | null
@@ -18,7 +17,6 @@ export interface School {
 export interface SchoolPayload {
   name: string
   code: string
-  academic_year?: string | null
   principal_id?: string | null
 }
 

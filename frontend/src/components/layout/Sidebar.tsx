@@ -55,7 +55,9 @@ export function Sidebar({ onClose }: SidebarProps) {
           ? [{ to: ROUTES.PARENT, icon: Baby, label: 'Parent Portal', end: true }]
           : [
               { to: ROUTES.DASHBOARD, icon: LayoutDashboard, label: 'Dashboard', end: true },
-              { to: ROUTES.COURSES, icon: BookOpen, label: 'Courses' },
+              ...(isAdmin
+                ? []
+                : [{ to: ROUTES.COURSES, icon: BookOpen, label: 'Courses' }]),
             ]),
       ],
     },
@@ -96,7 +98,6 @@ export function Sidebar({ onClose }: SidebarProps) {
               { to: ROUTES.ADMIN_COURSES, icon: BookOpen, label: 'Courses' },
               { to: ROUTES.ADMIN_ENROLLMENTS, icon: ClipboardList, label: 'Enrollments' },
               { to: ROUTES.ADMIN_PARENT_LINKS, icon: Link2, label: 'Parent Links' },
-              { to: ROUTES.GAMIFICATION_ADMIN, icon: Target, label: 'Activities' },
               { to: ROUTES.ADMIN_REPORTS, icon: FileBarChart, label: 'Reports' },
               { to: ROUTES.ADMIN_AUDIT, icon: ShieldCheck, label: 'Audit Log' },
               { to: ROUTES.ADMIN_SETTINGS, icon: Settings, label: 'Settings' },

@@ -6,7 +6,6 @@ import {
   School as SchoolIcon,
   Users as UsersIcon,
   BookOpen,
-  Calendar,
   Pencil,
   Archive,
   CheckCircle2,
@@ -65,7 +64,7 @@ export function SchoolsPage() {
         <div>
           <h2 className="text-2xl font-bold text-ink font-display">Schools</h2>
           <p className="text-sm text-ink-muted mt-1">
-            Manage schools in your district, assign principals, and set academic year.
+            Manage schools in your district and assign principals.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -144,10 +143,6 @@ function SchoolCard({ school, onEdit }: { school: School; onEdit: () => void }) 
 
       <div className="space-y-1.5 text-sm">
         <div className="flex items-center gap-2 text-ink-muted">
-          <Calendar className="h-3.5 w-3.5" />
-          <span>{school.academic_year ?? 'No academic year set'}</span>
-        </div>
-        <div className="flex items-center gap-2 text-ink-muted">
           <UsersIcon className="h-3.5 w-3.5" />
           <span>
             Principal: {school.principal_name ? (
@@ -192,7 +187,6 @@ function SchoolCard({ school, onEdit }: { school: School; onEdit: () => void }) 
 interface FormValues {
   name: string
   code: string
-  academic_year: string
   principal_id: string
   is_active: boolean
 }
@@ -216,7 +210,6 @@ function SchoolForm({
     () => ({
       name: initial?.name ?? '',
       code: initial?.code ?? '',
-      academic_year: initial?.academic_year ?? '',
       principal_id: initial?.principal_id ?? '',
       is_active: initial?.is_active ?? true,
     }),
@@ -254,7 +247,6 @@ function SchoolForm({
     const payload: SchoolPayload & SchoolUpdatePayload = {
       name: values.name.trim(),
       code: values.code.trim(),
-      academic_year: values.academic_year.trim() || null,
       principal_id: values.principal_id || null,
       is_active: values.is_active,
     }
@@ -295,10 +287,6 @@ function SchoolForm({
         <div>
           <label className="label">Code</label>
           <input {...form.register('code', { required: true })} className="input" placeholder="LHS-01" />
-        </div>
-        <div>
-          <label className="label">Academic Year</label>
-          <input {...form.register('academic_year')} className="input" placeholder="2025-2026" />
         </div>
         <div>
           <label className="label">Principal</label>

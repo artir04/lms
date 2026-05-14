@@ -67,6 +67,7 @@ async def import_csv(
     section_row = section_q.first()
     if not section_row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Section not found")
+    section_course_id = section_row[0].course_id
 
     student_role_q = await db.execute(select(RoleModel).where(RoleModel.name == "student"))
     student_role = student_role_q.scalar_one_or_none()
@@ -157,6 +158,8 @@ async def import_csv(
         summary=f"CSV import: {enrolled} enrolled, {created} created, {skipped} skipped, {errors} errors",
         request=request,
         metadata={
+            "course_id": str(section_course_id),
+            "section_id": str(section_id),
             "total_rows": len(result_rows),
             "created": created,
             "enrolled": enrolled,
@@ -195,6 +198,9 @@ async def transfer_enrollment(
     sections = section_q.scalars().all()
     if len(sections) != 2:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="One or both sections not found in tenant")
+    section_by_id = {s.id: s for s in sections}
+    from_course_id = section_by_id[data.from_section_id].course_id
+    to_course_id = section_by_id[data.to_section_id].course_id
 
     enr_q = await db.execute(
         select(Enrollment).where(
@@ -232,6 +238,9 @@ async def transfer_enrollment(
             "student_id": str(data.student_id),
             "from_section_id": str(data.from_section_id),
             "to_section_id": str(data.to_section_id),
+            "from_course_id": str(from_course_id),
+            "to_course_id": str(to_course_id),
+            "course_id": str(to_course_id),
         },
     )
     return MessageResponse(message="Student transferred")
@@ -264,9 +273,32 @@ async def list_enrollment_history(
     )
     rows = (await db.execute(query)).scalars().all()
 
+    section_to_course: dict[str, str] = {}
+    if course_id is not None:
+        sec_rows = (
+            await db.execute(
+                select(Section.id, Section.course_id)
+                .join(Course, Course.id == Section.course_id)
+                .where(Course.tenant_id == tenant_id)
+            )
+        ).all()
+        section_to_course = {str(sid): str(cid) for sid, cid in sec_rows}
+
+    def row_course_ids(md: dict) -> set[str]:
+        ids: set[str] = set()
+        for key in ("course_id", "from_course_id", "to_course_id"):
+            val = md.get(key)
+            if val:
+                ids.add(str(val))
+        for key in ("section_id", "from_section_id", "to_section_id"):
+            sec = md.get(key)
+            if sec and str(sec) in section_to_course:
+                ids.add(section_to_course[str(sec)])
+        return ids
+
     def matches(r: AuditLog) -> bool:
         md = r.event_metadata or {}
-        if course_id and md.get("course_id") != str(course_id):
+        if course_id and str(course_id) not in row_course_ids(md):
             return False
         if section_id and md.get("section_id") != str(section_id) and md.get("to_section_id") != str(section_id) and md.get("from_section_id") != str(section_id):
             return False

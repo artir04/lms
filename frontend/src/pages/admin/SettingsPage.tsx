@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { Settings, Shield, School, Users, Save, CheckCircle2, AlertCircle } from 'lucide-react'
+import { Settings, School, Save, CheckCircle2, AlertCircle } from 'lucide-react'
 import { useTenantSettings, useUpdateTenantSettings } from '@/api/tenants'
 import { PageLoader } from '@/components/ui/Spinner'
 import { cn } from '@/utils/cn'
 
-type Tab = 'general' | 'roles' | 'security'
+type Tab = 'general' | 'security'
 
 interface GeneralSettingsValues {
   platform_name: string
@@ -13,7 +13,6 @@ interface GeneralSettingsValues {
   timezone: string
   academic_year: string
   grading_system: string
-  allow_student_enrollment: boolean
 }
 
 interface SecuritySettingsValues {
@@ -22,7 +21,6 @@ interface SecuritySettingsValues {
   password_min_length: number
   require_uppercase: boolean
   require_numbers: boolean
-  enable_2fa: boolean
 }
 
 const GENERAL_DEFAULTS: GeneralSettingsValues = {
@@ -31,7 +29,6 @@ const GENERAL_DEFAULTS: GeneralSettingsValues = {
   timezone: 'Europe/Belgrade',
   academic_year: '2025-2026',
   grading_system: 'kosovo_1_5',
-  allow_student_enrollment: false,
 }
 
 const SECURITY_DEFAULTS: SecuritySettingsValues = {
@@ -40,7 +37,6 @@ const SECURITY_DEFAULTS: SecuritySettingsValues = {
   password_min_length: 8,
   require_uppercase: true,
   require_numbers: true,
-  enable_2fa: false,
 }
 
 export function SettingsPage() {
@@ -49,7 +45,6 @@ export function SettingsPage() {
 
   const tabs: { key: Tab; label: string; icon: React.ElementType }[] = [
     { key: 'general', label: 'General', icon: School },
-    { key: 'roles', label: 'Roles & Permissions', icon: Shield },
     { key: 'security', label: 'Security', icon: Settings },
   ]
 
@@ -81,7 +76,6 @@ export function SettingsPage() {
       </div>
 
       {tab === 'general' && <GeneralSettings initial={general} />}
-      {tab === 'roles' && <RolesSettings />}
       {tab === 'security' && <SecuritySettings initial={security} />}
     </div>
   )
@@ -150,13 +144,6 @@ function GeneralSettings({ initial }: { initial: GeneralSettingsValues }) {
         </select>
       </div>
 
-      <div className="flex items-center gap-3">
-        <input type="checkbox" id="allow_enrollment" {...form.register('allow_student_enrollment')} className="rounded" />
-        <label htmlFor="allow_enrollment" className="text-sm text-ink-secondary">
-          Allow students to self-enroll in courses
-        </label>
-      </div>
-
       <div className="flex items-center gap-3 pt-2">
         <button type="submit" disabled={isPending} className="btn-primary flex items-center gap-2">
           <Save className="w-4 h-4" /> {isPending ? 'Saving...' : 'Save Settings'}
@@ -173,75 +160,6 @@ function GeneralSettings({ initial }: { initial: GeneralSettingsValues }) {
         )}
       </div>
     </form>
-  )
-}
-
-function RolesSettings() {
-  const roles = [
-    {
-      name: 'Superadmin',
-      description: 'Full platform control. Manages districts, schools, and all system settings.',
-      permissions: ['All permissions'],
-      color: 'text-rose-400 bg-rose-500/10',
-    },
-    {
-      name: 'Admin',
-      description: 'School-level management. Manages users, courses, and generates reports.',
-      permissions: ['User management', 'Course management', 'Reports', 'Attendance oversight', 'Grade oversight'],
-      color: 'text-amber-400 bg-amber-500/10',
-    },
-    {
-      name: 'Teacher',
-      description: 'Creates and manages courses, quizzes, grades, and attendance for assigned classes.',
-      permissions: ['Create courses', 'Create quizzes', 'Grade students', 'Mark attendance', 'View analytics', 'Message students'],
-      color: 'text-sky-400 bg-sky-500/10',
-    },
-    {
-      name: 'Parent',
-      description: 'View-only access to linked children\'s progress, attendance, and grades.',
-      permissions: ['View child progress', 'View child grades', 'View child attendance', 'View upcoming assignments'],
-      color: 'text-purple-400 bg-purple-500/10',
-    },
-    {
-      name: 'Student',
-      description: 'Access courses, take quizzes, view grades, and participate in gamification.',
-      permissions: ['View courses', 'Take quizzes', 'View grades', 'View attendance', 'Earn badges & points', 'Message teachers'],
-      color: 'text-emerald-400 bg-emerald-500/10',
-    },
-  ]
-
-  return (
-    <div className="space-y-4 max-w-3xl">
-      <h3 className="text-lg font-semibold text-ink flex items-center gap-2 font-display">
-        <Shield className="w-5 h-5 text-primary-400" /> Role-Based Access Control
-      </h3>
-      <p className="text-sm text-ink-muted">
-        The platform uses a 5-tier role hierarchy. Each role inherits access from the roles below it.
-      </p>
-
-      <div className="space-y-3">
-        {roles.map((role) => (
-          <div key={role.name} className="card p-5">
-            <div className="flex items-start gap-4">
-              <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center shrink-0', role.color)}>
-                <Users className="w-5 h-5" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <h4 className="text-sm font-semibold text-ink">{role.name}</h4>
-                <p className="text-xs text-ink-muted mt-0.5">{role.description}</p>
-                <div className="flex flex-wrap gap-1.5 mt-3">
-                  {role.permissions.map((p) => (
-                    <span key={p} className="text-[10px] px-2 py-0.5 rounded-full bg-ink-faint/60 text-ink-secondary">
-                      {p}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
   )
 }
 
@@ -298,10 +216,6 @@ function SecuritySettings({ initial }: { initial: SecuritySettingsValues }) {
         <div className="flex items-center gap-3">
           <input type="checkbox" id="req_nums" {...form.register('require_numbers')} className="rounded" />
           <label htmlFor="req_nums" className="text-sm text-ink-secondary">Require numbers in passwords</label>
-        </div>
-        <div className="flex items-center gap-3">
-          <input type="checkbox" id="enable_2fa" {...form.register('enable_2fa')} className="rounded" />
-          <label htmlFor="enable_2fa" className="text-sm text-ink-secondary">Enable two-factor authentication (2FA)</label>
         </div>
       </div>
 

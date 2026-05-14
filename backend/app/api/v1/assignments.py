@@ -1,17 +1,22 @@
 import uuid
-from fastapi import APIRouter, Depends
+import os
+import aiofiles
+from fastapi import APIRouter, Depends, UploadFile, File
 from sqlalchemy import select
 from app.db.session import get_db
 from app.dependencies import CurrentUserPayload, require_roles
 from app.services.assignment_service import AssignmentService
 from app.core.permissions import Role
 from app.core.exceptions import ForbiddenError, NotFoundError
+from app.config import get_settings
 from app.models.course import Course, Section, Enrollment
 from app.schemas.assignment import (
     AssignmentCreate, AssignmentUpdate, AssignmentRead,
     AssignmentSubmissionCreate, AssignmentSubmissionRead,
     AssignmentSubmissionListItem, AssignmentGradeRequest,
 )
+
+settings = get_settings()
 
 router = APIRouter(prefix="/assignments", tags=["assignments"])
 
@@ -90,6 +95,28 @@ async def submit_assignment(assignment_id: uuid.UUID, data: AssignmentSubmission
     assignment = await AssignmentService(db).get_assignment(assignment_id)
     await _assert_course_view_access(assignment.course_id, payload, db)
     return await AssignmentService(db).submit(assignment_id, uuid.UUID(payload["sub"]), data)
+
+
+@router.post("/{assignment_id}/submissions/upload")
+async def upload_submission_file(
+    assignment_id: uuid.UUID,
+    payload: CurrentUserPayload,
+    file: UploadFile = File(...),
+    db=Depends(get_db),
+):
+    assignment = await AssignmentService(db).get_assignment(assignment_id)
+    await _assert_course_view_access(assignment.course_id, payload, db)
+    storage_key = f"submissions/{assignment_id}/{payload['sub']}/{uuid.uuid4()}_{file.filename}"
+    dest = os.path.join(settings.MEDIA_ROOT, storage_key)
+    os.makedirs(os.path.dirname(dest), exist_ok=True)
+    content = await file.read()
+    async with aiofiles.open(dest, "wb") as f:
+        await f.write(content)
+    return {
+        "name": file.filename,
+        "size": len(content),
+        "url": f"/media/{storage_key}",
+    }
 
 
 @router.get("/{assignment_id}/submissions", response_model=list[AssignmentSubmissionListItem], dependencies=[require_roles(Role.TEACHER, Role.ADMIN)])

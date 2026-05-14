@@ -20,6 +20,7 @@ export const ROUTES = {
   TEACHER_ATTENDANCE: '/teacher/attendance',
   MY_STUDENTS: '/teacher/students',
   GAMIFICATION: '/gamification',
+  GAMIFICATION_ADMIN: '/teacher/activities',
   PARENT_DASHBOARD: '/parent',
   ADMIN_USERS: '/admin/users',
   ADMIN_REPORTS: '/admin/reports',

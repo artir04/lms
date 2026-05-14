@@ -24,6 +24,7 @@ import { MyGradesPage } from '@/pages/grades/MyGradesPage'
 import { GradebookPage } from '@/pages/grades/GradebookPage'
 import { AnalyticsPage } from '@/pages/analytics/AnalyticsPage'
 import { GamificationPage } from '@/pages/gamification/GamificationPage'
+import { ActivitiesManagementPage } from '@/pages/admin/ActivitiesManagementPage'
 import { UserManagementPage } from '@/pages/admin/UserManagementPage'
 import { ReportsPage } from '@/pages/admin/ReportsPage'
 import { SettingsPage } from '@/pages/admin/SettingsPage'
@@ -113,6 +114,7 @@ export const router = createBrowserRouter([
               { path: 'courses/:courseId/attendance/report', element: <AttendanceReportPage /> },
               { path: 'teacher/attendance', element: <TeacherAttendanceOverviewPage /> },
               { path: 'teacher/students', element: <MyStudentsPage /> },
+              { path: 'teacher/activities', element: <ActivitiesManagementPage /> },
               { path: 'analytics', element: <AnalyticsPage /> },
             ],
           },

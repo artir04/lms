@@ -86,26 +86,42 @@ export function AssignmentGradingPage() {
           <p className="text-ink-muted italic text-sm">No text response provided</p>
         )}
 
-        {submission.file_urls && Array.isArray(submission.file_urls) && (submission.file_urls as any[]).length > 0 && (
-          <div className="mt-3">
-            <p className="text-xs text-ink-muted mb-2">Attachments</p>
-            <ul className="space-y-1">
-              {(submission.file_urls as any[]).map((file: any, i: number) => (
-                <li key={i}>
-                  <a
-                    href={file.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm text-indigo-400 hover:text-indigo-300 underline"
-                  >
-                    {file.name ?? `File ${i + 1}`}
-                    {file.size && <span className="text-ink-muted ml-1">({(file.size / 1024).toFixed(1)} KB)</span>}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
+        {(() => {
+          const raw = submission.file_urls as any
+          const files: any[] = Array.isArray(raw) ? raw : Array.isArray(raw?.files) ? raw.files : []
+          if (files.length === 0) return null
+          return (
+            <div className="mt-3">
+              <p className="text-xs text-ink-muted mb-2">Attachments</p>
+              <ul className="space-y-1">
+                {files.map((file: any, i: number) => {
+                  const label = (
+                    <>
+                      {file.name ?? `File ${i + 1}`}
+                      {file.size && <span className="text-ink-muted ml-1">({(file.size / 1024).toFixed(1)} KB)</span>}
+                    </>
+                  )
+                  return (
+                    <li key={i} className="text-sm">
+                      {file.url ? (
+                        <a
+                          href={file.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-indigo-400 hover:text-indigo-300 underline"
+                        >
+                          {label}
+                        </a>
+                      ) : (
+                        <span className="text-ink-secondary">{label}</span>
+                      )}
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+          )
+        })()}
       </div>
 
       {/* Grading form */}

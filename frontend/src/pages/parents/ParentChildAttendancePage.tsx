@@ -160,7 +160,7 @@ export function ParentChildAttendancePage() {
 
   if (!child) {
     return (
-      <div className="card p-12 text-center text-slate-500">
+      <div className="card p-12 text-center text-ink-muted">
         <Calendar className="h-12 w-12 mx-auto mb-3 opacity-40" />
         <p>Child not found or you don't have access to this student's data</p>
       </div>
@@ -174,7 +174,7 @@ export function ParentChildAttendancePage() {
   const attendanceRate = totalRecords > 0 ? ((presentCount / totalRecords) * 100).toFixed(1) : '0.0'
 
   const controlBase =
-    'h-8 inline-flex items-center text-sm rounded-md border border-slate-700/60 bg-slate-800/60 text-slate-200 hover:border-slate-600 focus:outline-none focus:border-indigo-500'
+    'h-8 inline-flex items-center text-sm rounded-md border border-border bg-surface-elevated text-ink hover:border-border-strong focus:outline-none focus:border-indigo-500'
 
   return (
     <div className="space-y-6">
@@ -183,13 +183,13 @@ export function ParentChildAttendancePage() {
         <div>
           <Link
             to="/parent"
-            className="text-sm text-slate-400 hover:text-slate-300 flex items-center gap-1 mb-2"
+            className="text-sm text-ink-muted hover:text-ink-secondary flex items-center gap-1 mb-2"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to Parent Portal
           </Link>
-          <h2 className="text-2xl font-bold text-white">{child.student_name}'s Attendance</h2>
-          <p className="text-slate-400 text-sm mt-1">{child.relationship} • {child.email}</p>
+          <h2 className="text-2xl font-bold text-ink">{child.student_name}'s Attendance</h2>
+          <p className="text-ink-muted text-sm mt-1">{child.relationship} • {child.email}</p>
         </div>
       </div>
 
@@ -199,7 +199,7 @@ export function ParentChildAttendancePage() {
           <div className="flex flex-wrap items-center gap-2">
             {/* Date range */}
             <div className="relative">
-              <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
+              <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-ink-muted pointer-events-none" />
               <select
                 value={rangeParam}
                 onChange={(e) => setRange(e.target.value as Range)}
@@ -224,7 +224,7 @@ export function ParentChildAttendancePage() {
             </select>
 
             {/* Divider */}
-            <div className="h-5 w-px bg-slate-700/60 mx-1" />
+            <div className="h-5 w-px bg-border mx-1" />
 
             {/* Status pills */}
             <div className="flex items-center gap-1">
@@ -239,7 +239,7 @@ export function ParentChildAttendancePage() {
                       'h-8 px-3 rounded-full text-xs font-medium border transition-colors',
                       active
                         ? ATTENDANCE_STATUS_COLORS[s]
-                        : 'bg-transparent border-slate-700/60 text-slate-400 hover:border-slate-600 hover:text-slate-300',
+                        : 'bg-transparent border-border text-ink-muted hover:border-border-strong hover:text-ink-secondary',
                     )}
                   >
                     {ATTENDANCE_STATUS_LABELS[s]}
@@ -256,7 +256,7 @@ export function ParentChildAttendancePage() {
                 'h-8 inline-flex items-center gap-1.5 px-3 rounded-full text-xs font-medium border transition-colors',
                 notesParam
                   ? 'bg-indigo-500/20 border-indigo-500/40 text-indigo-300'
-                  : 'bg-transparent border-slate-700/60 text-slate-400 hover:border-slate-600 hover:text-slate-300',
+                  : 'bg-transparent border-border text-ink-muted hover:border-border-strong hover:text-ink-secondary',
               )}
             >
               <StickyNote className="h-3 w-3" />
@@ -264,15 +264,15 @@ export function ParentChildAttendancePage() {
             </button>
 
             {/* Right side: meta + clear */}
-            <div className="ml-auto flex items-center gap-3 text-xs text-slate-500">
+            <div className="ml-auto flex items-center gap-3 text-xs text-ink-muted">
               <span>
-                <span className="text-slate-200 font-medium">{totalRecords}</span> of {totalRawRecords}
+                <span className="text-ink font-medium">{totalRecords}</span> of {totalRawRecords}
               </span>
               {hasActiveFilters && (
                 <button
                   type="button"
                   onClick={clearFilters}
-                  className="inline-flex items-center gap-1 text-slate-400 hover:text-slate-200"
+                  className="inline-flex items-center gap-1 text-ink-muted hover:text-ink"
                 >
                   <X className="h-3 w-3" /> Clear
                 </button>
@@ -282,15 +282,15 @@ export function ParentChildAttendancePage() {
 
           {/* Custom date inputs */}
           {rangeParam === 'custom' && (
-            <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-slate-700/40">
-              <span className="text-xs text-slate-500">From</span>
+            <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-border/60">
+              <span className="text-xs text-ink-muted">From</span>
               <input
                 type="date"
                 value={fromParam}
                 onChange={(e) => updateParam('from', e.target.value)}
                 className={cn(controlBase, 'px-2')}
               />
-              <span className="text-xs text-slate-500">to</span>
+              <span className="text-xs text-ink-muted">to</span>
               <input
                 type="date"
                 value={toParam}
@@ -311,8 +311,8 @@ export function ParentChildAttendancePage() {
                 <TrendingUp className="h-5 w-5 text-indigo-500" />
               </div>
               <div>
-                <p className="text-xs text-slate-500 font-medium">Attendance Rate</p>
-                <p className="text-lg font-bold text-white">{attendanceRate}%</p>
+                <p className="text-xs text-ink-muted font-medium">Attendance Rate</p>
+                <p className="text-lg font-bold text-ink">{attendanceRate}%</p>
               </div>
             </div>
           </div>
@@ -322,7 +322,7 @@ export function ParentChildAttendancePage() {
                 <Calendar className="h-5 w-5 text-emerald-500" />
               </div>
               <div>
-                <p className="text-xs text-slate-500 font-medium">Present</p>
+                <p className="text-xs text-ink-muted font-medium">Present</p>
                 <p className="text-lg font-bold text-emerald-400">{presentCount}</p>
               </div>
             </div>
@@ -333,7 +333,7 @@ export function ParentChildAttendancePage() {
                 <Calendar className="h-5 w-5 text-red-500" />
               </div>
               <div>
-                <p className="text-xs text-slate-500 font-medium">Absent</p>
+                <p className="text-xs text-ink-muted font-medium">Absent</p>
                 <p className="text-lg font-bold text-red-400">{absentCount}</p>
               </div>
             </div>
@@ -344,7 +344,7 @@ export function ParentChildAttendancePage() {
                 <Calendar className="h-5 w-5 text-amber-500" />
               </div>
               <div>
-                <p className="text-xs text-slate-500 font-medium">Tardy</p>
+                <p className="text-xs text-ink-muted font-medium">Tardy</p>
                 <p className="text-lg font-bold text-amber-400">{tardyCount}</p>
               </div>
             </div>
@@ -354,13 +354,13 @@ export function ParentChildAttendancePage() {
 
       {/* No attendance state */}
       {totalRawRecords === 0 ? (
-        <div className="card p-12 text-center text-slate-500">
+        <div className="card p-12 text-center text-ink-muted">
           <Calendar className="h-12 w-12 mx-auto mb-3 opacity-40" />
           <p>No attendance records found</p>
           <p className="text-sm mt-2">Attendance data will appear here once teachers start recording it</p>
         </div>
       ) : totalRecords === 0 ? (
-        <div className="card p-12 text-center text-slate-500">
+        <div className="card p-12 text-center text-ink-muted">
           <Calendar className="h-12 w-12 mx-auto mb-3 opacity-40" />
           <p>No records match the current filters</p>
           <button
@@ -376,28 +376,28 @@ export function ParentChildAttendancePage() {
           {filteredCourses.map((course: any) => (
             course.attendance_records.length > 0 && (
               <div key={course.course_id} className="card overflow-hidden">
-                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700/60">
-                  <h3 className="font-semibold text-white">{course.course_title}</h3>
+                <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+                  <h3 className="font-semibold text-ink">{course.course_title}</h3>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-slate-400">
+                    <span className="text-sm text-ink-muted">
                       {course.attendance_records.length} records
                     </span>
-                    <span className="text-lg font-bold text-white">{course.filtered_rate}%</span>
+                    <span className="text-lg font-bold text-ink">{course.filtered_rate}%</span>
                   </div>
                 </div>
 
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="bg-slate-800/50 text-left">
-                      <th className="px-6 py-2 text-xs font-medium text-slate-500 uppercase">Date</th>
-                      <th className="px-6 py-2 text-xs font-medium text-slate-500 uppercase">Status</th>
-                      <th className="px-6 py-2 text-xs font-medium text-slate-500 uppercase">Notes</th>
+                    <tr className="bg-surface-elevated/50 text-left">
+                      <th className="px-6 py-2 text-xs font-medium text-ink-muted uppercase">Date</th>
+                      <th className="px-6 py-2 text-xs font-medium text-ink-muted uppercase">Status</th>
+                      <th className="px-6 py-2 text-xs font-medium text-ink-muted uppercase">Notes</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-700/40">
+                  <tbody className="divide-y divide-border/60">
                     {course.attendance_records.map((record: any) => (
-                      <tr key={record.id} className="hover:bg-slate-800/50">
-                        <td className="px-6 py-3 text-slate-300">
+                      <tr key={record.id} className="hover:bg-surface-elevated/50">
+                        <td className="px-6 py-3 text-ink-secondary">
                           {new Date(record.date).toLocaleDateString('en-US', {
                             weekday: 'short',
                             month: 'short',
@@ -407,12 +407,12 @@ export function ParentChildAttendancePage() {
                         <td className="px-6 py-3">
                           <span className={cn(
                             'px-2.5 py-1 rounded-full text-xs font-bold border',
-                            ATTENDANCE_STATUS_COLORS[record.status] || 'bg-slate-700/50 text-slate-400 border-slate-600/30'
+                            ATTENDANCE_STATUS_COLORS[record.status] || 'bg-surface-elevated text-ink-muted border-border-strong/30'
                           )}>
                             {ATTENDANCE_STATUS_LABELS[record.status] || record.status}
                           </span>
                         </td>
-                        <td className="px-6 py-3 text-slate-400 text-xs">
+                        <td className="px-6 py-3 text-ink-muted text-xs">
                           {record.notes || '—'}
                         </td>
                       </tr>

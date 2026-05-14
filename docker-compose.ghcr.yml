@@ -1,6 +1,7 @@
-# Deploy via Dokploy: import this file, set environment variables in Dokploy's UI,
-# and ensure the stack has access to GHCR (no extra auth needed for public images).
-# Images are published by .github/workflows/docker-publish.yml on every push to main.
+# Deploy via Dokploy on Orange Pi Zero 4 (RK3399, 4GB RAM).
+# Import this file in Dokploy, override env vars in the UI, and route a domain
+# to the frontend service (port 80) via Traefik.
+# Images are published by .github/workflows/docker-publish.yml.
 
 services:
   db:
@@ -16,6 +17,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    mem_limit: 512m
     restart: unless-stopped
 
   backend:
@@ -40,6 +42,14 @@ services:
         condition: service_healthy
     volumes:
       - media_files:/app/media
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    mem_limit: 512m
     restart: unless-stopped
 
   frontend:
@@ -48,6 +58,7 @@ services:
       - "80:80"
     depends_on:
       - backend
+    mem_limit: 128m
     restart: unless-stopped
 
 volumes:

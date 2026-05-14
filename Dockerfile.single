@@ -1,4 +1,4 @@
-# Single image: serves both FastAPI backend and built frontend static files.
+# All-in-one image: FastAPI backend + built frontend + PostgreSQL 16.
 FROM node:20-alpine AS frontend-builder
 WORKDIR /app
 COPY frontend/package*.json ./
@@ -23,8 +23,12 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1
 
+# Install PostgreSQL 16, curl (for healthcheck), and cleanup
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends curl && \
+    apt-get install -y --no-install-recommends \
+        curl \
+        postgresql-16 \
+        postgresql-client-16 && \
     rm -rf /var/lib/apt/lists/*
 
 COPY --from=python-builder /root/.local /root/.local
@@ -32,5 +36,9 @@ ENV PATH=/root/.local/bin:$PATH
 
 COPY backend/ .
 COPY --from=frontend-builder /app/dist /app/static
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
 
 EXPOSE 8000
+
+ENTRYPOINT ["/docker-entrypoint.sh"]

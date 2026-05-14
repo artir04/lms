@@ -10,10 +10,10 @@ PG_PSQL=$(find /usr/lib/postgresql -name psql -type f 2>/dev/null | head -1)
 export PATH="$(dirname "$PG_CTL"):$PATH"
 
 # ── Defaults (so the image works with zero env vars) ──
-SECRET_KEY="${SECRET_KEY:-$(openssl rand -hex 32)}"
-POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-lms_password}"
-SUPERADMIN_EMAIL="${SUPERADMIN_EMAIL:-superadmin@lms.example.com}"
-SUPERADMIN_PASSWORD="${SUPERADMIN_PASSWORD:-SuperAdmin123!}"
+export SECRET_KEY="${SECRET_KEY:-$(openssl rand -hex 32)}"
+export POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-lms_password}"
+export SUPERADMIN_EMAIL="${SUPERADMIN_EMAIL:-superadmin@lms.example.com}"
+export SUPERADMIN_PASSWORD="${SUPERADMIN_PASSWORD:-SuperAdmin123!}"
 export DATABASE_URL="postgresql+asyncpg://lms_user:${POSTGRES_PASSWORD}@127.0.0.1:5432/lms_db"
 
 # ── Initialize PostgreSQL data directory if empty ──

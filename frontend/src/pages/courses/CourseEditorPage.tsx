@@ -26,6 +26,8 @@ interface Lesson {
   content_type: string
   position: number
   duration_min: number | null
+  body?: string | null
+  video_url?: string | null
   attachments?: { id: string; filename: string; url: string }[]
 }
 
@@ -63,7 +65,20 @@ export function CourseEditorPage() {
     onSuccess: (_d, { moduleId }) => {
       qc.invalidateQueries({ queryKey: ['modules', courseId] })
       qc.invalidateQueries({ queryKey: ['lessons', moduleId] })
+      toast.success('Lesson added')
     },
+    onError: (err: any) => toast.error(err?.response?.data?.detail ?? 'Failed to add lesson'),
+  })
+
+  const { mutate: updateLesson, isPending: savingLesson } = useMutation({
+    mutationFn: ({ lessonId, data }: { lessonId: string; moduleId: string; data: any }) =>
+      api.patch(`/courses/${courseId}/lessons/${lessonId}`, data).then((r) => r.data),
+    onSuccess: (_d, { moduleId }) => {
+      qc.invalidateQueries({ queryKey: ['lessons', moduleId] })
+      qc.invalidateQueries({ queryKey: ['lesson'] })
+      toast.success('Lesson updated')
+    },
+    onError: (err: any) => toast.error(err?.response?.data?.detail ?? 'Failed to update lesson'),
   })
 
   const { mutate: deleteLesson, isPending: deletingLesson } = useMutation({
@@ -79,14 +94,22 @@ export function CourseEditorPage() {
 
   const { mutate: reorderModules } = useMutation({
     mutationFn: (ordered_ids: string[]) =>
-      api.put(`/courses/${courseId}/modules/reorder`, { ordered_ids }),
+      api.put(
+        `/courses/${courseId}/modules/reorder`,
+        ordered_ids.map((id, position) => ({ id, position })),
+      ),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['modules', courseId] }),
+    onError: (err: any) => toast.error(err?.response?.data?.detail ?? 'Reorder failed'),
   })
 
   const { mutate: reorderLessons } = useMutation({
     mutationFn: ({ moduleId, ordered_ids }: { moduleId: string; ordered_ids: string[] }) =>
-      api.put(`/courses/${courseId}/modules/${moduleId}/lessons/reorder`, { ordered_ids }),
+      api.put(
+        `/courses/${courseId}/modules/${moduleId}/lessons/reorder`,
+        ordered_ids.map((id, position) => ({ id, position })),
+      ),
     onSuccess: (_d, { moduleId }) => qc.invalidateQueries({ queryKey: ['lessons', moduleId] }),
+    onError: (err: any) => toast.error(err?.response?.data?.detail ?? 'Reorder failed'),
   })
 
   // Drag state for modules
@@ -127,14 +150,19 @@ export function CourseEditorPage() {
   const [showEditCourse, setShowEditCourse] = useState(false)
   const [showAddModule, setShowAddModule] = useState(false)
   const [addLessonModuleId, setAddLessonModuleId] = useState<string | null>(null)
+  const [editingLesson, setEditingLesson] = useState<{ lesson: Lesson; moduleId: string } | null>(null)
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set())
   const [moduleToDelete, setModuleToDelete] = useState<Module | null>(null)
   const [lessonToDelete, setLessonToDelete] = useState<{ id: string; title: string; moduleId: string } | null>(null)
 
   const courseForm = useForm({ values: { title: course?.title || '', description: course?.description || '', subject: course?.subject || '', grade_level: course?.grade_level || '', is_published: course?.is_published ?? false } })
   const moduleForm = useForm<{ title: string }>()
-  const lessonForm = useForm<{ title: string; content_type: string; duration_min: string }>({
-    defaultValues: { content_type: 'text' },
+  type LessonFormShape = { title: string; content_type: string; duration_min: string; body: string; video_url: string }
+  const lessonForm = useForm<LessonFormShape>({
+    defaultValues: { content_type: 'text', body: '', video_url: '' },
+  })
+  const editLessonForm = useForm<LessonFormShape>({
+    defaultValues: { content_type: 'text', body: '', video_url: '' },
   })
 
   const toggleModule = (id: string) =>
@@ -223,6 +251,16 @@ export function CourseEditorPage() {
                     courseId={courseId!}
                     moduleId={mod.id}
                     onDelete={(lesson) => setLessonToDelete({ id: lesson.id, title: lesson.title, moduleId: mod.id })}
+                    onEdit={(lesson) => {
+                      editLessonForm.reset({
+                        title: lesson.title,
+                        content_type: lesson.content_type,
+                        duration_min: lesson.duration_min ? String(lesson.duration_min) : '',
+                        body: lesson.body ?? '',
+                        video_url: lesson.video_url ?? '',
+                      })
+                      setEditingLesson({ lesson, moduleId: mod.id })
+                    }}
                     onReorder={(ordered_ids) => reorderLessons({ moduleId: mod.id, ordered_ids })}
                   />
                 )}
@@ -323,44 +361,131 @@ export function CourseEditorPage() {
       />
 
       {/* Add Lesson Modal */}
-      <Modal isOpen={!!addLessonModuleId} onClose={() => setAddLessonModuleId(null)} title="Add Lesson">
-        <form
-          onSubmit={lessonForm.handleSubmit((d) => {
+      <Modal isOpen={!!addLessonModuleId} onClose={() => setAddLessonModuleId(null)} title="Add Lesson" size="lg">
+        <LessonFormFields
+          form={lessonForm}
+          submitting={creatingLesson}
+          submitLabel="Add Lesson"
+          onCancel={() => setAddLessonModuleId(null)}
+          onSubmit={(d) => {
             createLesson(
-              { moduleId: addLessonModuleId!, data: { ...d, duration_min: d.duration_min ? Number(d.duration_min) : null } },
-              { onSuccess: () => { setAddLessonModuleId(null); lessonForm.reset({ content_type: 'text' }) } }
+              {
+                moduleId: addLessonModuleId!,
+                data: {
+                  title: d.title,
+                  content_type: d.content_type,
+                  duration_min: d.duration_min ? Number(d.duration_min) : null,
+                  body: d.body || null,
+                  video_url: d.video_url || null,
+                },
+              },
+              { onSuccess: () => { setAddLessonModuleId(null); lessonForm.reset({ content_type: 'text', body: '', video_url: '' }) } }
             )
-          })}
-          className="space-y-4"
-        >
-          <div>
-            <label className="label">Lesson Title *</label>
-            <input {...lessonForm.register('title', { required: true })} className="input" placeholder="e.g. Introduction to Variables" />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="label">Content Type</label>
-              <select {...lessonForm.register('content_type')} className="input">
-                <option value="text">Text</option>
-                <option value="video">Video</option>
-                <option value="embed">Embed</option>
-                <option value="file">File</option>
-              </select>
-            </div>
-            <div>
-              <label className="label">Duration (min)</label>
-              <input {...lessonForm.register('duration_min')} type="number" min="1" className="input" placeholder="Optional" />
-            </div>
-          </div>
-          <div className="flex gap-3 pt-2">
-            <button type="button" onClick={() => setAddLessonModuleId(null)} className="btn-secondary flex-1">Cancel</button>
-            <button type="submit" disabled={creatingLesson} className="btn-primary flex-1">
-              {creatingLesson ? 'Adding...' : 'Add Lesson'}
-            </button>
-          </div>
-        </form>
+          }}
+        />
+      </Modal>
+
+      {/* Edit Lesson Modal */}
+      <Modal isOpen={!!editingLesson} onClose={() => setEditingLesson(null)} title="Edit Lesson" size="lg">
+        {editingLesson && (
+          <LessonFormFields
+            form={editLessonForm}
+            submitting={savingLesson}
+            submitLabel="Save changes"
+            onCancel={() => setEditingLesson(null)}
+            onSubmit={(d) => {
+              updateLesson(
+                {
+                  lessonId: editingLesson.lesson.id,
+                  moduleId: editingLesson.moduleId,
+                  data: {
+                    title: d.title,
+                    content_type: d.content_type,
+                    duration_min: d.duration_min ? Number(d.duration_min) : null,
+                    body: d.body || null,
+                    video_url: d.video_url || null,
+                  },
+                },
+                { onSuccess: () => setEditingLesson(null) }
+              )
+            }}
+          />
+        )}
       </Modal>
     </div>
+  )
+}
+
+function LessonFormFields({
+  form,
+  onSubmit,
+  onCancel,
+  submitting,
+  submitLabel,
+}: {
+  form: ReturnType<typeof useForm<{ title: string; content_type: string; duration_min: string; body: string; video_url: string }>>
+  onSubmit: (data: { title: string; content_type: string; duration_min: string; body: string; video_url: string }) => void
+  onCancel: () => void
+  submitting: boolean
+  submitLabel: string
+}) {
+  const contentType = form.watch('content_type')
+  const showBody = contentType === 'text'
+  const showVideoUrl = contentType === 'video' || contentType === 'embed'
+
+  return (
+    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <div>
+        <label className="label">Lesson Title *</label>
+        <input {...form.register('title', { required: true })} className="input" placeholder="e.g. Introduction to Variables" />
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="label">Content Type</label>
+          <select {...form.register('content_type')} className="input">
+            <option value="text">Text</option>
+            <option value="video">Video</option>
+            <option value="embed">Embed</option>
+            <option value="file">File</option>
+          </select>
+        </div>
+        <div>
+          <label className="label">Duration (min)</label>
+          <input {...form.register('duration_min')} type="number" min="1" className="input" placeholder="Optional" />
+        </div>
+      </div>
+      {showBody && (
+        <div>
+          <label className="label">Lesson body</label>
+          <textarea
+            {...form.register('body')}
+            rows={10}
+            className="input resize-y font-mono text-sm"
+            placeholder="Write the lesson content here. Basic HTML is supported (e.g. <h2>, <p>, <ul>, <strong>, <a href=...>)."
+          />
+          <p className="text-[11px] text-ink-muted mt-1">
+            Plain text or HTML. Students will see this rendered on the lesson page.
+          </p>
+        </div>
+      )}
+      {showVideoUrl && (
+        <div>
+          <label className="label">{contentType === 'embed' ? 'Embed URL' : 'Video URL'}</label>
+          <input
+            {...form.register('video_url')}
+            type="url"
+            className="input"
+            placeholder={contentType === 'embed' ? 'https://example.com/embed/...' : 'https://youtube.com/embed/...'}
+          />
+        </div>
+      )}
+      <div className="flex gap-3 pt-2">
+        <button type="button" onClick={onCancel} className="btn-secondary flex-1">Cancel</button>
+        <button type="submit" disabled={submitting} className="btn-primary flex-1">
+          {submitting ? 'Saving…' : submitLabel}
+        </button>
+      </div>
+    </form>
   )
 }
 
@@ -368,11 +493,13 @@ function LessonList({
   courseId,
   moduleId,
   onDelete,
+  onEdit,
   onReorder,
 }: {
   courseId: string
   moduleId: string
   onDelete: (lesson: Lesson) => void
+  onEdit: (lesson: Lesson) => void
   onReorder: (ordered_ids: string[]) => void
 }) {
   const { data: lessons, isLoading } = useQuery<Lesson[]>({
@@ -387,7 +514,7 @@ function LessonList({
   const fileInputRef = useRef<HTMLInputElement>(null)
   const qc = useQueryClient()
 
-  const { mutate: uploadAttachment } = useMutation({
+  const { mutate: uploadAttachment, isPending: uploading } = useMutation({
     mutationFn: ({ lessonId, file }: { lessonId: string; file: File }) => {
       const fd = new FormData()
       fd.append('file', file)
@@ -395,7 +522,14 @@ function LessonList({
         headers: { 'Content-Type': 'multipart/form-data' },
       }).then((r) => r.data)
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['modules', courseId] }),
+    onSuccess: (_data, { file }) => {
+      qc.invalidateQueries({ queryKey: ['lessons', moduleId] })
+      qc.invalidateQueries({ queryKey: ['lesson'] })
+      toast.success(`Uploaded ${file.name}`)
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.detail ?? 'Upload failed')
+    },
   })
 
   const handleLessonDragStart = (e: React.DragEvent, lessonId: string) => {
@@ -450,47 +584,79 @@ function LessonList({
       {!lessons?.length && (
         <p className="px-4 py-3 text-sm text-ink-muted">No lessons yet.</p>
       )}
-      {lessons?.map((lesson) => (
-        <div
-          key={lesson.id}
-          draggable
-          onDragStart={(e) => handleLessonDragStart(e, lesson.id)}
-          onDragOver={(e) => handleLessonDragOver(e, lesson.id)}
-          onDrop={(e) => handleLessonDrop(e, lesson.id)}
-          onDragEnd={handleLessonDragEnd}
-          className={cn(
-            'flex items-center gap-3 px-4 py-2.5 transition-colors',
-            dragLessonId === lesson.id
-              ? 'opacity-50 bg-primary-500/5'
-              : dragOverLessonId === lesson.id
-              ? 'bg-primary-500/10'
-              : ''
-          )}
-        >
-          <GripVertical className="h-4 w-4 text-ink-muted cursor-grab active:cursor-grabbing shrink-0" />
-          <span className="flex-1 text-sm text-ink-secondary truncate">{lesson.title}</span>
-          {lesson.duration_min && <span className="text-xs text-ink-muted">{lesson.duration_min} min</span>}
-          <span className="text-xs text-ink-muted capitalize">{lesson.content_type}</span>
-          <button
-            onClick={() => {
-              setUploadingLessonId(lesson.id)
-              fileInputRef.current?.click()
-            }}
-            className="text-ink-muted hover:text-primary-400 transition-colors"
-            title="Upload attachment"
-          >
-            <Upload className="h-3.5 w-3.5" />
-          </button>
-          {lesson.attachments && lesson.attachments.length > 0 && (
-            <span className="text-xs text-ink-muted flex items-center gap-0.5" title={`${lesson.attachments.length} attachment(s)`}>
-              <Paperclip className="h-3 w-3" />
-            </span>
-          )}
-          <button onClick={() => onDelete(lesson)} className="text-red-400 hover:text-red-300">
-            <Trash2 className="h-3.5 w-3.5" />
-          </button>
-        </div>
-      ))}
+      {lessons?.map((lesson) => {
+        const isUploadingHere = uploading && uploadingLessonId === lesson.id
+        return (
+          <div key={lesson.id}>
+            <div
+              draggable
+              onDragStart={(e) => handleLessonDragStart(e, lesson.id)}
+              onDragOver={(e) => handleLessonDragOver(e, lesson.id)}
+              onDrop={(e) => handleLessonDrop(e, lesson.id)}
+              onDragEnd={handleLessonDragEnd}
+              className={cn(
+                'flex items-center gap-3 px-4 py-2.5 transition-colors',
+                dragLessonId === lesson.id
+                  ? 'opacity-50 bg-primary-500/5'
+                  : dragOverLessonId === lesson.id
+                  ? 'bg-primary-500/10'
+                  : ''
+              )}
+            >
+              <GripVertical className="h-4 w-4 text-ink-muted cursor-grab active:cursor-grabbing shrink-0" />
+              <span className="flex-1 text-sm text-ink-secondary truncate">{lesson.title}</span>
+              {lesson.duration_min && <span className="text-xs text-ink-muted">{lesson.duration_min} min</span>}
+              <span className="text-xs text-ink-muted capitalize">{lesson.content_type}</span>
+              {lesson.attachments && lesson.attachments.length > 0 && (
+                <span className="text-xs text-ink-muted flex items-center gap-0.5" title={`${lesson.attachments.length} attachment(s)`}>
+                  <Paperclip className="h-3 w-3" />
+                  {lesson.attachments.length}
+                </span>
+              )}
+              {lesson.content_type !== 'text' && (
+                <button
+                  onClick={() => {
+                    setUploadingLessonId(lesson.id)
+                    fileInputRef.current?.click()
+                  }}
+                  disabled={isUploadingHere}
+                  className="text-ink-muted hover:text-primary-400 transition-colors disabled:opacity-50"
+                  title={isUploadingHere ? 'Uploading…' : 'Upload attachment'}
+                >
+                  <Upload className={cn('h-3.5 w-3.5', isUploadingHere && 'animate-pulse')} />
+                </button>
+              )}
+              <button
+                onClick={() => onEdit(lesson)}
+                className="text-ink-muted hover:text-primary-400 transition-colors"
+                title="Edit lesson"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </button>
+              <button onClick={() => onDelete(lesson)} className="text-red-400 hover:text-red-300">
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </div>
+            {lesson.attachments && lesson.attachments.length > 0 && (
+              <ul className="pl-12 pr-4 pb-2 space-y-1">
+                {lesson.attachments.map((att) => (
+                  <li key={att.id} className="flex items-center gap-2 text-xs text-ink-muted">
+                    <Paperclip className="h-3 w-3 shrink-0" />
+                    <a
+                      href={att.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="truncate hover:text-primary-400 transition-colors"
+                    >
+                      {att.filename}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )
+      })}
     </div>
   )
 }

@@ -150,18 +150,28 @@ export function AssignmentDetailPage() {
           ) : (
             <p className="text-ink-muted italic">No description</p>
           )}
-          <div className="flex flex-wrap gap-3 text-sm">
-            <div className={cn('px-3 py-1.5 rounded-lg', assignment.is_published ? 'bg-emerald-500/10 text-emerald-400' : 'bg-slate-700/50 text-slate-400')}>
-              {assignment.is_published ? <><Globe className="h-3.5 w-3.5 inline mr-1" />Published</> : <><Globe className="h-3.5 w-3.5 inline mr-1 opacity-50" />Draft</>}
-            </div>
-            <div className="px-3 py-1.5 rounded-lg bg-slate-700/50 text-slate-400">
-              Max score: {assignment.max_score}
-            </div>
+          <div className="flex flex-wrap gap-2 text-sm">
+            <span
+              className={cn(
+                'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium',
+                assignment.is_published
+                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 ring-1 ring-emerald-500/20'
+                  : 'bg-amber-500/10 text-amber-700 dark:text-amber-300 ring-1 ring-amber-500/20',
+              )}
+            >
+              <Globe className={cn('h-3.5 w-3.5', !assignment.is_published && 'opacity-60')} />
+              {assignment.is_published ? 'Published' : 'Draft'}
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-surface-elevated text-ink-secondary ring-1 ring-border">
+              Max score: <span className="font-semibold text-ink">{assignment.max_score}</span>
+            </span>
             {assignment.allows_file_upload && (
-              <div className="px-3 py-1.5 rounded-lg bg-slate-700/50 text-slate-400">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-surface-elevated text-ink-secondary ring-1 ring-border">
                 File upload allowed
-                {assignment.allowed_file_types && ` (${assignment.allowed_file_types})`}
-              </div>
+                {assignment.allowed_file_types && (
+                  <span className="text-ink-muted">({assignment.allowed_file_types})</span>
+                )}
+              </span>
             )}
           </div>
 

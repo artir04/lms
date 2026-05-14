@@ -130,7 +130,7 @@ export function GamificationPage() {
                   <span className={cn(
                     'w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0',
                     entry.rank === 1 ? 'bg-amber-500/20 text-amber-400' :
-                    entry.rank === 2 ? 'bg-slate-400/20 text-slate-300' :
+                    entry.rank === 2 ? 'bg-slate-400/30 text-slate-700 dark:text-slate-200' :
                     entry.rank === 3 ? 'bg-orange-500/20 text-orange-400' :
                     'bg-surface-elevated text-ink-muted'
                   )}>

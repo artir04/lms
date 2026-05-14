@@ -504,11 +504,16 @@ export function CourseDetailPage() {
                         )}
                       </div>
                     </div>
-                    <div className="flex-shrink-0">
+                    <div className="flex-shrink-0 flex items-center gap-2">
                       {canManage ? (
-                        <Link to={ROUTES.ASSIGNMENT_SUBMISSIONS(assignment.id)} className="btn-secondary btn-sm">
-                          <Pencil className="h-3.5 w-3.5" /> Submissions
-                        </Link>
+                        <>
+                          <Link to={ROUTES.ASSIGNMENT_DETAIL(assignment.id)} className="btn-secondary btn-sm">
+                            <Pencil className="h-3.5 w-3.5" /> Edit
+                          </Link>
+                          <Link to={ROUTES.ASSIGNMENT_SUBMISSIONS(assignment.id)} className="btn-secondary btn-sm">
+                            <ClipboardCheck className="h-3.5 w-3.5" /> Submissions
+                          </Link>
+                        </>
                       ) : !assignment.is_published ? (
                         <span className="text-xs text-ink-muted italic">Not available yet</span>
                       ) : isCompleted ? (

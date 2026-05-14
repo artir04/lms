@@ -139,7 +139,7 @@ export function ParentChildGradesPage() {
 
   if (!child) {
     return (
-      <div className="card p-12 text-center text-slate-500">
+      <div className="card p-12 text-center text-ink-muted">
         <GraduationCap className="h-12 w-12 mx-auto mb-3 opacity-40" />
         <p>Child not found or you don't have access to this student's data</p>
       </div>
@@ -147,7 +147,7 @@ export function ParentChildGradesPage() {
   }
 
   const controlBase =
-    'h-8 inline-flex items-center text-sm rounded-md border border-slate-700/60 bg-slate-800/60 text-slate-200 hover:border-slate-600 focus:outline-none focus:border-indigo-500'
+    'h-8 inline-flex items-center text-sm rounded-md border border-border bg-surface-elevated text-ink hover:border-border-strong focus:outline-none focus:border-indigo-500'
 
   return (
     <div className="space-y-6">
@@ -156,13 +156,13 @@ export function ParentChildGradesPage() {
         <div>
           <Link
             to="/parent"
-            className="text-sm text-slate-400 hover:text-slate-300 flex items-center gap-1 mb-2"
+            className="text-sm text-ink-muted hover:text-ink-secondary flex items-center gap-1 mb-2"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to Parent Portal
           </Link>
-          <h2 className="text-2xl font-bold text-white">{child.student_name}'s Grades</h2>
-          <p className="text-slate-400 text-sm mt-1">{child.relationship} • {child.email}</p>
+          <h2 className="text-2xl font-bold text-ink">{child.student_name}'s Grades</h2>
+          <p className="text-ink-muted text-sm mt-1">{child.relationship} • {child.email}</p>
         </div>
       </div>
 
@@ -172,7 +172,7 @@ export function ParentChildGradesPage() {
           <div className="flex flex-wrap items-center gap-2">
             {/* Course */}
             <div className="relative">
-              <BookOpen className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
+              <BookOpen className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-ink-muted pointer-events-none" />
               <select
                 value={courseParam}
                 onChange={(e) => updateParam('course', e.target.value)}
@@ -186,7 +186,7 @@ export function ParentChildGradesPage() {
             </div>
 
             {/* Divider */}
-            <div className="h-5 w-px bg-slate-700/60 mx-1" />
+            <div className="h-5 w-px bg-border mx-1" />
 
             {/* Grade pills (1-5) */}
             <div className="flex items-center gap-1">
@@ -202,7 +202,7 @@ export function ParentChildGradesPage() {
                       'h-8 w-8 inline-flex items-center justify-center rounded-full text-xs font-bold border transition-colors',
                       active
                         ? GRADE_PILL_ACTIVE[grade]
-                        : 'bg-transparent border-slate-700/60 text-slate-400 hover:border-slate-600 hover:text-slate-300',
+                        : 'bg-transparent border-border text-ink-muted hover:border-border-strong hover:text-ink-secondary',
                     )}
                   >
                     {grade}
@@ -219,7 +219,7 @@ export function ParentChildGradesPage() {
                 'h-8 inline-flex items-center gap-1.5 px-3 rounded-full text-xs font-medium border transition-colors',
                 belowParam
                   ? 'bg-red-500/20 border-red-500/40 text-red-300'
-                  : 'bg-transparent border-slate-700/60 text-slate-400 hover:border-slate-600 hover:text-slate-300',
+                  : 'bg-transparent border-border text-ink-muted hover:border-border-strong hover:text-ink-secondary',
               )}
             >
               <AlertTriangle className="h-3 w-3" />
@@ -227,15 +227,15 @@ export function ParentChildGradesPage() {
             </button>
 
             {/* Right side: meta + clear */}
-            <div className="ml-auto flex items-center gap-3 text-xs text-slate-500">
+            <div className="ml-auto flex items-center gap-3 text-xs text-ink-muted">
               <span>
-                <span className="text-slate-200 font-medium">{totalFilteredEntries}</span> of {totalRawEntries}
+                <span className="text-ink font-medium">{totalFilteredEntries}</span> of {totalRawEntries}
               </span>
               {hasActiveFilters && (
                 <button
                   type="button"
                   onClick={clearFilters}
-                  className="inline-flex items-center gap-1 text-slate-400 hover:text-slate-200"
+                  className="inline-flex items-center gap-1 text-ink-muted hover:text-ink"
                 >
                   <X className="h-3 w-3" /> Clear
                 </button>
@@ -245,7 +245,7 @@ export function ParentChildGradesPage() {
 
           {/* Categories — second row only when there's something to filter */}
           {categoryOptions.length > 0 && (
-            <div className="flex flex-wrap items-center gap-1.5 mt-3 pt-3 border-t border-slate-700/40">
+            <div className="flex flex-wrap items-center gap-1.5 mt-3 pt-3 border-t border-border/60">
               {categoryOptions.map((cat) => {
                 const active = selectedCategories.includes(cat)
                 return (
@@ -257,7 +257,7 @@ export function ParentChildGradesPage() {
                       'h-7 px-2.5 rounded-full text-xs capitalize border transition-colors',
                       active
                         ? 'bg-indigo-500/20 border-indigo-500/40 text-indigo-300'
-                        : 'bg-transparent border-slate-700/60 text-slate-400 hover:border-slate-600 hover:text-slate-300',
+                        : 'bg-transparent border-border text-ink-muted hover:border-border-strong hover:text-ink-secondary',
                     )}
                   >
                     {cat}
@@ -271,13 +271,13 @@ export function ParentChildGradesPage() {
 
       {/* No grades state */}
       {!grades || grades.length === 0 ? (
-        <div className="card p-12 text-center text-slate-500">
+        <div className="card p-12 text-center text-ink-muted">
           <TrendingUp className="h-12 w-12 mx-auto mb-3 opacity-40" />
           <p>No grades recorded yet</p>
           <p className="text-sm mt-2">Grades will appear here once teachers post them</p>
         </div>
       ) : totalFilteredEntries === 0 ? (
-        <div className="card p-12 text-center text-slate-500">
+        <div className="card p-12 text-center text-ink-muted">
           <TrendingUp className="h-12 w-12 mx-auto mb-3 opacity-40" />
           <p>No grade entries match the current filters</p>
           <button
@@ -293,10 +293,10 @@ export function ParentChildGradesPage() {
           {filteredSummaries.map((summary: any) =>
             summary.entries.length > 0 && (
               <div key={summary.course_id} className="card overflow-hidden">
-                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700/60">
-                  <h3 className="font-semibold text-white">{summary.course_title}</h3>
+                <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+                  <h3 className="font-semibold text-ink">{summary.course_title}</h3>
                   <div className="flex items-center gap-3">
-                    <span className="text-lg font-bold text-white">
+                    <span className="text-lg font-bold text-ink">
                       {summary.filtered_average !== null
                         ? summary.filtered_average.toFixed(2)
                         : Number(summary.average) > 0
@@ -304,7 +304,7 @@ export function ParentChildGradesPage() {
                           : '—'}
                     </span>
                     {summary.final_grade != null && (
-                      <span className={cn('w-9 h-9 flex items-center justify-center rounded-full text-sm font-bold', GRADE_COLORS[summary.final_grade] || 'text-slate-400 bg-slate-700/50')}>
+                      <span className={cn('w-9 h-9 flex items-center justify-center rounded-full text-sm font-bold', GRADE_COLORS[summary.final_grade] || 'text-ink-muted bg-surface-elevated')}>
                         {summary.final_grade}
                       </span>
                     )}
@@ -313,17 +313,17 @@ export function ParentChildGradesPage() {
 
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="bg-slate-800/50 text-left">
-                      <th className="px-6 py-2 text-xs font-medium text-slate-500 uppercase">Assignment</th>
-                      <th className="px-6 py-2 text-xs font-medium text-slate-500 uppercase">Grade</th>
+                    <tr className="bg-surface-elevated/50 text-left">
+                      <th className="px-6 py-2 text-xs font-medium text-ink-muted uppercase">Assignment</th>
+                      <th className="px-6 py-2 text-xs font-medium text-ink-muted uppercase">Grade</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-700/40">
+                  <tbody className="divide-y divide-border/60">
                     {summary.entries.map((entry: any) => (
-                      <tr key={entry.id} className="hover:bg-slate-800/50">
-                        <td className="px-6 py-3 text-slate-300 capitalize">{entry.category}</td>
+                      <tr key={entry.id} className="hover:bg-surface-elevated/50">
+                        <td className="px-6 py-3 text-ink-secondary capitalize">{entry.category}</td>
                         <td className="px-6 py-3">
-                          <span className={cn('px-2.5 py-1 rounded-full text-xs font-bold', GRADE_COLORS[entry.grade] || 'bg-slate-700/50 text-slate-400')}>
+                          <span className={cn('px-2.5 py-1 rounded-full text-xs font-bold', GRADE_COLORS[entry.grade] || 'bg-surface-elevated text-ink-muted')}>
                             {entry.grade}
                           </span>
                         </td>

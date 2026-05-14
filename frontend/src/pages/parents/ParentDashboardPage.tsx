@@ -38,7 +38,7 @@ export function ParentDashboardPage() {
             {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
           </p>
           <h2 className="text-2xl font-bold mt-1">Parent Portal</h2>
-          <p className="text-slate-400 mt-1 text-sm">
+          <p className="text-white/70 mt-1 text-sm">
             Monitor your children's academic progress and attendance
           </p>
         </div>
@@ -53,8 +53,8 @@ export function ParentDashboardPage() {
                 <Users className="h-5 w-5 text-indigo-500" />
               </div>
               <div>
-                <p className="text-xs text-slate-500 font-medium">Children</p>
-                <p className="text-lg font-bold text-white">{children.length}</p>
+                <p className="text-xs text-ink-muted font-medium">Children</p>
+                <p className="text-lg font-bold text-ink">{children.length}</p>
               </div>
             </div>
           </div>
@@ -64,12 +64,12 @@ export function ParentDashboardPage() {
                 <GraduationCap className="h-5 w-5 text-emerald-500" />
               </div>
               <div>
-                <p className="text-xs text-slate-500 font-medium">Average Grade</p>
-                <p className="text-lg font-bold text-white">
+                <p className="text-xs text-ink-muted font-medium">Average Grade</p>
+                <p className="text-lg font-bold text-ink">
                   {averageGrade !== null ? (
                     <>
                       {averageGrade.toFixed(1)}
-                      <span className="ml-1.5 text-xs font-medium text-slate-400">/ 5</span>
+                      <span className="ml-1.5 text-xs font-medium text-ink-muted">/ 5</span>
                     </>
                   ) : (
                     '—'
@@ -84,8 +84,8 @@ export function ParentDashboardPage() {
                 <CalendarCheck className="h-5 w-5 text-amber-500" />
               </div>
               <div>
-                <p className="text-xs text-slate-500 font-medium">Attendance Rate</p>
-                <p className="text-lg font-bold text-white">
+                <p className="text-xs text-ink-muted font-medium">Attendance Rate</p>
+                <p className="text-lg font-bold text-ink">
                   {averageAttendance !== null ? `${averageAttendance.toFixed(0)}%` : '—'}
                 </p>
               </div>
@@ -99,7 +99,7 @@ export function ParentDashboardPage() {
         <h3 className="section-title mb-4">My Children</h3>
 
         {!children || children.length === 0 ? (
-          <div className="card p-12 text-center text-slate-500">
+          <div className="card p-12 text-center text-ink-muted">
             <Users className="h-12 w-12 mx-auto mb-3 opacity-40" />
             <p>No children linked to your account</p>
             <p className="text-sm mt-2">Please contact your school administrator to link your children</p>
@@ -117,12 +117,12 @@ export function ParentDashboardPage() {
                       {child.student_name.charAt(0).toUpperCase()}
                     </div>
                     <div className="min-w-0">
-                      <h4 className="font-semibold text-white truncate">
+                      <h4 className="font-semibold text-ink truncate">
                         {child.student_name}
                       </h4>
-                      <p className="text-sm text-slate-400 truncate">{child.email}</p>
+                      <p className="text-sm text-ink-muted truncate">{child.email}</p>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className="text-xs bg-slate-700/50 text-slate-300 px-2 py-0.5 rounded-full capitalize">
+                        <span className="text-xs bg-surface-elevated text-ink-secondary ring-1 ring-border px-2 py-0.5 rounded-full capitalize">
                           {child.relationship}
                         </span>
                         {child.is_primary_contact && (

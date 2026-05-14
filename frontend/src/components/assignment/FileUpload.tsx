@@ -52,16 +52,16 @@ export function FileUpload({ onFilesChange, allowedTypes, maxFiles = 5, maxSizeM
       <div
         onClick={() => inputRef.current?.click()}
         className={cn(
-          'border-2 border-dashed border-slate-600 rounded-lg p-6 text-center cursor-pointer',
-          'hover:border-indigo-500/60 hover:bg-slate-800/40 transition-colors',
+          'border-2 border-dashed border-border-strong rounded-lg p-6 text-center cursor-pointer',
+          'hover:border-indigo-500/60 hover:bg-surface-elevated transition-colors',
         )}
       >
-        <Upload className="h-6 w-6 mx-auto mb-2 text-slate-500" />
-        <p className="text-sm text-slate-400">
+        <Upload className="h-6 w-6 mx-auto mb-2 text-ink-muted" />
+        <p className="text-sm text-ink-muted">
           Drag files here or <span className="text-indigo-400">browse</span>
         </p>
         {allowedTypes && (
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-xs text-ink-muted mt-1">
             Allowed: {allowedTypes} (max {maxSizeMB}MB each)
           </p>
         )}
@@ -80,11 +80,11 @@ export function FileUpload({ onFilesChange, allowedTypes, maxFiles = 5, maxSizeM
       {selectedFiles.length > 0 && (
         <ul className="space-y-1.5">
           {selectedFiles.map(({ file, id }) => (
-            <li key={id} className="flex items-center gap-2 text-sm bg-slate-800/60 rounded-lg px-3 py-2">
-              <File className="h-4 w-4 text-slate-400 shrink-0" />
-              <span className="text-slate-300 truncate flex-1">{file.name}</span>
-              <span className="text-xs text-slate-500">{formatFileSize(file.size)}</span>
-              <button type="button" onClick={() => removeFile(id)} className="text-slate-500 hover:text-rose-400">
+            <li key={id} className="flex items-center gap-2 text-sm bg-surface-elevated rounded-lg px-3 py-2">
+              <File className="h-4 w-4 text-ink-muted shrink-0" />
+              <span className="text-ink-secondary truncate flex-1">{file.name}</span>
+              <span className="text-xs text-ink-muted">{formatFileSize(file.size)}</span>
+              <button type="button" onClick={() => removeFile(id)} className="text-ink-muted hover:text-rose-400">
                 <X className="h-3.5 w-3.5" />
               </button>
             </li>

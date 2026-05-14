@@ -26,16 +26,20 @@ export function AssignmentSubmitPage() {
       setError('Please provide a text response or upload a file')
       return
     }
-    // Build file_urls payload — in production these would come from an upload endpoint
     const file_urls = uploadedFiles.length > 0
-      ? uploadedFiles.map((f) => ({ name: f.name, size: f.size }))
+      ? { files: uploadedFiles.map((f) => ({ name: f.name, size: f.size })) }
       : undefined
 
     submit(
-      { text_response: textResponse.trim() || undefined, file_urls: file_urls as any },
+      { text_response: textResponse.trim() || undefined, file_urls },
       {
-        onSuccess: () => navigate(ROUTES.COURSE_DETAIL(assignment.course_id)),
-        onError: (err: any) => setError(err?.response?.data?.detail ?? 'Failed to submit'),
+        onSuccess: () => navigate(ROUTES.ASSIGNMENT_DETAIL(assignmentId!)),
+        onError: (err: any) => {
+          const detail = err?.response?.data?.detail
+          if (typeof detail === 'string') setError(detail)
+          else if (Array.isArray(detail)) setError(detail.map((d: any) => d?.msg ?? 'Invalid input').join(', '))
+          else setError('Failed to submit')
+        },
       },
     )
   }
@@ -57,7 +61,7 @@ export function AssignmentSubmitPage() {
 
       {/* Assignment details */}
       <div className="card p-5 space-y-2">
-        <h2 className="font-semibold text-white">{assignment.title}</h2>
+        <h2 className="font-semibold text-ink">{assignment.title}</h2>
         {assignment.description && (
           <p className="text-sm text-ink-secondary whitespace-pre-wrap">{assignment.description}</p>
         )}

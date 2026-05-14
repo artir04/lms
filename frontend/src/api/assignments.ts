@@ -41,6 +41,7 @@ export function useSubmitAssignment(assignmentId: string) {
       api.post<AssignmentSubmission>(`/assignments/${assignmentId}/submissions`, data).then((r) => r.data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: assignmentKeys.detail(assignmentId) })
+      qc.invalidateQueries({ queryKey: ['assignments'] })
       qc.invalidateQueries({ queryKey: ['upcoming'] })
       qc.invalidateQueries({ queryKey: ['my-grades'] })
     },

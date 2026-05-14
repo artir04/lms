@@ -66,8 +66,8 @@ export function StudentAttendancePage() {
           <p className="text-xs text-amber-400/70 mt-1">Tardy</p>
         </div>
         <div className="card p-4 text-center">
-          <p className="text-2xl font-bold text-slate-400">{overallStats.excused}</p>
-          <p className="text-xs text-slate-400/70 mt-1">Excused</p>
+          <p className="text-2xl font-bold text-ink-secondary">{overallStats.excused}</p>
+          <p className="text-xs text-ink-muted mt-1">Excused</p>
         </div>
       </div>
 

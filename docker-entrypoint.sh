@@ -36,7 +36,9 @@ su postgres -c "$PG_PSQL -tc \"SELECT 1 FROM pg_database WHERE datname='lms_db'\
     $PG_PSQL -c \"CREATE DATABASE lms_db OWNER lms_user\""
 
 # ── Run migrations ──
-alembic upgrade head
+# Create tables first so alembic has a foundation (fresh DB), then stamp head
+python -c "import asyncio; from app.db.init_db import init_db; asyncio.run(init_db())"
+alembic stamp head
 
 # ── Run seeder (idempotent) ──
 python -m app.db.seed

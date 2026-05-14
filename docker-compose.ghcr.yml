@@ -1,0 +1,55 @@
+# Deploy via Dokploy: import this file, set environment variables in Dokploy's UI,
+# and ensure the stack has access to GHCR (no extra auth needed for public images).
+# Images are published by .github/workflows/docker-publish.yml on every push to main.
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: lms_db
+      POSTGRES_USER: lms_user
+      POSTGRES_PASSWORD: lms_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lms_user -d lms_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  backend:
+    image: ghcr.io/artir04/lms/backend:latest
+    environment:
+      APP_ENV: production
+      APP_NAME: LMS Platform
+      SECRET_KEY: change-this-to-a-long-random-secret-key
+      ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: 15
+      REFRESH_TOKEN_EXPIRE_DAYS: 7
+      DATABASE_URL: postgresql+asyncpg://lms_user:lms_password@db:5432/lms_db
+      STORAGE_BACKEND: local
+      MEDIA_ROOT: /app/media
+      EMAIL_BACKEND: console
+      DEFAULT_FROM_EMAIL: noreply@lms.example.com
+      FRONTEND_URL: /
+      SUPERADMIN_EMAIL: superadmin@lms.example.com
+      SUPERADMIN_PASSWORD: SuperAdmin123!
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - media_files:/app/media
+    restart: unless-stopped
+
+  frontend:
+    image: ghcr.io/artir04/lms/frontend:latest
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  media_files:

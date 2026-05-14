@@ -22,6 +22,7 @@ import { ROUTES } from '@/config/routes'
 import { toast } from '@/store/toastStore'
 import api from '@/config/axios'
 import type { Quiz, Question } from '@/types/assessment'
+import { isoToLocalDateTime, localDateTimeToIso } from '@/utils/formatters'
 
 const QUESTION_TYPES = [
   { value: 'mcq', label: 'Multiple Choice' },
@@ -98,6 +99,7 @@ export function QuizBuilderPage() {
       title: quiz?.title || '',
       instructions: quiz?.instructions || '',
       time_limit_min: quiz?.time_limit_min ?? '',
+      due_at: isoToLocalDateTime(quiz?.due_at ?? null),
       is_published: quiz?.is_published ?? false,
     },
   })
@@ -308,7 +310,19 @@ export function QuizBuilderPage() {
 
       {/* Quiz Settings Modal */}
       <Modal isOpen={showSettings} onClose={() => setShowSettings(false)} title="Quiz Settings">
-        <form onSubmit={settingsForm.handleSubmit((d) => updateQuiz({ ...d, time_limit_min: d.time_limit_min ? Number(d.time_limit_min) : null }, { onSuccess: () => setShowSettings(false) }))} className="space-y-4">
+        <form
+          onSubmit={settingsForm.handleSubmit((d) =>
+            updateQuiz(
+              {
+                ...d,
+                time_limit_min: d.time_limit_min ? Number(d.time_limit_min) : null,
+                due_at: d.due_at ? localDateTimeToIso(d.due_at) ?? null : null,
+              } as Partial<Quiz>,
+              { onSuccess: () => setShowSettings(false) },
+            ),
+          )}
+          className="space-y-4"
+        >
           <div>
             <label className="label">Title *</label>
             <input {...settingsForm.register('title', { required: true })} className="input" />
@@ -320,6 +334,10 @@ export function QuizBuilderPage() {
           <div>
             <label className="label">Time Limit (min)</label>
             <input {...settingsForm.register('time_limit_min')} type="number" min="1" className="input" placeholder="Unlimited" />
+          </div>
+          <div>
+            <label className="label">Due Date</label>
+            <input {...settingsForm.register('due_at')} type="datetime-local" className="input" />
           </div>
           <div className="flex items-center gap-3">
             <input type="checkbox" id="qz_published" {...settingsForm.register('is_published')} className="rounded" />

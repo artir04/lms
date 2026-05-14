@@ -33,7 +33,7 @@ import { AdminCoursesPage } from '@/pages/admin/AdminCoursesPage'
 import { EnrollmentsPage } from '@/pages/admin/EnrollmentsPage'
 import { ParentLinkingPage } from '@/pages/admin/ParentLinkingPage'
 import { AuditLogPage } from '@/pages/admin/AuditLogPage'
-import { NotFoundPage, ForbiddenPage } from '@/pages/errors/NotFoundPage'
+import { NotFoundPage, ForbiddenPage, RouteErrorBoundary } from '@/pages/errors/NotFoundPage'
 import { AttendanceMarkingPage } from '@/pages/attendance/AttendanceMarkingPage'
 import { AttendanceReportPage } from '@/pages/attendance/AttendanceReportPage'
 import { StudentAttendancePage } from '@/pages/attendance/StudentAttendancePage'
@@ -63,6 +63,7 @@ export const router = createBrowserRouter([
   {
     path: '/',
     element: <ProtectedRoute />,
+    errorElement: <RouteErrorBoundary />,
     children: [
       {
         element: <AppShell />,

@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: lms
+    runtime: image
+    image:
+      url: ghcr.io/artir04/lms/app:latest
+    plan: standard
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: SUPERADMIN_EMAIL
+        value: superadmin@lms.example.com
+      - key: SUPERADMIN_PASSWORD
+        value: SuperAdmin123!
+    disk:
+      name: lms-pgdata
+      mountPath: /var/lib/postgresql/data
+      sizeGB: 10

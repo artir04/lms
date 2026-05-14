@@ -10,7 +10,7 @@ from app.models.attendance import Attendance, AttendanceStatus
 from app.models.notification import Notification
 from app.models.analytics import ActivityLog, ReportSnapshot
 from app.models.audit import AuditLog
-from app.models.gamification import Badge, UserBadge, PointEntry
+from app.models.gamification import Badge, UserBadge, PointEntry, Activity, ActivityCompletion
 
 __all__ = [
     "District", "School",
@@ -25,5 +25,5 @@ __all__ = [
     "Notification",
     "ActivityLog", "ReportSnapshot",
     "AuditLog",
-    "Badge", "UserBadge", "PointEntry",
+    "Badge", "UserBadge", "PointEntry", "Activity", "ActivityCompletion",
 ]

@@ -37,6 +37,39 @@ export interface LeaderboardEntry {
   rank: number
 }
 
+export interface Activity {
+  id: string
+  title: string
+  description: string
+  points: number
+  category: string
+  course_id: string | null
+  created_by: string
+  is_active: boolean
+  created_at: string
+  completed: boolean
+  completed_at: string | null
+  completion_count: number
+}
+
+export interface ActivityCreate {
+  title: string
+  description: string
+  points: number
+  category: string
+  course_id: string | null
+  is_active: boolean
+}
+
+export interface ActivityUpdate {
+  title?: string
+  description?: string
+  points?: number
+  category?: string
+  course_id?: string | null
+  is_active?: boolean
+}
+
 export interface UpcomingAssignment {
   quiz_id: string
   quiz_title: string

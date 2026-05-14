@@ -4,9 +4,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload
 
-from app.models.gamification import Badge, UserBadge, PointEntry
+from app.models.gamification import Badge, UserBadge, PointEntry, Activity, ActivityCompletion
 from app.models.user import User
-from app.schemas.gamification import StudentPoints, LeaderboardEntry, UserBadgeRead, PointEntryRead, BadgeRead
+from app.models.course import Enrollment
+from app.core.exceptions import NotFoundError, ConflictError, ForbiddenError
+from app.schemas.gamification import (
+    StudentPoints, LeaderboardEntry, UserBadgeRead, PointEntryRead, BadgeRead,
+    ActivityCreate, ActivityUpdate, ActivityRead,
+)
 
 
 # Points awarded for different actions
@@ -152,3 +157,155 @@ class GamificationService:
                     earned_at=datetime.now(timezone.utc),
                 ))
         await self.db.flush()
+
+    async def create_activity(
+        self,
+        tenant_id: uuid.UUID,
+        created_by: uuid.UUID,
+        data: ActivityCreate,
+    ) -> Activity:
+        activity = Activity(
+            title=data.title,
+            description=data.description,
+            points=data.points,
+            category=data.category,
+            course_id=data.course_id,
+            tenant_id=tenant_id,
+            created_by=created_by,
+            is_active=data.is_active,
+        )
+        self.db.add(activity)
+        await self.db.flush()
+        return activity
+
+    async def update_activity(
+        self,
+        activity_id: uuid.UUID,
+        tenant_id: uuid.UUID,
+        data: ActivityUpdate,
+    ) -> Activity:
+        activity = await self._get_activity_in_tenant(activity_id, tenant_id)
+        for field, value in data.model_dump(exclude_unset=True).items():
+            setattr(activity, field, value)
+        await self.db.flush()
+        return activity
+
+    async def delete_activity(self, activity_id: uuid.UUID, tenant_id: uuid.UUID) -> None:
+        activity = await self._get_activity_in_tenant(activity_id, tenant_id)
+        await self.db.delete(activity)
+        await self.db.flush()
+
+    async def list_activities(
+        self,
+        tenant_id: uuid.UUID,
+        user_id: uuid.UUID,
+        include_inactive: bool = False,
+        course_id: uuid.UUID | None = None,
+    ) -> list[ActivityRead]:
+        stmt = select(Activity).where(Activity.tenant_id == tenant_id)
+        if not include_inactive:
+            stmt = stmt.where(Activity.is_active == True)
+        if course_id is not None:
+            stmt = stmt.where(Activity.course_id == course_id)
+        stmt = stmt.order_by(Activity.created_at.desc())
+        result = await self.db.execute(stmt)
+        activities = result.scalars().all()
+
+        if not activities:
+            return []
+
+        activity_ids = [a.id for a in activities]
+
+        # User completions
+        my_completions_r = await self.db.execute(
+            select(ActivityCompletion).where(
+                ActivityCompletion.user_id == user_id,
+                ActivityCompletion.activity_id.in_(activity_ids),
+            )
+        )
+        my_completions = {c.activity_id: c for c in my_completions_r.scalars().all()}
+
+        # Aggregate completion counts
+        counts_r = await self.db.execute(
+            select(ActivityCompletion.activity_id, func.count().label("c"))
+            .where(ActivityCompletion.activity_id.in_(activity_ids))
+            .group_by(ActivityCompletion.activity_id)
+        )
+        counts = {row.activity_id: row.c for row in counts_r.all()}
+
+        return [
+            ActivityRead(
+                id=a.id,
+                title=a.title,
+                description=a.description,
+                points=a.points,
+                category=a.category,
+                course_id=a.course_id,
+                created_by=a.created_by,
+                is_active=a.is_active,
+                created_at=a.created_at,
+                completed=a.id in my_completions,
+                completed_at=my_completions[a.id].completed_at if a.id in my_completions else None,
+                completion_count=counts.get(a.id, 0),
+            )
+            for a in activities
+        ]
+
+    async def complete_activity(self, activity_id: uuid.UUID, user_id: uuid.UUID, tenant_id: uuid.UUID) -> PointEntry:
+        activity = await self._get_activity_in_tenant(activity_id, tenant_id)
+        if not activity.is_active:
+            raise ForbiddenError("Activity is not active")
+
+        # If activity is scoped to a course, require enrollment in a section of that course
+        if activity.course_id is not None:
+            from app.models.course import Section
+            enrolled_r = await self.db.execute(
+                select(func.count())
+                .select_from(Enrollment)
+                .join(Section, Section.id == Enrollment.section_id)
+                .where(
+                    Enrollment.student_id == user_id,
+                    Section.course_id == activity.course_id,
+                    Enrollment.status == "active",
+                )
+            )
+            if enrolled_r.scalar_one() == 0:
+                raise ForbiddenError("You are not enrolled in this course")
+
+        # Prevent duplicate completion
+        existing_r = await self.db.execute(
+            select(ActivityCompletion).where(
+                ActivityCompletion.activity_id == activity_id,
+                ActivityCompletion.user_id == user_id,
+            )
+        )
+        if existing_r.scalar_one_or_none() is not None:
+            raise ConflictError("Activity already completed")
+
+        completion = ActivityCompletion(
+            activity_id=activity_id,
+            user_id=user_id,
+            completed_at=datetime.now(timezone.utc),
+        )
+        self.db.add(completion)
+
+        # Award points reusing existing engine
+        entry = PointEntry(
+            user_id=user_id,
+            points=activity.points,
+            reason="activity_completed",
+            resource_id=activity.id,
+        )
+        self.db.add(entry)
+        await self.db.flush()
+        await self._check_badges(user_id)
+        return entry
+
+    async def _get_activity_in_tenant(self, activity_id: uuid.UUID, tenant_id: uuid.UUID) -> Activity:
+        result = await self.db.execute(
+            select(Activity).where(Activity.id == activity_id, Activity.tenant_id == tenant_id)
+        )
+        activity = result.scalar_one_or_none()
+        if activity is None:
+            raise NotFoundError("Activity")
+        return activity

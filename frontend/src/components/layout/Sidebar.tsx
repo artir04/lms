@@ -11,6 +11,7 @@ import {
   ChevronRight,
   Calendar,
   Trophy,
+  Target,
   FileBarChart,
   Sparkles,
   Baby,
@@ -80,6 +81,7 @@ export function Sidebar({ onClose }: SidebarProps) {
             items: [
               { to: ROUTES.TEACHER_ATTENDANCE, icon: Calendar, label: 'Attendance' },
               { to: ROUTES.MY_STUDENTS, icon: Users, label: 'My Students' },
+              { to: ROUTES.GAMIFICATION_ADMIN, icon: Target, label: 'Activities' },
             ],
           },
         ]
@@ -94,6 +96,7 @@ export function Sidebar({ onClose }: SidebarProps) {
               { to: ROUTES.ADMIN_COURSES, icon: BookOpen, label: 'Courses' },
               { to: ROUTES.ADMIN_ENROLLMENTS, icon: ClipboardList, label: 'Enrollments' },
               { to: ROUTES.ADMIN_PARENT_LINKS, icon: Link2, label: 'Parent Links' },
+              { to: ROUTES.GAMIFICATION_ADMIN, icon: Target, label: 'Activities' },
               { to: ROUTES.ADMIN_REPORTS, icon: FileBarChart, label: 'Reports' },
               { to: ROUTES.ADMIN_AUDIT, icon: ShieldCheck, label: 'Audit Log' },
               { to: ROUTES.ADMIN_SETTINGS, icon: Settings, label: 'Settings' },

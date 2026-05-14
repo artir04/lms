@@ -6,6 +6,7 @@ import { PageLoader } from '@/components/ui/Spinner'
 import { FileUpload } from '@/components/assignment/FileUpload'
 import { ROUTES } from '@/config/routes'
 import { formatDate } from '@/utils/formatters'
+import api from '@/config/axios'
 
 export function AssignmentSubmitPage() {
   const { assignmentId } = useParams<{ assignmentId: string }>()
@@ -20,15 +21,40 @@ export function AssignmentSubmitPage() {
   if (isLoading) return <PageLoader />
   if (!assignment) return <div className="text-center text-ink-muted py-16">Assignment not found</div>
 
-  const handleSubmit = () => {
+  const [uploading, setUploading] = useState(false)
+
+  const handleSubmit = async () => {
     setError(null)
     if (!textResponse.trim() && uploadedFiles.length === 0) {
       setError('Please provide a text response or upload a file')
       return
     }
-    const file_urls = uploadedFiles.length > 0
-      ? { files: uploadedFiles.map((f) => ({ name: f.name, size: f.size })) }
-      : undefined
+
+    let file_urls: { files: { name: string; size: number; url: string }[] } | undefined
+    if (uploadedFiles.length > 0) {
+      setUploading(true)
+      try {
+        const uploaded = await Promise.all(
+          uploadedFiles.map(async (f) => {
+            const fd = new FormData()
+            fd.append('file', f)
+            const res = await api.post<{ name: string; size: number; url: string }>(
+              `/assignments/${assignmentId}/submissions/upload`,
+              fd,
+              { headers: { 'Content-Type': 'multipart/form-data' } },
+            )
+            return res.data
+          }),
+        )
+        file_urls = { files: uploaded }
+      } catch (err: any) {
+        setUploading(false)
+        const detail = err?.response?.data?.detail
+        setError(typeof detail === 'string' ? detail : 'Failed to upload attachment')
+        return
+      }
+      setUploading(false)
+    }
 
     submit(
       { text_response: textResponse.trim() || undefined, file_urls },
@@ -112,9 +138,9 @@ export function AssignmentSubmitPage() {
         </div>
       )}
 
-      <button onClick={handleSubmit} disabled={isPending} className="btn-primary w-full">
+      <button onClick={handleSubmit} disabled={isPending || uploading} className="btn-primary w-full">
         <Send className="h-4 w-4" />
-        {isPending ? 'Submitting...' : 'Submit Assignment'}
+        {uploading ? 'Uploading...' : isPending ? 'Submitting...' : 'Submit Assignment'}
       </button>
     </div>
   )

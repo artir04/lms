@@ -27,8 +27,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         curl \
-        postgresql-16 \
-        postgresql-client-16 && \
+        postgresql \
+        postgresql-client && \
     rm -rf /var/lib/apt/lists/*
 
 COPY --from=python-builder /root/.local /root/.local

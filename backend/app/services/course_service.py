@@ -45,7 +45,8 @@ class CourseService:
             query = query.join(Section).join(Enrollment).where(
                 Enrollment.student_id == student_id, Enrollment.status == "active"
             )
-        else:
+        elif not teacher_id:
+            # Teachers see their own drafts; everyone else sees only published
             query = query.where(Course.is_published == True)
 
         if search:

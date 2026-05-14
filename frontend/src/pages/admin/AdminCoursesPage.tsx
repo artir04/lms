@@ -23,6 +23,7 @@ import {
   useReassignTeacher,
   useUnarchiveCourse,
 } from '@/api/adminCourses'
+import { toast } from '@/store/toastStore'
 import type { PaginatedResponse } from '@/types/common'
 import type { User } from '@/types/user'
 import { formatDate } from '@/utils/formatters'
@@ -231,7 +232,7 @@ function ReassignForm({
   onCancel: () => void
 }) {
   const [teacherId, setTeacherId] = useState('')
-  const { mutate, isPending, error } = useReassignTeacher()
+  const { mutate, isPending } = useReassignTeacher()
 
   const { data: teachers } = useQuery<PaginatedResponse<User>>({
     queryKey: ['users', 'teachers-for-reassign'],
@@ -239,7 +240,25 @@ function ReassignForm({
       api.get('/users', { params: { role: 'teacher', page_size: 100 } }).then((r) => r.data),
   })
 
-  const apiDetail = (error as { response?: { data?: { detail?: unknown } } } | null)?.response?.data?.detail
+  const handleReassign = () => {
+    const newTeacher = teachers?.items.find((t) => t.id === teacherId)
+    mutate(
+      { courseId: course.id, teacherId },
+      {
+        onSuccess: () => {
+          const target = newTeacher?.full_name ?? 'the selected teacher'
+          toast.success(`${course.title} reassigned to ${target}`, { title: 'Teacher reassigned' })
+          onSuccess()
+        },
+        onError: (err) => {
+          const detail = (err as { response?: { data?: { detail?: unknown } } } | null)?.response
+            ?.data?.detail
+          const message = typeof detail === 'string' ? detail : 'Reassign failed'
+          toast.error(message, { title: 'Reassign failed' })
+        },
+      }
+    )
+  }
 
   return (
     <div className="space-y-4">
@@ -263,18 +282,12 @@ function ReassignForm({
         </select>
       </div>
 
-      {!!apiDetail && (
-        <p className="text-sm text-rose-400">
-          {typeof apiDetail === 'string' ? apiDetail : 'Reassign failed'}
-        </p>
-      )}
-
       <div className="flex gap-3 pt-2">
         <button onClick={onCancel} className="btn-secondary flex-1">
           Cancel
         </button>
         <button
-          onClick={() => mutate({ courseId: course.id, teacherId }, { onSuccess })}
+          onClick={handleReassign}
           disabled={!teacherId || isPending}
           className="btn-primary flex-1"
         >

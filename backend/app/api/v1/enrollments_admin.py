@@ -1,6 +1,7 @@
 import csv
 import io
 import uuid
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile, status
 from sqlalchemy import and_, desc, or_, select
@@ -79,6 +80,7 @@ async def import_csv(
     enrolled = 0
     skipped = 0
     errors = 0
+    affected_student_ids: list[str] = []
 
     for raw_row in reader:
         row = {(k or "").strip().lower(): (v or "").strip() for k, v in raw_row.items()}
@@ -145,6 +147,7 @@ async def import_csv(
             db.add(Enrollment(section_id=section_id, student_id=user.id, status="active"))
         await db.flush()
         enrolled += 1
+        affected_student_ids.append(str(user.id))
         result_rows.append(CsvImportRow(
             email=email, first_name=first_name, last_name=last_name,
             status=row_status, detail=detail,
@@ -165,6 +168,7 @@ async def import_csv(
             "enrolled": enrolled,
             "skipped": skipped,
             "errors": errors,
+            "student_ids": affected_student_ids,
         },
     )
 
@@ -246,6 +250,23 @@ async def transfer_enrollment(
     return MessageResponse(message="Student transferred")
 
 
+ENROLLMENT_HISTORY_ACTIONS = (
+    "enrollment.create",
+    "enrollment.drop",
+    "enrollment.transfer",
+    "enrollment.csv_import",
+)
+
+
+def _safe_uuid(value) -> uuid.UUID | None:
+    if value is None:
+        return None
+    try:
+        return uuid.UUID(str(value))
+    except (ValueError, TypeError, AttributeError):
+        return None
+
+
 @router.get(
     "/history",
     dependencies=[require_roles(Role.ADMIN, Role.SUPERADMIN)],
@@ -256,33 +277,43 @@ async def list_enrollment_history(
     course_id: uuid.UUID | None = None,
     section_id: uuid.UUID | None = None,
     student_id: uuid.UUID | None = None,
-    limit: int = Query(50, ge=1, le=500),
+    actions: list[str] | None = Query(None, description="Filter by audit action (repeatable)"),
+    date_from: datetime | None = Query(None, description="ISO start timestamp (inclusive)"),
+    date_to: datetime | None = Query(None, description="ISO end timestamp (inclusive)"),
+    limit: int = Query(100, ge=1, le=500),
 ):
     tenant_id = uuid.UUID(payload["tenant_id"])
-    actions = (
-        "enrollment.create",
-        "enrollment.drop",
-        "enrollment.transfer",
-        "enrollment.csv_import",
+
+    requested_actions: tuple[str, ...] = ENROLLMENT_HISTORY_ACTIONS
+    if actions:
+        clean = tuple(a for a in actions if a in ENROLLMENT_HISTORY_ACTIONS)
+        if clean:
+            requested_actions = clean
+
+    query = select(AuditLog).where(
+        AuditLog.tenant_id == tenant_id,
+        AuditLog.action.in_(requested_actions),
     )
-    query = (
-        select(AuditLog)
-        .where(AuditLog.tenant_id == tenant_id, AuditLog.action.in_(actions))
-        .order_by(desc(AuditLog.created_at))
-        .limit(limit)
-    )
+    if date_from is not None:
+        query = query.where(AuditLog.created_at >= date_from)
+    if date_to is not None:
+        query = query.where(AuditLog.created_at <= date_to)
+
+    # Pull a wider window before metadata filtering so the limit applies post-filter.
+    fetch_limit = limit * 5 if (course_id or section_id or student_id) else limit
+    query = query.order_by(desc(AuditLog.created_at)).limit(fetch_limit)
     rows = (await db.execute(query)).scalars().all()
 
-    section_to_course: dict[str, str] = {}
-    if course_id is not None:
-        sec_rows = (
-            await db.execute(
-                select(Section.id, Section.course_id)
-                .join(Course, Course.id == Section.course_id)
-                .where(Course.tenant_id == tenant_id)
-            )
-        ).all()
-        section_to_course = {str(sid): str(cid) for sid, cid in sec_rows}
+    # Build section→course map (used both for course filtering and for display).
+    sec_rows = (
+        await db.execute(
+            select(Section.id, Section.course_id, Section.name)
+            .join(Course, Course.id == Section.course_id)
+            .where(Course.tenant_id == tenant_id)
+        )
+    ).all()
+    section_to_course: dict[str, str] = {str(sid): str(cid) for sid, cid, _ in sec_rows}
+    section_name: dict[str, str] = {str(sid): name for sid, _, name in sec_rows}
 
     def row_course_ids(md: dict) -> set[str]:
         ids: set[str] = set()
@@ -300,21 +331,132 @@ async def list_enrollment_history(
         md = r.event_metadata or {}
         if course_id and str(course_id) not in row_course_ids(md):
             return False
-        if section_id and md.get("section_id") != str(section_id) and md.get("to_section_id") != str(section_id) and md.get("from_section_id") != str(section_id):
+        if section_id and str(section_id) not in (
+            str(md.get("section_id") or ""),
+            str(md.get("to_section_id") or ""),
+            str(md.get("from_section_id") or ""),
+        ):
             return False
-        if student_id and md.get("student_id") != str(student_id):
-            return False
+        if student_id:
+            target_str = str(student_id)
+            in_single = md.get("student_id") == target_str
+            in_bulk = any(str(x) == target_str for x in (md.get("student_ids") or []))
+            if not (in_single or in_bulk):
+                return False
         return True
 
-    filtered = [r for r in rows if matches(r)]
-    return [
-        {
+    filtered = [r for r in rows if matches(r)][:limit]
+
+    # Batch-resolve referenced courses, sections, and students for display.
+    course_ids: set[uuid.UUID] = set()
+    section_ids: set[uuid.UUID] = set()
+    student_ids: set[uuid.UUID] = set()
+    for r in filtered:
+        md = r.event_metadata or {}
+        for key in ("course_id", "from_course_id", "to_course_id"):
+            cid = _safe_uuid(md.get(key))
+            if cid:
+                course_ids.add(cid)
+        for key in ("section_id", "from_section_id", "to_section_id"):
+            sid = _safe_uuid(md.get(key))
+            if sid:
+                section_ids.add(sid)
+                # Section's parent course also worth resolving for display
+                parent_cid = _safe_uuid(section_to_course.get(str(sid)))
+                if parent_cid:
+                    course_ids.add(parent_cid)
+        stud_id = _safe_uuid(md.get("student_id"))
+        if stud_id:
+            student_ids.add(stud_id)
+        # Many events store the affected student in target_id directly.
+        if r.target_type in ("enrollment",) and r.target_id:
+            student_ids.add(r.target_id)
+        # CSV imports store an array of every imported student.
+        for raw in md.get("student_ids") or []:
+            arr_id = _safe_uuid(raw)
+            if arr_id:
+                student_ids.add(arr_id)
+
+    courses_lookup: dict[str, dict] = {}
+    if course_ids:
+        c_rows = (
+            await db.execute(
+                select(Course.id, Course.title)
+                .where(Course.id.in_(course_ids), Course.tenant_id == tenant_id)
+            )
+        ).all()
+        courses_lookup = {str(cid): {"id": str(cid), "title": title} for cid, title in c_rows}
+
+    sections_lookup: dict[str, dict] = {}
+    for sid in section_ids:
+        s_key = str(sid)
+        if s_key in section_name:
+            parent_course_id = section_to_course.get(s_key)
+            sections_lookup[s_key] = {
+                "id": s_key,
+                "name": section_name[s_key],
+                "course_id": parent_course_id,
+                "course_title": courses_lookup.get(parent_course_id, {}).get("title") if parent_course_id else None,
+            }
+
+    students_lookup: dict[str, dict] = {}
+    if student_ids:
+        u_rows = (
+            await db.execute(
+                select(User.id, User.first_name, User.last_name, User.email)
+                .where(User.id.in_(student_ids), User.tenant_id == tenant_id)
+            )
+        ).all()
+        students_lookup = {
+            str(uid): {
+                "id": str(uid),
+                "full_name": f"{fn} {ln}".strip(),
+                "email": email,
+            }
+            for uid, fn, ln, email in u_rows
+        }
+
+    def resolve_course(md: dict, key: str) -> dict | None:
+        cid = md.get(key)
+        if not cid:
+            return None
+        return courses_lookup.get(str(cid))
+
+    def resolve_section(md: dict, key: str) -> dict | None:
+        sid = md.get(key)
+        if not sid:
+            return None
+        return sections_lookup.get(str(sid))
+
+    enriched: list[dict] = []
+    for r in filtered:
+        md = r.event_metadata or {}
+        student_key = md.get("student_id") or (str(r.target_id) if r.target_type == "enrollment" and r.target_id else None)
+        bulk_students: list[dict] = []
+        for raw in md.get("student_ids") or []:
+            resolved = students_lookup.get(str(raw))
+            if resolved:
+                bulk_students.append(resolved)
+        enriched.append({
+            "id": str(r.id),
             "action": r.action,
-            "target_id": r.target_id,
+            "target_type": r.target_type,
+            "target_id": str(r.target_id) if r.target_id else None,
             "summary": r.summary,
             "actor_email": r.actor_email,
-            "event_metadata": r.event_metadata,
+            "actor_user_id": str(r.actor_user_id) if r.actor_user_id else None,
+            "actor_role": r.actor_role,
+            "ip_address": r.ip_address,
+            "user_agent": r.user_agent,
+            "event_metadata": md,
             "created_at": r.created_at,
-        }
-        for r in filtered
-    ]
+            "student": students_lookup.get(str(student_key)) if student_key else None,
+            "students": bulk_students,
+            "course": resolve_course(md, "course_id"),
+            "section": resolve_section(md, "section_id"),
+            "from_course": resolve_course(md, "from_course_id"),
+            "to_course": resolve_course(md, "to_course_id"),
+            "from_section": resolve_section(md, "from_section_id"),
+            "to_section": resolve_section(md, "to_section_id"),
+        })
+    return enriched

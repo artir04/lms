@@ -57,6 +57,18 @@ export function useCourseSections(courseId: string) {
   })
 }
 
+export function useCreateSection(courseId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { name: string; capacity?: number | null }) =>
+      api.post<Section>(`/courses/${courseId}/sections`, data).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: courseKeys.sections(courseId) })
+      qc.invalidateQueries({ queryKey: courseKeys.all })
+    },
+  })
+}
+
 export function useEnrollStudent(courseId: string, sectionId: string) {
   const qc = useQueryClient()
   return useMutation({

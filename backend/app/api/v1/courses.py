@@ -211,7 +211,7 @@ async def list_sections(course_id: uuid.UUID, payload: CurrentUserPayload, db=De
     return await service.list_sections(course_id, tenant_id)
 
 
-@router.post("/{course_id}/sections", response_model=SectionRead, dependencies=[require_roles(Role.TEACHER, Role.ADMIN)])
+@router.post("/{course_id}/sections", response_model=SectionRead, dependencies=[require_roles(Role.TEACHER, Role.ADMIN, Role.SUPERADMIN)])
 async def create_section(course_id: uuid.UUID, data: SectionCreate, payload: CurrentUserPayload, db=Depends(get_db)):
     service = CourseService(db)
     return await service.create_section(course_id, data, uuid.UUID(payload["tenant_id"]))
@@ -251,7 +251,12 @@ async def drop_student(course_id: uuid.UUID, section_id: uuid.UUID, student_id: 
 
 
 @router.get("/{course_id}/enrollments")
-async def list_enrollments(course_id: uuid.UUID, payload: CurrentUserPayload, db=Depends(get_db)):
+async def list_enrollments(
+    course_id: uuid.UUID,
+    payload: CurrentUserPayload,
+    db=Depends(get_db),
+    section_id: uuid.UUID | None = Query(None, description="Optional: filter roster to a single section"),
+):
     """Class list for a course. Visible to staff and to actively-enrolled students."""
     from sqlalchemy import func, select
     from app.models.course import Enrollment, Section
@@ -278,4 +283,4 @@ async def list_enrollments(course_id: uuid.UUID, payload: CurrentUserPayload, db
         if not enrolled:
             raise ForbiddenError("You don't have access to this class list")
 
-    return await service.list_enrollments(course_id, tenant_id)
+    return await service.list_enrollments(course_id, tenant_id, section_id=section_id)

@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 from typing import Any
 
 from fastapi import Request
@@ -92,20 +93,37 @@ class AuditService:
         params: PaginationParams,
         *,
         action: str | None = None,
+        actions: list[str] | None = None,
+        action_prefixes: list[str] | None = None,
         target_type: str | None = None,
+        target_types: list[str] | None = None,
         target_id: uuid.UUID | None = None,
         actor_user_id: uuid.UUID | None = None,
         search: str | None = None,
+        date_from: datetime | None = None,
+        date_to: datetime | None = None,
     ) -> PaginatedResponse[AuditLog]:
         query = select(AuditLog).where(AuditLog.tenant_id == tenant_id)
         if action:
             query = query.where(AuditLog.action == action)
+        if actions:
+            query = query.where(AuditLog.action.in_(actions))
+        if action_prefixes:
+            query = query.where(
+                or_(*(AuditLog.action.like(f"{p}%") for p in action_prefixes))
+            )
         if target_type:
             query = query.where(AuditLog.target_type == target_type)
+        if target_types:
+            query = query.where(AuditLog.target_type.in_(target_types))
         if target_id:
             query = query.where(AuditLog.target_id == target_id)
         if actor_user_id:
             query = query.where(AuditLog.actor_user_id == actor_user_id)
+        if date_from is not None:
+            query = query.where(AuditLog.created_at >= date_from)
+        if date_to is not None:
+            query = query.where(AuditLog.created_at <= date_to)
         if search:
             term = f"%{search}%"
             query = query.where(

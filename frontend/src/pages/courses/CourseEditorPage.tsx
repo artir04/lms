@@ -11,6 +11,7 @@ import { toast } from '@/store/toastStore'
 import { ROUTES } from '@/config/routes'
 import { cn } from '@/utils/cn'
 import api from '@/config/axios'
+import { getYouTubeEmbedUrl } from '@/utils/formatters'
 
 interface Module {
   id: string
@@ -376,7 +377,7 @@ export function CourseEditorPage() {
                   content_type: d.content_type,
                   duration_min: d.duration_min ? Number(d.duration_min) : null,
                   body: d.body || null,
-                  video_url: d.video_url || null,
+                  video_url: getYouTubeEmbedUrl(d.video_url || ''),
                 },
               },
               { onSuccess: () => { setAddLessonModuleId(null); lessonForm.reset({ content_type: 'text', body: '', video_url: '' }) } }
@@ -403,7 +404,7 @@ export function CourseEditorPage() {
                     content_type: d.content_type,
                     duration_min: d.duration_min ? Number(d.duration_min) : null,
                     body: d.body || null,
-                    video_url: d.video_url || null,
+                    video_url: getYouTubeEmbedUrl(d.video_url || ''),
                   },
                 },
                 { onSuccess: () => setEditingLesson(null) }

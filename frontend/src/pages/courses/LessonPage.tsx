@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, PlayCircle, FileText, File, Image, FileArchive, FileSpreadsheet, Paperclip, Download, Eye, EyeOff, Maximize2 } from 'lucide-react'
+import { ArrowLeft, PlayCircle, FileText, File, Image, FileArchive, FileSpreadsheet, Paperclip, Download, Eye, EyeOff, Maximize2, ExternalLink } from 'lucide-react'
 import api from '@/config/axios'
 import { PageLoader } from '@/components/ui/Spinner'
 import { ROUTES } from '@/config/routes'
@@ -90,6 +90,17 @@ export function LessonPage() {
               allowFullScreen
               title={lesson.title}
             />
+          </div>
+          <div className="px-4 py-3 border-t border-border bg-surface-elevated/40 flex items-center justify-center">
+            <a
+              href={lesson.video_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-sm text-primary-400 hover:text-primary-300 transition-colors"
+            >
+              <ExternalLink className="h-4 w-4" />
+              Open video in new tab
+            </a>
           </div>
         </div>
       )}

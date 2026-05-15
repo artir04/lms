@@ -5,6 +5,7 @@ import { ArrowLeft, PlayCircle, FileText, File, Image, FileArchive, FileSpreadsh
 import api from '@/config/axios'
 import { PageLoader } from '@/components/ui/Spinner'
 import { ROUTES } from '@/config/routes'
+import { getYouTubeEmbedUrl } from '@/utils/formatters'
 
 interface Attachment {
   id: string
@@ -84,7 +85,7 @@ export function LessonPage() {
         <div className="card overflow-hidden">
           <div className="aspect-video">
             <iframe
-              src={lesson.video_url}
+              src={getYouTubeEmbedUrl(lesson.video_url)}
               className="w-full h-full"
               allowFullScreen
               title={lesson.title}
@@ -98,7 +99,7 @@ export function LessonPage() {
         <div className="card overflow-hidden">
           <div className="aspect-video">
             <iframe
-              src={lesson.video_url}
+              src={getYouTubeEmbedUrl(lesson.video_url)}
               className="w-full h-full"
               allowFullScreen
               title={lesson.title}

@@ -33,3 +33,19 @@ export const NUMERIC_GRADE_COLORS: Record<number, string> = {
   2: 'badge-yellow',
   1: 'badge-red',
 }
+
+/** Convert YouTube watch/share URLs to embed URLs. Returns original if not YouTube. */
+export function getYouTubeEmbedUrl(url: string): string {
+  if (!url) return url
+  try {
+    const u = new URL(url)
+    if (u.hostname.includes('youtube.com')) {
+      const v = u.searchParams.get('v')
+      if (v) return `https://www.youtube.com/embed/${v}`
+    }
+    if (u.hostname === 'youtu.be') {
+      return `https://www.youtube.com/embed/${u.pathname.slice(1)}`
+    }
+  } catch { /* not a valid URL */ }
+  return url
+}

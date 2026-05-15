@@ -475,7 +475,7 @@ function LessonFormFields({
             {...form.register('video_url')}
             type="url"
             className="input"
-            placeholder={contentType === 'embed' ? 'https://example.com/embed/...' : 'https://youtube.com/embed/...'}
+            placeholder={contentType === 'embed' ? 'https://example.com/embed/...' : 'https://youtube.com/watch?v=... (any YouTube URL works)'}
           />
         </div>
       )}

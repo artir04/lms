@@ -71,15 +71,16 @@ export interface ActivityUpdate {
 }
 
 export interface UpcomingAssignment {
-  quiz_id: string
-  quiz_title: string
+  item_id: string
+  item_type: 'quiz' | 'assignment'
+  title: string
   course_id: string
   course_title: string
   due_at: string | null
-  time_limit_min: number | null
-  max_attempts: number
-  attempts_used: number
   is_overdue: boolean
+  time_limit_min: number | null
+  max_attempts: number | null
+  attempts_used: number | null
 }
 
 export interface AdminReport {

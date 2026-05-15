@@ -13,7 +13,7 @@ import { Modal } from '@/components/ui/Modal'
 import { PageLoader } from '@/components/ui/Spinner'
 import { useAuth } from '@/hooks/useAuth'
 import { ROUTES } from '@/config/routes'
-import { formatDate } from '@/utils/formatters'
+import { formatDate, localDateTimeToIso } from '@/utils/formatters'
 import api from '@/config/axios'
 import { useQuery } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
@@ -657,7 +657,7 @@ function CreateQuizButton({ courseId }: { courseId: string }) {
   const navigate = useNavigate()
   const [show, setShow] = useState(false)
   const { mutate: createQuiz, isPending } = useCreateQuiz(courseId)
-  const { register, handleSubmit, reset } = useForm<{ title: string }>()
+  const { register, handleSubmit, reset } = useForm<{ title: string; due_at: string }>()
 
   return (
     <>
@@ -667,19 +667,26 @@ function CreateQuizButton({ courseId }: { courseId: string }) {
       <Modal isOpen={show} onClose={() => setShow(false)} title="Create Quiz">
         <form
           onSubmit={handleSubmit((d) =>
-            createQuiz(d, {
-              onSuccess: (quiz: any) => {
-                setShow(false)
-                reset()
-                navigate(ROUTES.QUIZ_BUILDER(courseId, quiz.id))
+            createQuiz(
+              { title: d.title, due_at: localDateTimeToIso(d.due_at) },
+              {
+                onSuccess: (quiz: any) => {
+                  setShow(false)
+                  reset()
+                  navigate(ROUTES.QUIZ_BUILDER(courseId, quiz.id))
+                },
               },
-            })
+            )
           )}
           className="space-y-4"
         >
           <div>
             <label className="label">Quiz Title *</label>
             <input {...register('title', { required: true })} className="input" placeholder="e.g. Chapter 1 Quiz" />
+          </div>
+          <div>
+            <label className="label">Due Date</label>
+            <input {...register('due_at')} type="datetime-local" className="input" />
           </div>
           <p className="text-xs text-ink-muted">
             Quiz weight is auto-computed from the course category weights. Configure category weights in Course Settings.
@@ -714,7 +721,7 @@ function CreateAssignmentButton({ courseId }: { courseId: string }) {
             createAssignment({
               title: d.title,
               description: d.description || undefined,
-              due_at: d.due_at || undefined,
+              due_at: localDateTimeToIso(d.due_at),
               max_score: Number(d.max_score),
             } as any, {
               onSuccess: () => {

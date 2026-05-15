@@ -61,9 +61,10 @@ async def my_grades(payload: CurrentUserPayload, db=Depends(get_db)):
 
 @router.get("/upcoming", response_model=list[UpcomingAssignment])
 async def upcoming_assignments(payload: CurrentUserPayload, db=Depends(get_db)):
-    """Get upcoming quizzes/assignments for the current student."""
+    """Get upcoming quizzes and assignments for the current student."""
     from datetime import datetime, timezone
     from app.models.assessment import Quiz, Submission
+    from app.models.assignment import Assignment, AssignmentSubmission
     from app.models.course import Course, Section, Enrollment
 
     student_id = uuid.UUID(payload["sub"])
@@ -77,7 +78,7 @@ async def upcoming_assignments(payload: CurrentUserPayload, db=Depends(get_db)):
     )
     courses = courses_result.scalars().all()
 
-    items = []
+    items: list[UpcomingAssignment] = []
     now = datetime.now(timezone.utc)
     for course in courses:
         quizzes_result = await db.execute(
@@ -98,15 +99,43 @@ async def upcoming_assignments(payload: CurrentUserPayload, db=Depends(get_db)):
                 continue
 
             items.append(UpcomingAssignment(
-                quiz_id=quiz.id,
-                quiz_title=quiz.title,
+                item_id=quiz.id,
+                item_type="quiz",
+                title=quiz.title,
                 course_id=course.id,
                 course_title=course.title,
                 due_at=quiz.due_at,
+                is_overdue=quiz.due_at < now if quiz.due_at else False,
                 time_limit_min=quiz.time_limit_min,
                 max_attempts=quiz.max_attempts,
                 attempts_used=attempts_used,
-                is_overdue=quiz.due_at < now if quiz.due_at else False,
+            ))
+
+        assignments_result = await db.execute(
+            select(Assignment).where(
+                Assignment.course_id == course.id,
+                Assignment.is_published == True,
+            ).order_by(Assignment.due_at.asc().nullslast())
+        )
+        for assignment in assignments_result.scalars().all():
+            done_result = await db.execute(
+                select(func.count()).select_from(AssignmentSubmission).where(
+                    AssignmentSubmission.assignment_id == assignment.id,
+                    AssignmentSubmission.student_id == student_id,
+                    AssignmentSubmission.status.in_(("submitted", "graded")),
+                )
+            )
+            if done_result.scalar_one() > 0:
+                continue
+
+            items.append(UpcomingAssignment(
+                item_id=assignment.id,
+                item_type="assignment",
+                title=assignment.title,
+                course_id=course.id,
+                course_title=course.title,
+                due_at=assignment.due_at,
+                is_overdue=assignment.due_at < now if assignment.due_at else False,
             ))
 
     items.sort(key=lambda x: (x.due_at is None, x.due_at))

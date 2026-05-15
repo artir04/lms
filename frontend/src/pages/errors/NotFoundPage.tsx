@@ -1,7 +1,7 @@
-import { Link } from 'react-router-dom'
+import { Link, useRouteError, isRouteErrorResponse } from 'react-router-dom'
 import { ROUTES } from '@/config/routes'
 import { useAuth } from '@/hooks/useAuth'
-import { BookMarked, ArrowLeft, ShieldOff } from 'lucide-react'
+import { BookMarked, ArrowLeft, ShieldOff, AlertTriangle, RotateCcw } from 'lucide-react'
 
 export function NotFoundPage() {
   const { isParent } = useAuth()
@@ -23,6 +23,43 @@ export function NotFoundPage() {
           <ArrowLeft className="w-4 h-4" />
           {homeLabel}
         </Link>
+      </div>
+    </div>
+  )
+}
+
+export function RouteErrorBoundary() {
+  const error = useRouteError()
+  const { isParent } = useAuth()
+  const homeRoute = isParent ? ROUTES.PARENT : ROUTES.DASHBOARD
+  const homeLabel = isParent ? 'Back to Parent Dashboard' : 'Back to Dashboard'
+
+  if (isRouteErrorResponse(error) && error.status === 404) {
+    return <NotFoundPage />
+  }
+
+  console.error('[RouteErrorBoundary]', error)
+
+  return (
+    <div className="min-h-screen bg-surface-base flex items-center justify-center p-6">
+      <div className="text-center max-w-md">
+        <div className="w-16 h-16 rounded-2xl bg-amber-500/15 flex items-center justify-center mx-auto mb-6">
+          <AlertTriangle className="w-8 h-8 text-amber-400" />
+        </div>
+        <h1 className="text-2xl font-bold text-ink mt-2 font-display">Something went wrong</h1>
+        <p className="text-ink-muted mt-2 text-sm">
+          We hit an unexpected issue loading this page. Try refreshing — if it keeps happening, head back home.
+        </p>
+        <div className="flex gap-3 justify-center mt-6">
+          <button onClick={() => window.location.reload()} className="btn-secondary inline-flex">
+            <RotateCcw className="w-4 h-4" />
+            Reload
+          </button>
+          <Link to={homeRoute} className="btn-primary inline-flex">
+            <ArrowLeft className="w-4 h-4" />
+            {homeLabel}
+          </Link>
+        </div>
       </div>
     </div>
   )

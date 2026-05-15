@@ -17,11 +17,10 @@ export function AssignmentSubmitPage() {
   const [textResponse, setTextResponse] = useState('')
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([])
   const [error, setError] = useState<string | null>(null)
+  const [uploading, setUploading] = useState(false)
 
   if (isLoading) return <PageLoader />
   if (!assignment) return <div className="text-center text-ink-muted py-16">Assignment not found</div>
-
-  const [uploading, setUploading] = useState(false)
 
   const handleSubmit = async () => {
     setError(null)

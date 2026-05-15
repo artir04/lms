@@ -25,6 +25,23 @@ export function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
+/** Convert an HTML `<input type="datetime-local">` value (naive, local-zone) into an ISO 8601 UTC string the backend can parse. */
+export function localDateTimeToIso(value: string | null | undefined): string | undefined {
+  if (!value) return undefined
+  const d = new Date(value)
+  if (isNaN(d.getTime())) return undefined
+  return d.toISOString()
+}
+
+/** Convert an ISO 8601 string into the value format expected by `<input type="datetime-local">` (YYYY-MM-DDTHH:mm, in the user's local zone). */
+export function isoToLocalDateTime(iso: string | null | undefined): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return ''
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
 /** Kosovo grading system: 5 (highest) to 1 (lowest) */
 export const NUMERIC_GRADE_COLORS: Record<number, string> = {
   5: 'badge-green',

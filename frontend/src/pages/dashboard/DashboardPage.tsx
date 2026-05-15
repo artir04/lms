@@ -143,7 +143,7 @@ export function DashboardPage() {
       )}
 
       {/* What's Due Next — students */}
-      {isStudent && upcoming && upcoming.length > 0 && (
+      {isStudent && (
         <div>
           <div className="flex items-center justify-between mb-3">
             <h3 className="section-title mb-0 flex items-center gap-2">
@@ -151,59 +151,69 @@ export function DashboardPage() {
             </h3>
           </div>
           <div className="card overflow-hidden">
-            <div className="divide-y divide-border">
-              {upcoming.slice(0, 5).map((item) => (
-                <Link
-                  key={item.quiz_id}
-                  to={
-                    item.attempts_used < item.max_attempts
-                      ? ROUTES.QUIZ_TAKE(item.quiz_id)
-                      : ROUTES.COURSE_DETAIL(item.course_id)
-                  }
-                  className="flex items-center justify-between px-5 py-3 hover:bg-surface-elevated transition-colors"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div
-                      className={cn(
-                        'w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ring-1',
-                        item.is_overdue
-                          ? 'bg-rose-100 ring-rose-200/70 dark:bg-rose-500/15 dark:ring-rose-500/20'
-                          : 'bg-primary-100 ring-primary-200/70 dark:bg-primary-500/15 dark:ring-primary-500/20'
-                      )}
-                    >
-                      {item.is_overdue ? (
-                        <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400" />
-                      ) : (
-                        <Clock className="w-4 h-4 text-primary-700 dark:text-primary-400" />
-                      )}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-ink truncate">
-                        {item.quiz_title}
-                      </p>
-                      <p className="text-xs text-ink-muted truncate">
-                        {item.course_title}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 shrink-0 ml-4">
-                    {item.due_at && (
-                      <span
+            {upcoming && upcoming.length > 0 ? (
+              <div className="divide-y divide-border">
+                {upcoming.slice(0, 5).map((item) => (
+                  <Link
+                    key={`${item.item_type}-${item.item_id}`}
+                    to={
+                      item.item_type === 'quiz'
+                        ? ROUTES.QUIZ_TAKE(item.item_id)
+                        : ROUTES.ASSIGNMENT_SUBMIT(item.item_id)
+                    }
+                    className="flex items-center justify-between px-5 py-3 hover:bg-surface-elevated transition-colors"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div
                         className={cn(
-                          'text-xs font-medium',
+                          'w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ring-1',
                           item.is_overdue
-                            ? 'text-rose-600 dark:text-red-400'
-                            : 'text-ink-muted'
+                            ? 'bg-rose-100 ring-rose-200/70 dark:bg-rose-500/15 dark:ring-rose-500/20'
+                            : 'bg-primary-100 ring-primary-200/70 dark:bg-primary-500/15 dark:ring-primary-500/20'
                         )}
                       >
-                        {item.is_overdue ? 'Overdue' : formatDate(item.due_at)}
-                      </span>
-                    )}
-                    <ArrowRight className="w-3.5 h-3.5 text-ink-faint" />
-                  </div>
-                </Link>
-              ))}
-            </div>
+                        {item.is_overdue ? (
+                          <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400" />
+                        ) : (
+                          <Clock className="w-4 h-4 text-primary-700 dark:text-primary-400" />
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-ink truncate">
+                          {item.title}
+                        </p>
+                        <p className="text-xs text-ink-muted truncate">
+                          {item.course_title} · {item.item_type === 'quiz' ? 'Quiz' : 'Assignment'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0 ml-4">
+                      {item.due_at && (
+                        <span
+                          className={cn(
+                            'text-xs font-medium',
+                            item.is_overdue
+                              ? 'text-rose-600 dark:text-red-400'
+                              : 'text-ink-muted'
+                          )}
+                        >
+                          {item.is_overdue ? 'Overdue' : formatDate(item.due_at)}
+                        </span>
+                      )}
+                      <ArrowRight className="w-3.5 h-3.5 text-ink-faint" />
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <div className="px-5 py-10 text-center">
+                <div className="mx-auto w-10 h-10 rounded-xl bg-primary-100 ring-1 ring-primary-200/70 dark:bg-primary-500/15 dark:ring-primary-500/20 flex items-center justify-center mb-3">
+                  <Clock className="w-5 h-5 text-primary-700 dark:text-primary-400" />
+                </div>
+                <p className="text-sm font-medium text-ink">You're all caught up</p>
+                <p className="text-xs text-ink-muted mt-1">No quizzes or assignments due right now.</p>
+              </div>
+            )}
           </div>
         </div>
       )}

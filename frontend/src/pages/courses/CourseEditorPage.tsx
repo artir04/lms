@@ -1,9 +1,9 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { useState, useRef } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Plus, Pencil, Trash2, GripVertical, ChevronDown, ChevronRight, Upload, Paperclip } from 'lucide-react'
+import { ArrowLeft, Plus, Pencil, Trash2, GripVertical, ChevronDown, ChevronRight, Upload, Paperclip, Users as UsersIcon } from 'lucide-react'
 import { useForm } from 'react-hook-form'
-import { useCourse, useUpdateCourse } from '@/api/courses'
+import { useCourse, useUpdateCourse, useCourseSections, useCreateSection } from '@/api/courses'
 import { Modal } from '@/components/ui/Modal'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { PageLoader } from '@/components/ui/Spinner'
@@ -39,6 +39,8 @@ export function CourseEditorPage() {
 
   const { data: course, isLoading } = useCourse(courseId!)
   const { mutate: updateCourse, isPending: savingCourse } = useUpdateCourse(courseId!)
+  const { data: sections, isLoading: sectionsLoading } = useCourseSections(courseId!)
+  const { mutate: createSection, isPending: creatingSection } = useCreateSection(courseId!)
 
   const { data: modules, isLoading: modulesLoading } = useQuery<Module[]>({
     queryKey: ['modules', courseId],
@@ -150,6 +152,7 @@ export function CourseEditorPage() {
   // Modal states
   const [showEditCourse, setShowEditCourse] = useState(false)
   const [showAddModule, setShowAddModule] = useState(false)
+  const [showAddSection, setShowAddSection] = useState(false)
   const [addLessonModuleId, setAddLessonModuleId] = useState<string | null>(null)
   const [editingLesson, setEditingLesson] = useState<{ lesson: Lesson; moduleId: string } | null>(null)
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set())
@@ -158,6 +161,7 @@ export function CourseEditorPage() {
 
   const courseForm = useForm({ values: { title: course?.title || '', description: course?.description || '', subject: course?.subject || '', grade_level: course?.grade_level || '', is_published: course?.is_published ?? false } })
   const moduleForm = useForm<{ title: string }>()
+  const sectionForm = useForm<{ name: string; capacity: string }>({ defaultValues: { name: '', capacity: '' } })
   type LessonFormShape = { title: string; content_type: string; duration_min: string; body: string; video_url: string }
   const lessonForm = useForm<LessonFormShape>({
     defaultValues: { content_type: 'text', body: '', video_url: '' },
@@ -271,6 +275,38 @@ export function CourseEditorPage() {
         )}
       </div>
 
+      {/* Sections */}
+      <div className="card p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-ink font-display">Sections</h2>
+            <p className="text-xs text-ink-muted mt-0.5">Class periods or cohorts. Students enroll into a specific section.</p>
+          </div>
+          <button onClick={() => { sectionForm.reset({ name: '', capacity: '' }); setShowAddSection(true) }} className="btn-primary text-sm">
+            <Plus className="h-4 w-4" /> Add Section
+          </button>
+        </div>
+
+        {sectionsLoading ? (
+          <PageLoader />
+        ) : !sections?.length ? (
+          <div className="text-center text-ink-muted py-8">No sections yet. Add one above.</div>
+        ) : (
+          <ul className="divide-y divide-border/60">
+            {sections.map((s) => (
+              <li key={s.id} className="flex items-center gap-3 py-2.5">
+                <UsersIcon className="h-4 w-4 text-ink-muted shrink-0" />
+                <span className="flex-1 text-sm text-ink">{s.name}</span>
+                <span className="text-xs text-ink-muted tabular-nums">
+                  {s.enrollment_count}
+                  {s.capacity != null ? ` / ${s.capacity}` : ''} enrolled
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
       {/* Edit Course Modal */}
       <Modal isOpen={showEditCourse} onClose={() => setShowEditCourse(false)} title="Edit Course Details">
         <form onSubmit={courseForm.handleSubmit((d) => updateCourse(d, { onSuccess: () => setShowEditCourse(false) }))} className="space-y-4">
@@ -319,6 +355,52 @@ export function CourseEditorPage() {
             <button type="button" onClick={() => setShowAddModule(false)} className="btn-secondary flex-1">Cancel</button>
             <button type="submit" disabled={creatingModule} className="btn-primary flex-1">
               {creatingModule ? 'Adding...' : 'Add Module'}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Add Section Modal */}
+      <Modal isOpen={showAddSection} onClose={() => setShowAddSection(false)} title="Add Section">
+        <form
+          onSubmit={sectionForm.handleSubmit((d) => {
+            const capacity = d.capacity.trim() ? Number(d.capacity) : null
+            createSection(
+              { name: d.name.trim(), capacity },
+              {
+                onSuccess: () => {
+                  setShowAddSection(false)
+                  sectionForm.reset({ name: '', capacity: '' })
+                  toast.success('Section created')
+                },
+                onError: (err: any) => toast.error(err?.response?.data?.detail ?? 'Failed to add section'),
+              }
+            )
+          })}
+          className="space-y-4"
+        >
+          <div>
+            <label className="label">Section Name *</label>
+            <input
+              {...sectionForm.register('name', { required: true })}
+              className="input"
+              placeholder="e.g. Section B, Period 3"
+            />
+          </div>
+          <div>
+            <label className="label">Capacity</label>
+            <input
+              {...sectionForm.register('capacity')}
+              type="number"
+              min="1"
+              className="input"
+              placeholder="Optional — max students"
+            />
+          </div>
+          <div className="flex gap-3 pt-2">
+            <button type="button" onClick={() => setShowAddSection(false)} className="btn-secondary flex-1">Cancel</button>
+            <button type="submit" disabled={creatingSection} className="btn-primary flex-1">
+              {creatingSection ? 'Adding...' : 'Add Section'}
             </button>
           </div>
         </form>

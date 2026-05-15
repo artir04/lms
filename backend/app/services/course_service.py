@@ -147,6 +147,8 @@ class CourseService:
         )
         self.db.add(course)
         await self.db.flush()
+        self.db.add(Section(course_id=course.id, name="Section A"))
+        await self.db.flush()
         return await self.get_by_id(course.id, tenant_id)
 
     async def update_course(self, course_id: uuid.UUID, data: CourseUpdate, user_id: uuid.UUID, tenant_id: uuid.UUID, is_admin: bool = False) -> Course:
@@ -202,18 +204,27 @@ class CourseService:
         )
         return result.scalars().all()
 
-    async def list_enrollments(self, course_id: uuid.UUID, tenant_id: uuid.UUID) -> list[dict]:
-        """Get all enrolled students for a course as a simplified list."""
+    async def list_enrollments(
+        self,
+        course_id: uuid.UUID,
+        tenant_id: uuid.UUID,
+        section_id: uuid.UUID | None = None,
+    ) -> list[dict]:
+        """Get enrolled students for a course as a simplified list, optionally scoped to one section."""
         await self.get_by_id(course_id, tenant_id)
+
+        conditions = [
+            Section.course_id == course_id,
+            Enrollment.status == "active",
+        ]
+        if section_id is not None:
+            conditions.append(Enrollment.section_id == section_id)
 
         result = await self.db.execute(
             select(Enrollment, User)
             .join(Section)
             .join(User, Enrollment.student_id == User.id)
-            .where(
-                Section.course_id == course_id,
-                Enrollment.status == "active"
-            )
+            .where(*conditions)
             .order_by(User.last_name, User.first_name)
         )
 

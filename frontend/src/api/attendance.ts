@@ -28,9 +28,9 @@ export function useMarkAttendance() {
     mutationFn: ({ courseId, data }: { courseId: string; data: AttendanceCreateRequest }) =>
       api.post(`/attendance/courses/${courseId}`, data).then((r) => r.data),
     onSuccess: (_, { courseId, data }) => {
-      // Invalidate attendance queries for this course
       qc.invalidateQueries({ queryKey: attendanceKeys.course(courseId) })
       qc.invalidateQueries({ queryKey: attendanceKeys.courseByDate(courseId, data.date) })
+      qc.invalidateQueries({ queryKey: ['attendance', 'teacher', 'overview'] })
     },
   })
 }

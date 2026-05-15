@@ -18,13 +18,41 @@ export interface CsvImportResult {
   rows: CsvImportRow[]
 }
 
+export interface EnrollmentHistoryRef {
+  id: string
+  title?: string
+  name?: string
+  course_id?: string | null
+  course_title?: string | null
+}
+
+export interface EnrollmentHistoryStudent {
+  id: string
+  full_name: string
+  email: string
+}
+
 export interface EnrollmentHistoryEntry {
+  id?: string
   action: string
+  target_type: string | null
   target_id: string | null
   summary: string | null
   actor_email: string | null
+  actor_user_id: string | null
+  actor_role: string | null
+  ip_address: string | null
+  user_agent: string | null
   event_metadata: Record<string, unknown> | null
   created_at: string
+  student: EnrollmentHistoryStudent | null
+  students: EnrollmentHistoryStudent[]
+  course: EnrollmentHistoryRef | null
+  section: EnrollmentHistoryRef | null
+  from_course: EnrollmentHistoryRef | null
+  to_course: EnrollmentHistoryRef | null
+  from_section: EnrollmentHistoryRef | null
+  to_section: EnrollmentHistoryRef | null
 }
 
 export interface TransferPayload {
@@ -71,15 +99,26 @@ export function useTransferStudent() {
   })
 }
 
-export function useEnrollmentHistory(params: {
+export interface EnrollmentHistoryFilters {
   course_id?: string
   section_id?: string
   student_id?: string
+  actions?: string[]
+  date_from?: string
+  date_to?: string
   limit?: number
-}) {
+}
+
+export function useEnrollmentHistory(filters: EnrollmentHistoryFilters) {
   return useQuery<EnrollmentHistoryEntry[]>({
-    queryKey: enrollmentAdminKeys.history(params),
+    queryKey: enrollmentAdminKeys.history(filters),
     queryFn: () =>
-      api.get('/admin/enrollments/history', { params }).then((r) => r.data),
+      api
+        .get('/admin/enrollments/history', {
+          params: filters,
+          // Repeat ?actions=... for each value so FastAPI parses a list
+          paramsSerializer: { indexes: null },
+        })
+        .then((r) => r.data),
   })
 }
